@@ -1,9 +1,8 @@
-// mvDBoardPage.jsx
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+
 
 // Custom Hooks
-import {dashItems} from '../components/dashItems';
+import {dashItems} from '../../Utils/dashItems';
 import { useJO_h } from '../../hooks/useJO_h';
 import { useJO_d } from '../../hooks/useJO_d';
 import { useTR_h } from '../../hooks/useTR_h';
