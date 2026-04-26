@@ -3,8 +3,8 @@ import { useState, useMemo } from 'react';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 
 // Components
-import MvEvalJOForm from './components/mvEvalJOForm';
-import MvMaintenanceForm from './components/mvMaintenanceForm';
+import MvEvalJOForm from '../components/mvEvalJOForm';
+import MvMaintenanceForm from '../components/mvMaintenanceForm';
 
 
 

@@ -4,9 +4,9 @@ import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { Checkbox } from '@mui/material';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import DateDisplay from '../../Utils/formatDateForInput';
-import EvaluationModal from '../customUtils/evaluationModal';
+import EvaluationModal from '../../Utils/evaluationModal';
 import { evaluateJO } from '../../hooks/useJO_eval';
-import Toast from '../customUtils/Toast'; // Import your Toast component
+import Toast from '../../Utils/toast'; // Import your Toast component
 
 function MvEvalJO({
     onClose,

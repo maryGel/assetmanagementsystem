@@ -12,13 +12,13 @@ import { TextareaAutosize, CircularProgress } from '@mui/material';
 // Hooks
 import {useApprovalLogs} from '../../hooks/useApprovalLogs';
 import {useDisposalApproval} from '../../hooks/useADApproval';
-import { useApprovalActions } from '../customUtils/ApprovalActionHandler';
+import { useApprovalActions } from '../../Utils/approvalActionHandler';
 // Custom Utils
-import {borderColor} from '../customUtils/filters';
+import {borderColor} from '../../Utils/filters';
 // Components
-import BulkActionDialog from '../customUtils/bulkActionDialog';
-import Toast from '../customUtils/toast';
-import SelectionModeHeader from '../customUtils/selectionModeHeader';
+import BulkActionDialog from '../../Utils/bulkActionDialog';
+import Toast from '../../Utils/toast';
+import SelectionModeHeader from '../../Utils/selectionModeHeader';
 
 
 

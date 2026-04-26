@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation, useMatch} from 'react-router-dom';
 // Hooks
-import {useUsers} from '../hooks/useUsers';
+import {useUsers} from '../../hooks/useUsers';
 // Components
 import MvDashBoard from './mvDBoardPage'
 import MvTansactionPage from './mvTransactionPage';
-import MvHeader from './components/mvHeader'
+import MvHeader from '../components/mvHeader'
 import MvAccountPage from './mvAccountPage';
 
 

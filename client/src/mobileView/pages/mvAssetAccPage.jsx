@@ -1,45 +1,46 @@
 import { useState, useMemo, useEffect } from 'react';
 // MUI
-import { Box, Stack, CircularProgress  } from '@mui/material';
+import { Box, Stack, CircularProgress } from '@mui/material';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import RefreshIcon from '@mui/icons-material/Refresh';
 // Custom Utils
-import HistoryDatePicker from '../Utils/datePicker';
-import {getDefaultLast30Days} from '../Utils/datePicker';
-import {statusFilter} from './customUtils/filters';
-import SearchOverlay from './customUtils/searchOverlay';
+import HistoryDatePicker from '../../Utils/datePicker';
+import {getDefaultLast30Days} from '../../Utils/datePicker';
+import {statusFilter} from '../../Utils/filters';
+import SearchOverlay from '../../Utils/searchOverlay'
 // Components
-import MvALForm from './components/mvALForm';
+import MvAAForm from '../components/mvAAForm';
 // Hooks
-import { useAssetLostApproval } from '../hooks/useAssetLostApproval';
+import { useAssetAccApproval } from '../../hooks/useAssetAccApproval';
 
 
 
-function MVAssetLostPage({
+function MvAssetAccPage({
     onClose,
     isClosing,
     onAnimationEnd,
-    assetLostHeaders: initialDocHeaders = [],
-    assetLostDetails: initialDocDetails = [],
-    aLostHRefresh,
-    aLostDRefresh,
+    assetAccHeaders: initialDocHeaders = [],
+    assetAccDetails: initialDocDetails = [],
+    accHRefresh,
+    accDRefresh,
     selectedUser,
     isLoading: externalLoading = false,
     error: externalError = null,
 }){
+
     const [filter, setFilter] = useState('Waiting');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
     const [dateRange, setDateRange] = useState(getDefaultLast30Days); //state for date range
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState(null);
-    const [isSearchActive, setIsSearchActive] = useState(false);
+    const [isSearchActive, setIsSearchActive] = useState(false);    
     const [selectionMode, setSelectionMode] = useState(false);
-    const [selectedAL, setSelectedAL] = useState([]);
+    const [selectedAA, setSelectedAA] = useState([]);
     const [selectAll, setSelectAll] = useState(false);
-    const assetLostHeaders = initialDocHeaders;
-    const assetLostDetails = initialDocDetails;
+    const assetAccHeaders = initialDocHeaders;
+    const assetAccDetails = initialDocDetails;
 
     // Local state to manage data refresh
     const [isLoading, setIsLoading] = useState(externalLoading);
@@ -49,20 +50,20 @@ function MVAssetLostPage({
     const { 
         canApprove,
         loading: approvalLoading 
-    } = useAssetLostApproval();
+    } = useAssetAccApproval();
 
     // Function to trigger refresh
     const handleRefresh = async () => {
     setIsLoading(true);
 
     try {
-        await aLostHRefresh(); 
-        await aLostDRefresh();
-      } catch (err) {
-          setError('Failed to refresh data');
-      } finally {
-          setIsLoading(false);
-      }
+        await accHRefresh(); 
+        await accDRefresh();
+    } catch (err) {
+        setError('Failed to refresh data');
+    } finally {
+        setIsLoading(false);
+    }
     };
 
     const handleClosePage = () => {if(onClose) onClose()}; 
@@ -79,13 +80,12 @@ function MVAssetLostPage({
       setIsSearchOpen(true);
     };
 
-
     const handleSearchClose = () => {
       setIsSearchOpen(false);
     };
 
-    const handleSelectAL = (al) => {
-      setSelectedDoc(al);
+    const handleSelectAa = (aa) => {
+      setSelectedDoc(aa);
       setIsSearchActive(true);
       setIsSearchOpen(false);
     };
@@ -95,18 +95,18 @@ function MVAssetLostPage({
       setIsSearchActive(false);
     };
 
-    // Triggered when user long-press a Accountability Form
+        // Triggered when user long-press a Accountability Form
     const handleEnterSelectionMode = (DocNo) => {
     setSelectionMode(true);
-    if (!selectedAL.includes(DocNo)) {
-        setSelectedAL([DocNo]); 
+    if (!selectedAA.includes(DocNo)) {
+        setSelectedAA([DocNo]); 
     }
     };
 
     // Toggle Select All
     const handleSelectAll = () => {
         if (selectAll) {
-            setSelectedAL([]);
+            setSelectedAA([]);
             setSelectAll(false);
         } else {
              const eligibleJOs = displayData
@@ -115,52 +115,52 @@ function MVAssetLostPage({
                     return canBeApproved.canApprove;
                 })
                 .map(aa => aa.AAFNo);
-            setSelectedAL(eligibleJOs);
+            setSelectedAA(eligibleJOs);
             setSelectAll(true);
         }
     };
 
     const handleExitSelectionMode = () => {
         setSelectionMode(false);
-        setSelectedAL([]);
+        setSelectedAA([]);
         setSelectAll(false);
     };
 
     // First, apply the status filter
-    const statusFilteredAL = useMemo(() => {
-      return assetLostHeaders.filter((al) => {
+    const statusFilteredAA = useMemo(() => {
+      return assetAccHeaders.filter((aa) => {
         if(filter === 'All') return true;
         
         if(filter === 'Waiting'){
-          return (al.xPosted === 3 || al.xPosted === 2) && al.DISAPPROVED === 0; 
+          return (aa.xPosted === 3 || aa.xPosted === 2) && aa.DISAPPROVED === 0; 
         }
         if(filter === 'Fully Approved'){
-          return al.xPosted === 1 && al.DISAPPROVED === 0;
+          return aa.xPosted === 1 && aa.DISAPPROVED === 0;
         }
         if(filter === 'Rejected'){
-          return (al.xPosted === 3 || al.xPosted === 2) && al.DISAPPROVED === 1;
+          return (aa.xPosted === 3 || aa.xPosted ===2) && aa.DISAPPROVED === 1;
         }
         if(filter === 'Partially Approved'){
-          return al.xPosted === 2 && al.DISAPPROVED === 0;
+          return aa.xpost === 2 && aa.DISAPPROVED === 0;
         }
 
         return false;
       });
-    }, [assetLostHeaders, filter]);
+    }, [assetAccHeaders, filter]);
 
     // Then, apply the date filter on top of the status-filtered data
-    const filteredAL= useMemo(() => {
+    const filteredAA= useMemo(() => {
       // If no date range is selected, return all status-filtered data
       if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
-        return statusFilteredAL;
+        return statusFilteredAA;
       }
 
       const start = new Date(dateRange.startDate).setHours(0, 0, 0, 0);
       const end = new Date(dateRange.endDate).setHours(23, 59, 59, 999);
 
-      return statusFilteredAL.filter((al) => {
+      return statusFilteredAA.filter((aa) => {
         // Check multiple possible date fields
-        const adDate = al.xDate;
+        const adDate = aa.xDate;
         
         // If no date field exists
         if (!adDate) return true;
@@ -168,34 +168,34 @@ function MVAssetLostPage({
         const adDateTime = new Date(adDate).getTime();
         return adDateTime >= start && adDateTime <= end;
       });
-    }, [statusFilteredAL, dateRange]);
-  
-     // Final data: show selected Doc if search is active, otherwise show filtered data
+    }, [statusFilteredAA, dateRange]);
+
+    // Final data: show selected Doc if search is active, otherwise show filtered data
     const displayData = useMemo(() => {
       if (isSearchActive && selectedDoc) {
         return [selectedDoc]; // Return as array to maintain compatibility with MvJOForm
       }
-      return filteredAL;
-    }, [isSearchActive, selectedDoc, filteredAL]);
+      return filteredAA;
+    }, [isSearchActive, selectedDoc, filteredAA]);
 
-     useEffect(() => {
-      if (selectedAL.length === 0) {
+    useEffect(() => {
+      if (selectedAA.length === 0) {
           setSelectAll(false); // all unselected → uncheck Select All
-      } else if (selectedAL.length === displayData.length) {
+      } else if (selectedAA.length === displayData.length) {
           setSelectAll(true);  // all selected → check Select All
       } else {
           setSelectAll(false); // partial selection → uncheck Select All
       }
-    }, [selectedAL, displayData]);
+    }, [selectedAA, displayData]);
 
     useEffect(() => {
       // Clear selection mode when data changes (after approval/rejection)
       if (selectionMode) {
         setSelectionMode(false);
-        setSelectedAL([]);
+        setSelectedAA([]);
         setSelectAll(false);
       }
-    }, [assetLostHeaders]); // This will trigger when assetLostHeaders updates after approval
+    }, [assetAccHeaders]); // This will trigger when assetAccHeaders updates after approval
 
     // Show loading state
     if (isLoading) {
@@ -234,7 +234,7 @@ function MVAssetLostPage({
                 position: 'sticky', 
                 top: 0, 
                 bgcolor: '#fafafa',
-                zIndex: 10     
+                zIndex: 10      
               }}
             >
               <Stack
@@ -248,32 +248,40 @@ function MVAssetLostPage({
                   alignItems: 'center'
                 }}              
               >
-                <button className='w-5' onClick={handleClosePage}> 
-                  <ArrowBackIosIcon fontSize='small'/>
-                </button>
-                <button className='w-5' onClick={handleSearchClick}>
-                  <SearchIcon />
-                </button>
-                {statusFilter.map((item)=> (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setFilter(item.status)
-                      // Clear search when changing filters
-                      if (isSearchActive) {
-                        handleClearSearch();
-                      }
-                    }}
-                    className={`px-2 text-sm py-0.5 border rounded-2xl transition-colors whitespace-nowrap ${
-                        filter === item.status && !isSearchActive
-                        ? 'text-slate-900 font-semibold border-slate-900' 
-                        : 'bg-white text-slate-600 border-slate-400'
-                    }`}
-                  >
-                  <span>{item.icon}</span>
-                  <span className='pl-1 text-xs tracking-wide'>{item.status}</span>
+                <div className="flex items-center gap-2">
+                  <button className='w-5' onClick={handleClosePage}> 
+                    <ArrowBackIosIcon fontSize='small'/>
                   </button>
-                ))}
+                  <button 
+                    className='w-5 transition-colors hover:text-blue-600'
+                    onClick={handleSearchClick}
+                    title="Search Job Order"
+                  >
+                    <SearchIcon/>
+                  </button>
+                </div>
+                            
+                <div className="flex gap-1">
+                  {statusFilter.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                          setFilter(item.status);
+                          if (isSearchActive) {
+                              handleClearSearch();
+                          }
+                      }}
+                      className={`px-2 py-0.5 text-sm border rounded-2xl transition-colors whitespace-nowrap ${
+                          filter === item.status && !isSearchActive
+                              ? 'text-slate-900 font-semibold border-slate-900' 
+                              : 'bg-white text-slate-600 border-slate-400'
+                      }`}
+                    >
+                      <span>{item.icon}</span>
+                      <span className='pl-1 text-xs tracking-wide'>{item.status}</span>
+                    </button>
+                    ))}
+                </div>
               </Stack>
             </Box>
             
@@ -281,7 +289,7 @@ function MVAssetLostPage({
               <>
                 <div className='grid-cols-1 py-2'>
                   <div className='flex items-center justify-between px-4 text-sm font-semibold tracking-wide'>
-                    <span>Lost Asset Form</span>
+                    <span>Asset Accountability</span>
                     <div className='flex'>
                       <button 
                         onClick={handleOptionsOpen}
@@ -302,97 +310,94 @@ function MVAssetLostPage({
                     </div>
                   </div>
                     
-                  {isOptionsOpen && (
-                      <div className='flex m-1 border-t border-b bg-gray-50'>
-                          <HistoryDatePicker onDateRangeChange={handleDateRangeChange} />
-                      </div>
-                  )}
+                    {isOptionsOpen && (
+                        <div className='flex m-1 border-t border-b bg-gray-50'>
+                            <HistoryDatePicker onDateRangeChange={handleDateRangeChange} />
+                        </div>
+                    )}
                 </div>
 
-                {/* Filter Summary - Optional but helpful */}
                 {(filter !== 'All' || dateRange) && (
                   <div className='px-4 py-2 text-xs text-gray-600 border-blue-100 bg-blue-50 border-y'>
                     <div className='flex items-center gap-2'>
-                      {/* <span>Status: <strong>{filter}</strong></span> */}
                       {dateRange?.startDate && dateRange?.endDate && (
                         <>
                           <span>|</span>
                           <span>
                             Date: <strong>
-                              {dateRange.startDate.toLocaleDateString()} - {dateRange.endDate.toLocaleDateString()}
+                                {dateRange.startDate.toLocaleDateString()} - {dateRange.endDate.toLocaleDateString()}
                             </strong>
                           </span>
                         </>
                       )}
                       <span>|</span>
-                      <span>Results: <strong>{filteredAL.length}</strong></span>
+                      <span>Results: <strong>{displayData.length}</strong></span>
                     </div>
                   </div>
                 )}
               </>
             )}
-            
-          {/* Search Active Indicator */}
-          {isSearchActive && selectedDoc && (
-            <div className='px-4 py-2 text-xs text-blue-600 border-blue-100 bg-blue-50 border-y'>
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-2'>
-                  <SearchIcon fontSize='small' />
-                  <span>Search Results: <strong>{selectedDoc.AAFNo}</strong></span>
-                </div>
-                <button
-                  onClick={handleClearSearch}
-                  className='text-xs text-blue-600 underline hover:text-blue-800'
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
 
-          {isLoading ? (
-            <div className='flex justify-center p-8'>Loading...</div>
-          ) : error ? (
-            <div className='p-4 m-4 text-red-500 bg-red-100 rounded'>{error}</div>
-          ) : filteredAL.length > 0 
-            ? <div className='flex flex-col gap-4 mt-2'>
-                <MvALForm
-                  useProps={null}
-                  assetLostDetails = {assetLostDetails}
-                  filteredAL = {displayData}
-                  assetLostHeaders = {assetLostHeaders}
-                  isLoading={isLoading}
-                  error={error}
-                  selectedUser={selectedUser}   
-                  aLostHRefresh={aLostHRefresh}        
-                  aLostDRefresh={aLostDRefresh}     
-                  selectionMode={selectionMode}
-                  selectedAL={selectedAL}
-                  setSelectedAL={setSelectedAL} 
-                  onEnterSelectionMode={handleEnterSelectionMode}        
-                  onExitSelectionMode={handleExitSelectionMode}
-                  onSelectAll={handleSelectAll} 
-                  selectAll={selectAll}     
-                />
-              </div>  
-            : (
-              <span className='flex justify-center p-5 text-sm italic item-center text-slate-500'>
-                {isSearchActive 
-                  ? 'No JO record found with that number.' 
-                  : 'No record found within the selected date.'}
-              </span>
-          )}             
+            {/* Search Active Indicator */}
+            {isSearchActive && selectedDoc && (
+              <div className='px-4 py-2 text-xs text-blue-600 border-blue-100 bg-blue-50 border-y'>
+                <div className='flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                    <SearchIcon fontSize='small' />
+                    <span>Search Results: <strong>{selectedDoc.AAFNo}</strong></span>
+                  </div>
+                  <button
+                    onClick={handleClearSearch}
+                    className='text-xs text-blue-600 underline hover:text-blue-800'
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {isLoading 
+              ? (<div className='flex justify-center p-8'>Loading...</div>) 
+              : error ? (<div className='p-4 m-4 text-red-500 bg-red-100 rounded'>{error}</div>) 
+              : displayData.length > 0
+              ? <div className='flex flex-col gap-4 mt-2'>
+                  <MvAAForm
+                    useProps={null}
+                    filteredAA = {displayData}
+                    assetAccDetails = {assetAccDetails}
+                    assetAccHeaders = {assetAccHeaders}
+                    isLoading={isLoading}
+                    error={error}
+                    selectedUser={selectedUser}   
+                    accHRefresh={accHRefresh}        
+                    accDRefresh={accDRefresh}     
+                    selectionMode={selectionMode}
+                    selectedAA={selectedAA}
+                    setSelectedAA={setSelectedAA} 
+                    onEnterSelectionMode={handleEnterSelectionMode}        
+                    onExitSelectionMode={handleExitSelectionMode}
+                    onSelectAll={handleSelectAll} 
+                    selectAll={selectAll}     
+                  />
+                </div>
+              : (
+                <span className='flex justify-center p-5 text-sm italic item-center text-slate-500'>
+                  {isSearchActive 
+                    ? 'No Accountability Form record found with that number.' 
+                    : 'No record found within the selected date.'}
+                </span>
+              )}               
           </div>            
-        </div>    
+        </div>   
         {/* Search Overlay */}
         <SearchOverlay
           isOpen={isSearchOpen}
           onClose={handleSearchClose}
-          docHeaders={assetLostHeaders}
-          onSelectDoc={handleSelectAL}
-        />     
+          docHeaders={assetAccHeaders}
+          onSelectDoc={handleSelectAa}
+        />       
       </>
     )
 }
 
-export default MVAssetLostPage;
+export default MvAssetAccPage;

@@ -1,5 +1,5 @@
 
-import MobileHomePage from '../mobileView/mobileHomePage';
+import MobileHomePage from '../mobileView/pages/mobileHomePage';
 
 //MUI
 import FullWidthTabs from '../Utils/TabPanel'

@@ -13,12 +13,12 @@ import { TextareaAutosize, CircularProgress } from '@mui/material';
 // Hooks
 import { useTRApproval } from '../../hooks/useTRApproval';
 import { useApprovalLogs } from '../../hooks/useApprovalLogs';
-import { useApprovalActions } from '../customUtils/ApprovalActionHandler';
+import { useApprovalActions } from '../../Utils/approvalActionHandler';
 
 // Components
-import BulkActionDialog from '../customUtils/bulkActionDialog';
-import Toast from '../customUtils/toast';
-import SelectionModeHeader from '../customUtils/selectionModeHeader';
+import BulkActionDialog from '../../Utils/bulkActionDialog';
+import Toast from '../../Utils/toast';
+import SelectionModeHeader from '../../Utils/selectionModeHeader';
 
 
 function MvTRForm({

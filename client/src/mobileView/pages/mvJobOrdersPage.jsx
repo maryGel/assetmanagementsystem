@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+// mvJobOrdersPage.jsx
+import { useState, useMemo, useEffect } from 'react';
 // MUI
 import { Box, Stack, CircularProgress } from '@mui/material';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
@@ -6,28 +7,27 @@ import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import RefreshIcon from '@mui/icons-material/Refresh';
 // Custom Utils
-import HistoryDatePicker from '../Utils/datePicker';
-import {getDefaultLast30Days} from '../Utils/datePicker';
-import {statusFilter} from './customUtils/filters';
-import SearchOverlay from './customUtils/searchOverlay';
+import HistoryDatePicker from '../../Utils/datePicker';
+import {getDefaultLast30Days} from '../../Utils/datePicker';
+import {statusFilter} from '../../Utils/filters';
+import SearchOverlay from '../../Utils/searchOverlay';
 // Components
-import MvTRForm from './components/mvTRForm';
+import MvJOForm from '../components/mvJOForm';
 // Hooks
-import { useTRApproval } from '../hooks/useTRApproval';
+import { useJobOrderApproval } from '../../hooks/useJobOrderApproval';
 
-function MvTransferPage({
+function MvJobOrderPage({
     onClose,
     isClosing,
     onAnimationEnd,
-    trHeaders: initialTrHeaders =[],
-    trDetails: initialTrDetails =[],
-    trHRefresh,
-    trDRefresh,
+    joHeaders: initialJoHeaders =[],
+    joDetails: initialJoDetails =[],
+    joRefresh,
+    joDetailsRefresh,
     selectedUser,
     isLoading: externalLoading = false,
     error: externalError = null,
-}){
-
+}) {
     const [filter, setFilter] = useState('Waiting');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
     const [dateRange, setDateRange] = useState(getDefaultLast30Days);
@@ -35,41 +35,39 @@ function MvTransferPage({
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [isSearchActive, setIsSearchActive] = useState(false);
     const [selectionMode, setSelectionMode] = useState(false);
-    const [selectedTR, setSelectedTR] = useState([]);
+    const [selectedJO, setSelectedJO] = useState([]);
     const [selectAll, setSelectAll] = useState(false);
+    const joHeaders = initialJoHeaders;
+    const joDetails = initialJoDetails;
     
-    const trHeaders = initialTrHeaders;
-    const trDetails = initialTrDetails;
-
     // Local state to manage data refresh
     const [isLoading, setIsLoading] = useState(externalLoading);
     const [error, setError] = useState(externalError);
-    
+
     // Use the approval hook
     const { 
         canApprove,
         loading: approvalLoading 
-    } = useTRApproval();
-
+    } = useJobOrderApproval();
 
     // Function to trigger refresh
     const handleRefresh = async () => {
-        setIsLoading(true);
+    setIsLoading(true);
 
-        try {
-            await trHRefresh(); 
-            await trDRefresh();
-        } catch (err) {
-            setError('Failed to refresh data');
-        } finally {
-            setIsLoading(false);
-        }
+    try {
+        await joRefresh(); 
+        await joDetailsRefresh();
+    } catch (err) {
+        setError('Failed to refresh data');
+    } finally {
+        setIsLoading(false);
+    }
     };
 
-    const handleClosePage = () => {if (onClose) onClose()}; 
+    const handleClosePage = () => {if (onClose) onClose()};
 
     const handleOptionsOpen = () => {
-        setIsOptionsOpen(prev => !prev)
+        setIsOptionsOpen(prev => !prev);
     };
 
     const handleDateRangeChange = (range) => {
@@ -84,8 +82,8 @@ function MvTransferPage({
         setIsSearchOpen(false);
     };
 
-    const handleSelectTr = (tr) => {
-        setSelectedDoc(tr);
+    const handleSelectJO = (jo) => {
+        setSelectedDoc(jo);
         setIsSearchActive(true);
         setIsSearchOpen(false);
     };
@@ -95,111 +93,105 @@ function MvTransferPage({
         setIsSearchActive(false);
     };
 
-    // Triggered when user long-press a TR
-    const handleEnterSelectionMode = (trNo) => {
-        setSelectionMode(true);
-        if (!selectedTR.includes(trNo)) {
-            setSelectedTR([trNo]);
-        }
+    // Triggered when user long-press a JO
+    const handleEnterSelectionMode = (joNo) => {
+    setSelectionMode(true);
+    if (!selectedJO.includes(joNo)) {
+        setSelectedJO([joNo]); 
+    }
     };
 
-    // Toggle Select All - Only select documents that are eligible for approval
+    // Toggle Select All
     const handleSelectAll = () => {
         if (selectAll) {
-            setSelectedTR([]);
+            setSelectedJO([]);
             setSelectAll(false);
         } else {
-            // Only select documents that are not fully approved and not disapproved
-            const eligibleTRs = displayData
-                .filter(tr => {
-                    const canBeApproved = canApprove(tr);
+             const eligibleJOs = displayData
+                .filter(jo => {
+                    const canBeApproved = canApprove(jo);
                     return canBeApproved.canApprove;
                 })
-                .map(tr => tr.TR_No);
-            setSelectedTR(eligibleTRs);
+                .map(jo => jo.TR_No);
+            setSelectedJO(eligibleJOs);
             setSelectAll(true);
         }
     };
 
     const handleExitSelectionMode = () => {
         setSelectionMode(false);
-        setSelectedTR([]);
+        setSelectedJO([]);
         setSelectAll(false);
     };
 
-
-    // First, apply the status filter with multi-level support
-    const statusFilteredTR = useMemo(() => {
-        return trHeaders.filter((tr) => {
+    // First, apply the status filter
+    const statusFilteredJO = useMemo(() => {
+        return [...joHeaders].filter((jo) => {
             if(filter === 'All') return true;
             
             if(filter === 'Waiting'){
                 // Waiting includes: Not Started (xpost=3) and Partially Approved (xpost=2)
-                return (tr.xpost === 3 || tr.xpost === 2) && tr.DISAPPROVED === 0; 
+                return (jo.xpost === 3 || jo.xpost === 2) && jo.DISAPPROVED === 0; 
             }
             if(filter === 'Fully Approved'){
-                return tr.xpost === 1 && tr.DISAPPROVED === 0;
+                return jo.xpost === 1 && jo.DISAPPROVED === 0;
             }
             if(filter === 'Rejected'){
-                return (tr.xpost === 3 || tr.xpost === 2) && tr.DISAPPROVED === 1;
+                return (jo.xpost === 3 || jo.xpost === 2) && jo.DISAPPROVED === 1;
             }
             if(filter === 'Partially Approved'){
-                return tr.xpost === 2 && tr.DISAPPROVED === 0;
+                return jo.xpost === 2 && jo.DISAPPROVED === 0;
             }
             return false;
         });
-    }, [trHeaders, filter]);
+    }, [joHeaders, filter]);
 
-    // Then, apply the date filter on top of the status-filtered data
-    const filteredTR = useMemo(() => {
+    // Then, apply the date filter
+    const dateFilteredJO = useMemo(() => {
         if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
-            return statusFilteredTR;
+            return statusFilteredJO;
         }
 
         const start = new Date(dateRange.startDate).setHours(0, 0, 0, 0);
         const end = new Date(dateRange.endDate).setHours(23, 59, 59, 999);
 
-        return statusFilteredTR.filter((tr) => {
-            const trDate = tr.xDate;
-            if (!trDate) return true;        
-            const trDateTime = new Date(trDate).getTime();
-            return trDateTime >= start && trDateTime <= end;
+        return statusFilteredJO.filter((jo) => {
+            const joDate = jo.xDate;
+            if (!joDate) return null;
+            const joDateTime = new Date(joDate).getTime();
+            return joDateTime >= start && joDateTime <= end;
         });
-    }, [statusFilteredTR, dateRange]);
+    }, [statusFilteredJO, dateRange]);
 
-    // Final data: show selected Doc if search is active, otherwise show filtered data
+    // Final data: show selected JO if search is active, otherwise show filtered data
     const displayData = useMemo(() => {
         if (isSearchActive && selectedDoc) {
             return [selectedDoc];
         }
-        // Add computed fields to each TR without fetching
-        return filteredTR.map(tr => ({
-            ...tr,
-            canBeApproved: canApprove(tr),
-        }));
-    }, [isSearchActive, selectedDoc, filteredTR,  canApprove]);
+        return dateFilteredJO;
+    }, [isSearchActive, selectedDoc, dateFilteredJO]);
 
     useEffect(() => {
-        if (selectedTR.length === 0) {
-            setSelectAll(false);
-        } else if (selectedTR.length === displayData.filter(tr => tr.canBeApproved?.canApprove).length) {
-            setSelectAll(true);
+        if (selectedJO.length === 0) {
+            setSelectAll(false); // all unselected → uncheck Select All
+        } else if (selectedJO.length === displayData.length) {
+            setSelectAll(true);  // all selected → check Select All
         } else {
-            setSelectAll(false);
+            setSelectAll(false); // partial selection → uncheck Select All
         }
-    }, [selectedTR, displayData]);
+    }, [selectedJO, displayData]);
 
     useEffect(() => {
         // Clear selection mode when data changes (after approval/rejection)
         if (selectionMode) {
             setSelectionMode(false);
-            setSelectedTR([]);
+            setSelectedJO([]);
             setSelectAll(false);
         }
-    }, [trHeaders]); // This will trigger when trHeaders updates after approval
+    }, [joHeaders]); // This will trigger when joHeaders updates after approval
 
     // Show loading state
-    if (isLoading || approvalLoading) {
+    if (isLoading) {
         return (
             <div 
                 onAnimationEnd={onAnimationEnd}
@@ -210,7 +202,7 @@ function MvTransferPage({
                 <div className="flex flex-col items-center justify-center min-h-full">
                     <CircularProgress />
                     <span className="mt-3 text-sm text-gray-500">
-                        {'Loading transfers...'}
+                        {'Loading job orders...'}
                     </span>
                 </div>
             </div>
@@ -219,10 +211,12 @@ function MvTransferPage({
 
     return (
         <>
-            <div onAnimationEnd={onAnimationEnd} className={`          
-                fixed inset-0 z-50 items-start w-full max-h-screen overflow-y-auto shadow-xl bg-white  
-                ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
-                <div className="flex flex-col ">
+            <div 
+                onAnimationEnd={onAnimationEnd}
+                className={`fixed inset-0 z-50 w-full h-full overflow-y-auto bg-white shadow-xl 
+                ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}
+            >
+                <div className="flex flex-col min-h-full">
                     <Box 
                         sx={{ 
                             p: 2,
@@ -233,15 +227,15 @@ function MvTransferPage({
                             position: 'sticky', 
                             top: 0, 
                             bgcolor: '#fafafa',
-                            zIndex: 10       
+                            zIndex: 10
                         }}
                     >
                         <Stack
                             direction="row" 
-                            minWidth= 'max-content'
+                            minWidth='max-content'
                             spacing={1.5}
                             sx={{
-                                justifyContent: 'flex-start',
+                                justifyContent: 'space-between',
                                 px: 1,
                                 overflowX: 'auto',
                                 alignItems: 'center'
@@ -254,26 +248,26 @@ function MvTransferPage({
                                 <button 
                                     className='w-5 transition-colors hover:text-blue-600'
                                     onClick={handleSearchClick}
-                                    title="Search Transfer"
+                                    title="Search Job Order"
                                 >
                                     <SearchIcon/>
                                 </button>
                             </div>
-                            <div className='flex gap-1'>
-                                {statusFilter.map((item)=> (
+                            
+                            <div className="flex gap-1">
+                                {statusFilter.map((item) => (
                                     <button
                                         key={item.id}
                                         onClick={() => {
                                             setFilter(item.status);
-                                            // Clear search when changing filters
                                             if (isSearchActive) {
                                                 handleClearSearch();
                                             }
                                         }}
-                                        className={`px-2 text-sm border py-0.5 rounded-2xl transition-colors whitespace-nowrap ${
+                                        className={`px-2 py-0.5 text-sm border rounded-2xl transition-colors whitespace-nowrap ${
                                             filter === item.status && !isSearchActive
-                                            ? 'text-slate-900 font-semibold border-slate-900' 
-                                            : 'bg-white text-slate-600 border-slate-400'
+                                                ? 'text-slate-900 font-semibold border-slate-900' 
+                                                : 'bg-white text-slate-600 border-slate-400'
                                         }`}
                                     >
                                         <span>{item.icon}</span>
@@ -283,13 +277,13 @@ function MvTransferPage({
                             </div>
                         </Stack>
                     </Box>
-
+                    
                     {/* Date Range Filter - Hide when search is active */}
                     {!isSearchActive && (
                         <>
                             <div className='grid-cols-1 py-2'>
                                 <div className='flex items-center justify-between px-4 text-sm font-semibold tracking-wide'>
-                                    <span>Transfers</span>
+                                    <span>Job Orders</span>
                                     <div className='flex'>
                                         <button 
                                             onClick={handleOptionsOpen}
@@ -319,7 +313,7 @@ function MvTransferPage({
 
                             {(filter !== 'All' || dateRange) && (
                                 <div className='px-4 py-2 text-xs text-gray-600 border-blue-100 bg-blue-50 border-y'>
-                                    <div className='flex flex-wrap items-center gap-2'>
+                                    <div className='flex items-center gap-2'>
                                         {dateRange?.startDate && dateRange?.endDate && (
                                             <>
                                                 <span>|</span>
@@ -337,14 +331,14 @@ function MvTransferPage({
                             )}
                         </>
                     )}
-                    
+
                     {/* Search Active Indicator */}
                     {isSearchActive && selectedDoc && (
                         <div className='px-4 py-2 text-xs text-blue-600 border-blue-100 bg-blue-50 border-y'>
                             <div className='flex items-center justify-between'>
                                 <div className='flex items-center gap-2'>
                                     <SearchIcon fontSize='small' />
-                                    <span>Search Results: <strong>{selectedDoc.TR_No}</strong></span>
+                                    <span>Search Results: <strong>{selectedDoc.JO_No}</strong></span>
                                 </div>
                                 <button
                                     onClick={handleClearSearch}
@@ -360,44 +354,44 @@ function MvTransferPage({
                         <div className='p-4 m-4 text-red-500 bg-red-100 rounded'>{error}</div>
                     ) : displayData.length > 0 ? (
                         <div className='flex flex-col gap-4 mt-2'>
-                            <MvTRForm
+                            <MvJOForm 
                                 useProps={null}
-                                trHeaders={trHeaders}
-                                trDetails={trDetails}
-                                filteredTR={displayData}
+                                joHeaders={joHeaders}
+                                filteredJO={displayData}
                                 isLoading={isLoading}
                                 error={error}
-                                selectedUser={selectedUser}  
-                                trRefresh={trHRefresh} 
-                                trDetailsRefresh={trDRefresh}            
+                                joDetails={joDetails}
+                                selectedUser={selectedUser}   
+                                joRefresh={joRefresh}        
+                                joDetailsRefresh={joDetailsRefresh}     
                                 selectionMode={selectionMode}
-                                selectedTR={selectedTR}
-                                setSelectedTR={setSelectedTR} 
+                                selectedJO={selectedJO}
+                                setSelectedJO={setSelectedJO} 
                                 onEnterSelectionMode={handleEnterSelectionMode}        
-                                onExitSelectionMode={handleExitSelectionMode} 
+                                onExitSelectionMode={handleExitSelectionMode}
                                 onSelectAll={handleSelectAll} 
-                                selectAll={selectAll}
-                            />
+                                selectAll={selectAll}     
+                            />  
                         </div>
                     ) : (
                         <span className='flex justify-center p-5 text-sm italic item-center text-slate-500'>
                             {isSearchActive 
-                                ? 'No transfer record found with that number.' 
+                                ? 'No JO record found with that number.' 
                                 : 'No record found within the selected date.'}
                         </span>
-                    )}    
-                               
+                    )}                        
                 </div>            
-            </div>   
+            </div>
+
             {/* Search Overlay */}
             <SearchOverlay
                 isOpen={isSearchOpen}
                 onClose={handleSearchClose}
-                docHeaders={trHeaders}
-                onSelectDoc={handleSelectTr}
-            />     
+                docHeaders={joHeaders}
+                onSelectDoc={handleSelectJO}
+            />
         </>
-    )
+    );
 }
 
-export default MvTransferPage;
+export default MvJobOrderPage;

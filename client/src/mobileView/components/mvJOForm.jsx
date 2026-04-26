@@ -13,15 +13,15 @@ import { TextareaAutosize, CircularProgress } from '@mui/material';
 // Hooks
 import { useJobOrderApproval } from '../../hooks/useJobOrderApproval';
 import { useApprovalLogs } from '../../hooks/useApprovalLogs';
-import { useApprovalActions } from '../customUtils/ApprovalActionHandler';
+import { useApprovalActions } from '../../Utils/approvalActionHandler';
 
 // Components
-import BulkActionDialog from '../customUtils/bulkActionDialog';
-import Toast from '../customUtils/Toast'; 
-import SelectionModeHeader from '../customUtils/selectionModeHeader';
+import BulkActionDialog from '../../Utils/bulkActionDialog';
+import Toast from '../../Utils/toast'; 
+import SelectionModeHeader from '../../Utils/selectionModeHeader';
 
 // Custom Utils
-import { borderColor } from '../customUtils/filters';
+import { borderColor } from '../../Utils/filters';
 
 function MvJOForm({
     useProps,

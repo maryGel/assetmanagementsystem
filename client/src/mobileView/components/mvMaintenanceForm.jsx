@@ -6,9 +6,9 @@ import SearchIcon from '@mui/icons-material/Search';
 // Custom Utils
 import HistoryDatePicker from '../../Utils/datePicker';
 import DateDisplay from '../../Utils/formatDateForInput';
-import {maintStatus} from '../customUtils/filters';
+import {maintStatus} from '../../Utils/filters';
 import {getDefaultLast30Days} from '../../Utils/datePicker';
-import SearchOverlay from '../customUtils/searchOverlay'; // Import the SearchOverlay component
+import SearchOverlay from '../../Utils/searchOverlay'; // Import the SearchOverlay component
 // Component
 import MvWorkOrders from './mvWordOrders';
 
