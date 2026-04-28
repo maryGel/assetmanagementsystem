@@ -46,7 +46,10 @@ function a11yProps(index) {
   };
 }
 
-export default function AssetMoveTabs(){
+export default function AssetMoveTabs({
+  isEditing,
+  setIsEditing
+}){
 
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
@@ -71,7 +74,10 @@ export default function AssetMoveTabs(){
         </Tabs>
       </AppBar>
       <TabPanel value={value} index={0} dir={theme.direction} sx={{ width: '100%' }}>
-        <JOLineItems />
+        <JOLineItems 
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+        />
       </TabPanel>
       <TabPanel value={value} index={1} dir={theme.direction}>
 

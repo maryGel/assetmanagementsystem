@@ -14,8 +14,8 @@ import { useAssetLostH } from '../../hooks/useAssetLostH';
 import { useAssetLostD } from '../../hooks/useAssetLostD';
 
 
-const numStyles = 'p-3 text-2xl font-semibold text-white cursor-pointer hover:underline hover:text-gray-900 hover:drop-shadow-[0_0_1rem_black] transition-transform duration-150 active:translate-y-0.5 hover:scale-x-95';
-const boxStyles = 'flex items-end justify-between w-full h-28 gap-3 px-3 shadow-md shadow-black cursor-pointer hover:text-gray-800 transition-transform duration-150  hover:border hover:border-gray-200';
+const numStyles = 'p-3 text-2xl font-semibold cursor-pointer hover:underline hover:text-gray-900 hover:drop-shadow-[0_0_1rem_black] transition-transform duration-150 active:translate-y-0.5 hover:scale-x-95';
+const boxStyles = 'flex items-end justify-between shadow-md rounded-lg border border-spacing-2 w-full h-28 gap-3 px-3 cursor-pointer hover:text-gray-800 transition-transform duration-150  hover:border hover:border-gray-200';
 
 
 function DashboardPage(useProps) {
@@ -101,9 +101,9 @@ function DashboardPage(useProps) {
                       src={item.imgSrc}
                       alt={item.title}
                   />
-                  <span className='text-lg font-medium tracking-wide text-sky-600 hover:text-gray-800'>{item.title}</span>
+                  <span className='mt-2 font-semibold tracking-wide hover:text-gray-800'>{item.title}</span>
               </div>
-              <span className={`p-3 text-2xl font-semibold text-sky-600 ${numStyles}`}>{item.num}</span> 
+              <span className={`p-3 text-2xl font-semibold ${numStyles}`}>{item.num}</span> 
             </button>
           ))}
           </div>

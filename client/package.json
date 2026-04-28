@@ -29,6 +29,7 @@
     "react-date-range": "^2.0.1",
     "react-datepicker": "^9.1.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.74.0",
     "react-number-format": "^5.4.4",
     "react-responsive-autocomplete": "^1.0.4",
     "react-router-dom": "^6.20.1",

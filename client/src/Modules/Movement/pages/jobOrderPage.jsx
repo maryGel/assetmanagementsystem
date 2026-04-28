@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Box, Autocomplete, TextField, TextareaAutosize, ThemeProvider } from '@mui/material';
 
 // Components
-import AssetMoveTabs from '../custom Utils/tableTabs';
+import AssetMoveTabs from '../custom Utils/assetMoveTabs';
 
 // Custom Utils
 import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
@@ -13,19 +13,43 @@ import { CustomBtn } from '../../../Utils/groupbtns';
 
 // Custom Hooks
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
+import { useSections } from '../../../hooks/refSection';
+import { useJO_h } from '../../../hooks/useJO_h';
+import { useJO_d } from '../../../hooks/useJO_d';
+import { useApprovalLogs } from '../../../hooks/useApprovalLogs';
 
-export default function JOFormPage() {
-  const { refDeptData } = useRefDepartment();
+export default function JOFormPage(useProps) {
+  const { refDeptData } = useRefDepartment();  
+  const { refSections } = useSections();
+  const { approvalLogs } = useApprovalLogs(useProps);
+
+
+  const [ department, setDepartment ] = useState('');
+  const [ section, setSection ] = useState('');
+  const [ remarks, setRemarks ] = useState('');
   const [ isEditing, setIsEditing ] = useState(false);
+  const [ viewApprovers, setViewApprovers] = useState({});
 
   const handleEditButton = () => {
     setIsEditing(prev => !prev)
   }
 
+  const departments = refDeptData.map(item => item.Department);
+  const sections = refSections.map(item => item.xdesc);
+
+  const handleChange = (field, value) => {
+    if (field === 'Department') {
+      setDepartment(value);
+    } else if (field === 'Section') {
+      setSection(value);
+    } else if (field === 'Remarks') {
+      setRemarks(value);
+    }
+  }
+
   return (
     <>
-      {/* ... B u t t o n s ... */}
-      
+      {/* ... B u t t o n s ... */}     
       {/* Edit */}          
       <div className='flex justify-end gap-3 mx-20 my-4'>
         
@@ -58,6 +82,8 @@ export default function JOFormPage() {
             variant='createBtn'
             iconType='add'
             title='Create New JO'
+            onClick={handleEditButton}   
+            disabled={isEditing}         
           >           
             Create
           </CustomBtn>
@@ -104,9 +130,9 @@ export default function JOFormPage() {
                   disabled={!isEditing} 
                   className={`rounded-sm ${!isEditing ? 'border' : 'border-none' } border-gray-300 w-48`}
                   size = 'small'
-                  options= {refDeptData.map(item => item.Department)} 
-                  value={'IT Office' || ''}  
-                  // onChange={(event, newValue) => onFieldChange('Unit', newValue)}
+                  options= {departments} 
+                  value={department || ''}  
+                  onChange={(e, newValue) => handleChange('Department', newValue)}
                   renderInput={(params) => (
                     <TextField {...params} 
                       sx={getAutocompleteSx(isEditing)}
@@ -116,11 +142,11 @@ export default function JOFormPage() {
                 <label className='text-base font-normal text-gray-500 w-38 '>Maintenance Service :</label>
                 <Autocomplete 
                   disabled={!isEditing} 
-                  className={`rounded-sm ${!isEditing ? 'border' : 'border-none' } border-gray-300 w-48`}
+                  className={`rounded-sm ${!isEditing ? 'border' : 'border-none' } border-gray-300 w-72`}
                   size = 'small'
-                  options= {refDeptData.map(item => item.Department)} 
-                  value={'Electrical Unit' || ''}  
-                  // onChange={(event, newValue) => onFieldChange('Unit', newValue)}
+                  options= {sections} 
+                  value={section || ''}
+                  onChange={(e, newValue) => handleChange('Section', newValue)}
                   renderInput={(params) => (
                     <TextField {...params} 
                       sx={getAutocompleteSx(isEditing)}
@@ -133,12 +159,13 @@ export default function JOFormPage() {
 
               <div className='flex items-start justify-start w-full gap-10 mt-4'>
                 <label className='pt-2 text-base text-gray-500 w-28 font-nornal '>Remarks : </label>
-                <TextareaAutosize 
+                <textarea
                   id = "remarks"
                   disabled={!isEditing} 
                   aria-label = "minimum height"
                   minRows={2}
-                  value={'This is a sample remarks.' || ''}
+                  value={remarks || ''}
+                  onChange={(e) => handleChange('Remarks', e.target.value)}
                   className={`${!isEditing ? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 `}
                   style={{ 
                     width: '50rem',
@@ -155,7 +182,10 @@ export default function JOFormPage() {
       </div>    
       <ThemeProvider theme={customTheme}>
         <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
-          <AssetMoveTabs/>
+          <AssetMoveTabs
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+          />
         </div>
       </ThemeProvider>
 
