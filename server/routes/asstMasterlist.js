@@ -3,29 +3,110 @@ import { db } from '../server.js';
 
 const router = express.Router();
 
-//Get all itemlist
+// Get all itemlist with pagination and filters
 router.get('/', (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = parseInt(req.query.pageSize) || 10;
+  const offset = (page - 1) * pageSize;
 
-  const sqlSelect = 'SELECT * FROM itemlist';  //TODO implement pagination
-    
+  // Build WHERE clause from filters
+  const filters = [];
+  const params = [];
+  
+  // Text search
+  if (req.query.search) {
+    filters.push('(FacNO LIKE ? OR FacName LIKE ? OR Description LIKE ?)');
+    params.push(`%${req.query.search}%`, `%${req.query.search}%`, `%${req.query.search}%`);
+  }
+  
+  // Category filter (can be multiple)
+  if (req.query.category) {
+    const categories = req.query.category.split(',');
+    const placeholders = categories.map(() => '?').join(',');
+    filters.push(`CATEGORY IN (${placeholders})`);
+    params.push(...categories);
+  }
+  
+  // Item Class filter (can be multiple)
+  if (req.query.itemClass) {
+    const classes = req.query.itemClass.split(',');
+    const placeholders = classes.map(() => '?').join(',');
+    filters.push(`ItemClass IN (${placeholders})`);
+    params.push(...classes);
+  }
+  
+  // Location filter (can be multiple)
+  if (req.query.location) {
+    const locations = req.query.location.split(',');
+    const placeholders = locations.map(() => '?').join(',');
+    filters.push(`ItemLocation IN (${placeholders})`);
+    params.push(...locations);
+  }
+  
+  // Department filter (can be multiple)
+  if (req.query.department) {
+    const departments = req.query.department.split(',');
+    const placeholders = departments.map(() => '?').join(',');
+    filters.push(`Department IN (${placeholders})`);
+    params.push(...departments);
+  }
+
+  // In the filters section, add:
+  if (req.query.assetNos) {
+    const assetNos = req.query.assetNos.split(',');
+    const placeholders = assetNos.map(() => '?').join(',');
+    filters.push(`FacNO IN (${placeholders})`);
+    params.push(...assetNos);
+  }
+
+    // In your backend itemlist.js
+  console.log('Received query params:', req.query);
+  if (req.query.assetNos) {
+    console.log('Asset Nos to filter:', req.query.assetNos);
+  }
+  
+  const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+  const countSql = `SELECT COUNT(*) as total FROM itemlist ${whereClause}`;
+  const dataSql = `SELECT * FROM itemlist ${whereClause} LIMIT ? OFFSET ?`;
+
   db.getConnection((err, connection) => {
     if (err) {
-      console.error('Error getting connection from pool:' + err.stack);
-      return res.status(500).json({error:'Database connection error'});
+      console.error('Error getting connection from pool:', err.stack);
+      return res.status(500).json({ error: 'Database connection error' });
     }
 
-    connection.query(sqlSelect, (error,results, fields) => {
-      connection.release(); // release connection back to pool
-
-      if (error){
-        console.error('Error executing query:' + error.stack);
-        return res.status(500).json({error: 'Error fetching the data'});
+    // Get total count
+    connection.query(countSql, params, (countErr, countResults) => {
+      if (countErr) {
+        connection.release();
+        console.error('Error counting records:', countErr.stack);
+        return res.status(500).json({ error: 'Error fetching data count' });
       }
 
-      res.json(results);
-    })
-  })
-})
+      const total = countResults[0].total;
+      
+      // Get paginated data - add pageSize and offset to params
+      const dataParams = [...params, pageSize, offset];
+      
+      connection.query(dataSql, dataParams, (dataErr, results) => {
+        connection.release(); // Release only once here
+
+        if (dataErr) {
+          console.error('Error executing query:', dataErr.stack);
+          return res.status(500).json({ error: 'Error fetching the data' });
+        }
+
+        res.json({
+          data: results,
+          total: total,
+          page: page,
+          pageSize: pageSize
+        });
+      });
+    });
+  });
+});
+
 
 // Get a single asset by facNo
 router.get('/:facNo', (req, res) => {

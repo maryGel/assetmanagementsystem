@@ -215,6 +215,8 @@ export default function AssetMasterTable({
     page,
     total,
     setPage,
+    rowsPerPage,
+    setRowsPerPage, 
     isTableActive,
     setHeaderTitle,
     selected,
@@ -233,7 +235,7 @@ export default function AssetMasterTable({
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('FacNO');  
   const [dense, setDense] = useState(false);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  // const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const rows = Array.isArray(displayedAssets) ? displayedAssets : [];
     console.log('rows after processing:', rows);
@@ -248,8 +250,8 @@ export default function AssetMasterTable({
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelected = visibleRows.map(row => row.id); 
-      setSelected(newSelected)
+      const newSelected = rows.map(row => row.FacNO);
+      setSelected(newSelected);
     } else {
       setSelected([]);
     }
@@ -276,7 +278,8 @@ export default function AssetMasterTable({
 
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+      const newSize = parseInt(event.target.value, 10);
+    setRowsPerPage(newSize);   // if you keep local state – but better to call prop
     setPage(0);
   };
 
@@ -306,26 +309,31 @@ export default function AssetMasterTable({
     if (page > 0 && page * rowsPerPage >= rows.length) {
       setPage(0);
     }
-  }, [rows.length, page, rowsPerPage, setPage]);
+  }, [total, page, rowsPerPage, setPage]);
 
 
 
   // Avoid a layout jump when reaching the last page with empty rows.
-  const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+  const emptyRows = 0;
 
+
+  // const visibleRows = useMemo(() => {
+  //   if (!isTableActive) return [];
+
+  //   return rows
+  //     .slice() 
+  //     .sort(getComparator(order, orderBy))
+  //     .slice(
+  //       page * rowsPerPage,
+  //       page * rowsPerPage + rowsPerPage
+  //     );
+  // }, [rows, order, orderBy, page, rowsPerPage]);
 
   const visibleRows = useMemo(() => {
     if (!isTableActive) return [];
-
-    return rows
-      .slice() 
-      .sort(getComparator(order, orderBy))
-      .slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage
-      );
-  }, [rows, order, orderBy, page, rowsPerPage]);
+    // Apply sorting to the current page's data (client-side sort is fine)
+    return [...rows].sort(getComparator(order, orderBy));
+  }, [rows, order, orderBy]);
 
 
   const handleExportCsv = () => {
