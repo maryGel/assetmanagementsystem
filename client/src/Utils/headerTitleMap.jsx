@@ -14,6 +14,7 @@ export const headerTitleMap = {
   "/assetFolder/pages/referentialPage": "Referential Data",
 
   // Asset Movement Pages
+  "/assetMovement/searchTransactions": "Search Transactions",
   "/assetMovement/pages/JOFormPage": "Job Order Page",
 
   // System Setup Pages
@@ -22,9 +23,13 @@ export const headerTitleMap = {
 
 
 export const getBackPath = (currentPath) => {
+  // Asset Master Pages
   if (currentPath.startsWith('/assetFolder/assetMasterDisplay')) return '/assetFolder/pages/assetMasterList';
   if (currentPath.startsWith('/assetFolder/createAsset')) return '/assetFolder/pages/assetMasterList';
-  if (currentPath.startsWith('/assetMovement/pages/JOFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/systemSetup/user/userProfile')) return '/Home/SystemSetup';
   if (currentPath.startsWith('/assetFolder/pages')) return '/Home/AssetMasterPage';
+
+  // Movement Pages
+  if (currentPath.startsWith('/assetMovement/searchTransactions')) return '/Home/Movement';
+  if (currentPath.startsWith('/assetMovement/pages/JOFormPage')) return '/Home/Movement';
 };

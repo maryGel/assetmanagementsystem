@@ -15,6 +15,7 @@ import ReferentialPage from './Modules/assetMaster/pages/ReferentialPage.jsx';
 
 // Asset Movement Pages
 import JOFormPage from './Modules/Movement/pages/jobOrderPage.jsx';
+import SearchTransactions from './Modules/Movement/pages/searchTransactionsPage.jsx';
 
 // System Setup Pages
 import UserAccessPage from './Modules/SystemSetup/pages/userAccessPage.jsx';
@@ -44,6 +45,11 @@ function App() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  
+  useEffect(() => {
+    document.title = headerTitle;
+  }, [headerTitle]);
 
   return (
     <div className="App">
@@ -104,6 +110,12 @@ function App() {
           } />
 
           {/* Asset Movement Pages */}
+          <Route path="/assetMovement/searchTransactions" element={
+            <SearchTransactions
+              setHeaderTitle={saveTitleUpdate}
+            />
+          } />
+
           <Route path="/assetMovement/pages/JOFormPage" element={
             <JOFormPage
               setHeaderTitle={saveTitleUpdate}

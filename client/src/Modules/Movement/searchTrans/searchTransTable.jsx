@@ -1,4 +1,4 @@
-import  {useState, useMemo, useEffect}  from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { alpha } from '@mui/material/styles';
 import {
@@ -25,8 +25,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import AddIcon from '@mui/icons-material/Add';
 import { visuallyHidden } from '@mui/utils';
-
-
+// Custom Utils
+import DateDisplay from '../../../Utils/formatDateForInput';
 
 function descendingComparator(a, b, orderBy) {
   const aValue = a[orderBy];
@@ -51,20 +51,18 @@ function getComparator(order, orderBy) {
 }
 
 const headCells = [
-  { id: 'FacNO', numeric: false, disablePadding: true, label: 'Asset Number'},
-  { id: 'FacName', numeric: true, disablePadding: false, label: 'Asset Name'},
-  { id: 'ItemClass', numeric: true, disablePadding: false, label: 'Asset Class' },
-  { id: 'CATEGORY', numeric: true, disablePadding: false, label: 'Category'},
-  { id: 'balance_unit', numeric: true, disablePadding: false, label: 'Quantity'},
-  { id: 'Unit', numeric: true, disablePadding: false,label: 'UOM'},
-  { id: 'ItemLocation', numeric: true, disablePadding: false, label: 'Location'},
+  { id: 'DocNo', numeric: false, disablePadding: true, label: 'Document No' },
+  { id: 'DocType', numeric: true, disablePadding: false, label: 'Document Type'},
+  { id: 'Date', numeric: true, disablePadding: false, label: 'Date' },
+  { id: 'Status', numeric: true, disablePadding: false, label: 'Status'},
+  { id: 'Remarks', numeric: true, disablePadding: false, label: 'Remarks'},
   { id: 'Department', numeric: true, disablePadding: false, label: 'Department'},
-  {id: 'status', numeric: true, disablePadding: false, label: 'Status'},
+  { id: 'Location', numeric: true, disablePadding: false, label: 'Location'},
+  { id: 'Action', numeric: true, disablePadding: false, label: 'Action'},
 ];
 
 function EnhancedTableHead(props) {
-  const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } =
-    props;
+  const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } = props;
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
   };
@@ -73,14 +71,14 @@ function EnhancedTableHead(props) {
     <TableHead>
       <TableRow>
         <TableCell padding="checkbox">
-          {props.rowCount > 0 && (
+          {rowCount > 0 && (
             <Checkbox
               color="primary"
               indeterminate={numSelected > 0 && numSelected < rowCount}
               checked={rowCount > 0 && numSelected === rowCount}
               onChange={onSelectAllClick}
               inputProps={{
-                'aria-label': 'select all desserts',
+                'aria-label': 'select all documents',
               }}
             />
           )}
@@ -91,7 +89,7 @@ function EnhancedTableHead(props) {
             align='left'
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
-            sx ={{ fontWeight: 'bold' }}
+            sx={{ fontWeight: 'bold' }}
           >
             <TableSortLabel
               active={orderBy === headCell.id}
@@ -153,7 +151,7 @@ function EnhancedTableToolbar(props) {
           id="tableTitle"
           component="div"
         >
-          Asset Master List
+          Document List
         </Typography>
       )}
 
@@ -174,11 +172,11 @@ function EnhancedTableToolbar(props) {
         </Tooltip>
       }
 
-      <Tooltip title="Create Asset">
+      <Tooltip title="Create Document">
         <IconButton
           onClick={() => {
-            const path = '/assetFolder/createAsset';
-            window.open(path ,'_blank')
+            const path = '/assetMovement/pages/JOFormPage';
+            window.open(path, '_blank');
           }}
         >
           <AddIcon />
@@ -201,43 +199,35 @@ EnhancedTableToolbar.propTypes = {
   onExportCsv: PropTypes.func.isRequired,
 };
 
+export default function SearchTransactionTable({ 
+  loading, 
+  error,
+  displayedDocs,
+  page,
+  total,
+  setPage,
+  rowsPerPage,
+  setRowsPerPage, 
+  isTableActive,
+  setHeaderTitle,
+  selected,
+  setSelected
+}) {
 
-// ----------------------------------------------------------------
-//                    A S S E T   T A B L E 
-// ----------------------------------------------------------------
-
-
-export default function AssetMasterTable({ 
-    loading, 
-    error,
-    displayedAssets,
-    page,
-    total,
-    setPage,
-    rowsPerPage,
-    setRowsPerPage, 
-    isTableActive,
-    setHeaderTitle,
-    selected,
-    setSelected
-  }) {
-
-  // Add debug at top of component
-  // console.log('=== TABLE DEBUG ===');
-  // console.log('displayedAssets prop:', displayedAssets);
-  // console.log('displayedAssets isArray?', Array.isArray(displayedAssets));
-  // console.log('displayedAssets length:', displayedAssets?.length);
-  // console.log('total:', total);
-  // console.log('isTableActive:', isTableActive);
-
-  // MUI States
   const [order, setOrder] = useState('asc');
-  const [orderBy, setOrderBy] = useState('FacNO');  
+  const [orderBy, setOrderBy] = useState('DocNo');  
   const [dense, setDense] = useState(false);
-  // const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const rows = Array.isArray(displayedAssets) ? displayedAssets : [];
-    console.log('rows after processing:', rows);
+  const rows = Array.isArray(displayedDocs) ? displayedDocs : [];
+
+  const handleDocStatus = (status) => {
+    if (status === 0) return 'Draft';
+    if (status === 3) return 'For Approval';
+    if (status === 2) return 'Partially Approved';
+    if (status === 1) return 'Fully Approved';
+    // if (status === 0) return 'Rejected';
+    return '';
+  }
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -249,7 +239,7 @@ export default function AssetMasterTable({
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelected = rows.map(row => row.FacNO);
+      const newSelected = rows.map(row => row.DocNo);
       setSelected(newSelected);
     } else {
       setSelected([]);
@@ -275,10 +265,9 @@ export default function AssetMasterTable({
     setSelected(newSelected);
   };
 
-
   const handleChangeRowsPerPage = (event) => {
-      const newSize = parseInt(event.target.value, 10);
-    setRowsPerPage(newSize);   // if you keep local state – but better to call prop
+    const newSize = parseInt(event.target.value, 10);
+    setRowsPerPage(newSize);
     setPage(0);
   };
 
@@ -287,53 +276,25 @@ export default function AssetMasterTable({
   };
 
   const handleSelectItem = (row) => {
-    const facNo = row.FacNO || row.FacNo;
-    const path = `/assetFolder/assetMasterDisplay?copyFrom=${facNo}`;
+    const transNo = row.DocNo;
+    const path = `/assetMovement/pages/JOFormPage?docId=${transNo}`;
     
-    setHeaderTitle(`Asset Display`);
+    setHeaderTitle(`Document Display`);
     window.open(path, '_blank');
-
   }; 
 
-  const handleClickCopytoNew = (facNo) => {
-    if (!facNo) return;
-
-    // Navigate to Create Asset Page
-    const path = `/assetFolder/createAsset?copyFrom=${facNo}`
+  const handleClickCopytoNew = (transNo) => {
+    if (!transNo) return;
+    const path = `/assetMovement/pages/JOFormPage?copyFrom=${transNo}`;
     window.open(path, '_blank');
-  }
-
-
-  useEffect(() => {
-    if (page > 0 && page * rowsPerPage >= rows.length) {
-      setPage(0);
-    }
-  }, [total, page, rowsPerPage, setPage]);
-
-
-
-  // Avoid a layout jump when reaching the last page with empty rows.
-  const emptyRows = 0;
-
-
-  // const visibleRows = useMemo(() => {
-  //   if (!isTableActive) return [];
-
-  //   return rows
-  //     .slice() 
-  //     .sort(getComparator(order, orderBy))
-  //     .slice(
-  //       page * rowsPerPage,
-  //       page * rowsPerPage + rowsPerPage
-  //     );
-  // }, [rows, order, orderBy, page, rowsPerPage]);
+  };
 
   const visibleRows = useMemo(() => {
     if (!isTableActive) return [];
-    // Apply sorting to the current page's data (client-side sort is fine)
-    return [...rows].sort(getComparator(order, orderBy));
-  }, [rows, order, orderBy]);
-
+    // Apply sorting and pagination
+    const sorted = [...rows].sort(getComparator(order, orderBy));
+    return sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [rows, order, orderBy, page, rowsPerPage, isTableActive]);
 
   const handleExportCsv = () => {
     const header = headCells.map((c) => `"${c.label}"`).join(',');
@@ -353,45 +314,43 @@ export default function AssetMasterTable({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'asset_master.csv');
+    link.setAttribute('download', 'documents.csv');
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
   };
 
-
-  if(loading){
+  if (loading) {
     return (
-      <Box sx={{ width: '100%',  padding: 2}}>
+      <Box sx={{ width: '100%', padding: 2 }}>
         <Typography variant="h6" align="center">
-          Loading Asset Master Data...
+          Loading Documents...
         </Typography>
-      </Box>
-    )
-  }
-
-  if(error){
-    return (
-      <Box sx={{ width: '100%', padding: 2, textAlign: 'center' }}>
-        <Typography>{error}</Typography>
       </Box>
     );
   }
-  
-  
+
+  if (error) {
+    return (
+      <Box sx={{ width: '100%', padding: 2, textAlign: 'center' }}>
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ width: '100%',  padding: 2}}>
+    <Box sx={{ width: '100%', padding: 2 }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
         <EnhancedTableToolbar 
           numSelected={selected.length} 
           selected={selected}
-          onCopyToNew = {handleClickCopytoNew}
+          onCopyToNew={handleClickCopytoNew}
           onExportCsv={handleExportCsv}
         />
         <TableContainer>
           <Table
-            sx={{ minWidth: 750  }}
+            sx={{ minWidth: 750 }}
             aria-labelledby="tableTitle"
             size={dense ? 'small' : 'medium'}
           >
@@ -401,44 +360,42 @@ export default function AssetMasterTable({
               orderBy={orderBy}
               onSelectAllClick={handleSelectAllClick}
               onRequestSort={handleRequestSort}
-              rowCount={rows.length}  
-              sx={{ cursor: 'pointer', fontWeight: 'bold' }}          
+              rowCount={rows.length}
             />
-
-            {/*  ... T a b l e  B o d y ... */}
-
             <TableBody>
               {visibleRows.map((row) => {
-              
-              const labelId = `enhanced-table-checkbox-${row.FacNO}`;
-              const isItemSelected = isSelected(row.FacNO);
+                const labelId = `enhanced-table-checkbox-${row.DocNo}`;
+                const isItemSelected = isSelected(row.DocNo);
 
                 return (
                   <TableRow
-                    key={row.FacNO} // use FacNO as key
+                    key={row.DocNo}
                     selected={isItemSelected}
-
-                    hover   // disable hover for blank rows
-                    onClick={(event) => handleClick(row.FacNO)}                    
+                    hover
                     role="checkbox"
                     aria-checked={isItemSelected}
                     tabIndex={-1}
-                    sx={{ cursor: 'pointer' }}
+                    onClick={() => handleClick(row.DocNo)}
+                    sx={{
+                      cursor: 'pointer',
+                      '&.Mui-selected': {
+                        backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                      },
+                      '&.Mui-selected:hover': {
+                        backgroundColor: 'rgba(25, 118, 210, 0.18)',
+                      },
+                    }}
                   >
                     <TableCell 
                       padding="checkbox"
                       sx={{ width: 25 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleClick
-                      }}
                     >
                       <Checkbox
                         color="primary"
                         checked={isItemSelected}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleClick(row.FacNO)
+                          handleClick(row.DocNo);
                         }}
                       />
                     </TableCell>
@@ -448,36 +405,32 @@ export default function AssetMasterTable({
                       scope="row"
                       padding="none"
                       sx={{ 
-                        fontWeight: 'bold', color: 'primary.main', textDecoration: 'underline',                      
-                        '&:Hover': {fontSize: '1rem', color: '#43a047'}
+                        fontWeight: 'bold', 
+                        color: 'primary.main', 
+                        textDecoration: 'underline',                      
+                        '&:hover': { fontSize: '.9rem', color: '#43a047' }
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectItem(row);
                       }}
                     >
-                      {row.FacNO || ""}
+                      {row.DocNo || ""}
                     </TableCell>
-                    <TableCell align="left">{row.FacName}</TableCell>
-                    <TableCell align="left">{row.ItemClass}</TableCell>
-                    <TableCell align="left">{row.CATEGORY}</TableCell>
-                    <TableCell align="left">{row.balance_unit}</TableCell>
-                    <TableCell align="left">{row.Unit}</TableCell>
-                    <TableCell align="left">{row.ItemLocation}</TableCell>
+                    <TableCell align="left">{row.DocType}</TableCell>
+                    <TableCell align="center"><DateDisplay value={row.Date} format="short" /></TableCell>
+                    <TableCell align="left">{handleDocStatus(row.Status)}</TableCell>
+                    <TableCell align="left">{row.Remarks}</TableCell>
                     <TableCell align="left">{row.Department}</TableCell>
-                    <TableCell align="left">{row.status}</TableCell>                    
-                  </TableRow> 
+                    <TableCell align="left">{row.Location}</TableCell>
+                    <TableCell align="left">
+                      <IconButton size="small" onClick={() => handleSelectItem(row)}>
+                        <FileCopyIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-              {emptyRows > 0 && (
-                <TableRow
-                  style={{
-                    height: (dense ? 33 : 53) * emptyRows,
-                  }}
-                >
-                  <TableCell colSpan={6} />
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -498,3 +451,18 @@ export default function AssetMasterTable({
     </Box>
   );
 }
+
+SearchTransactionTable.propTypes = {
+  loading: PropTypes.bool,
+  error: PropTypes.string,
+  displayedDocs: PropTypes.array.isRequired,
+  page: PropTypes.number.isRequired,
+  total: PropTypes.number.isRequired,
+  setPage: PropTypes.func.isRequired,
+  rowsPerPage: PropTypes.number.isRequired,
+  setRowsPerPage: PropTypes.func.isRequired,
+  isTableActive: PropTypes.bool,
+  setHeaderTitle: PropTypes.func,
+  selected: PropTypes.array.isRequired,
+  setSelected: PropTypes.func.isRequired,
+};

@@ -116,10 +116,10 @@ export default function JOFormPage(useProps) {
         </Box>
         <form className='mt-8'>
             <label className='text-base font-normal text-gray-500 '>Job Order No : </label>
-            <label className='text-base font-semibold text-gray-800 '>NNN-JO-0000014</label>
+            <label className='text-base font-semibold text-gray-800 '>NNN-JO-0000014</label>  // JO_No from JO_h
             <br/>
             <label className='text-base font-normal text-gray-500 '>Status : </label>
-            <label className='text-base font-semibold text-gray-800 '>Posted - For Approval</label>
+            <label className='text-base font-semibold text-gray-800 '>For Approval</label> // status from JO_h
             
             <Box className='mt-2 '>
 

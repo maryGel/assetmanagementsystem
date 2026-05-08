@@ -20,13 +20,13 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+// Hooks
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 
 const EnhancedEditableTable = ({
   isEditing,
-  setEditing
 }) => {
-  const { fetchAssetByFacN0, assets, fetchAssets, isLoading, createAsset, updateAsset } = useAssetMasterData();
+  const { fetchAssetByFacN0, assets, allAssets, fetchAssets, isLoading, createAsset, updateAsset } = useAssetMasterData();
   
   // Initialize with ONE empty row directly
   const [rows, setRows] = useState([{
@@ -75,10 +75,10 @@ const EnhancedEditableTable = ({
 
   // Prepare asset options for autocomplete (for FacName field)
   useEffect(() => {
-    if (assets && assets.length > 0) {
-      setAssetOptions(assets);
+    if (allAssets && allAssets.length > 0) {
+      setAssetOptions(allAssets);
     }
-  }, [assets]);
+  }, [allAssets]);
 
   // REMOVED the useEffect that automatically adds a new row
 
@@ -369,7 +369,7 @@ const EnhancedEditableTable = ({
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={{ minWidth: '60px' }}>Actions</TableCell>
+              <TableCell sx={{ minWidth: '60px' }}>Action</TableCell>
               <TableCell sx={{ minWidth: '16rem' }}>Asset No.</TableCell>
               <TableCell sx={{ minWidth: '21rem' }}>Asset Name</TableCell>
               <TableCell sx={{ minWidth: '80px' }}>Qty</TableCell>

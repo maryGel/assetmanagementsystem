@@ -2,7 +2,7 @@ export const assetMovList= [
   {
     id: 1,
     title: 'Search Trans.',
-    link: '/assetMovement/assetAcquisition',
+    link: '/assetMovement/searchTransactions',
     imgSrc: '/icons/menu_icons/searchdoc.png',
     headerTitle: 'Search Document',
   },

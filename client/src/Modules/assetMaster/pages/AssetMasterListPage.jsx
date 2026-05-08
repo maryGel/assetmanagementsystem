@@ -8,7 +8,7 @@ import { createFilterOptions } from '@mui/material/Autocomplete';
 //Custom Utils
 import { CustomBtn } from '../../../Utils/groupbtns';
 
-// Component/pages import
+// Hooks/pages import
 import AssetMasterTable from '../assetMaster/assetMasterTable'
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 import { useRefCategory } from '../../../hooks/refCategory';
