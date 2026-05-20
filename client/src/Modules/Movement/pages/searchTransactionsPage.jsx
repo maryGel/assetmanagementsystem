@@ -23,7 +23,7 @@ const statusOptions = [
   {status: 3, label: 'For Approval'},
   {status: 2, label: 'Partially Approved'},
   {status: 1, label: 'Fully Approved'},
-  // {status: 0, label: 'Rejected'}
+  {status: 4, label: 'Rejected'}
 ];
 
 
@@ -115,6 +115,13 @@ function SearchTransactions(useProps) {
       );
     }
 
+    // Filter rejected
+    if (filters.rejected && filters.rejected.length > 0) {
+      filtered = filtered.filter(doc =>
+        filters.rejected.includes(doc.rejected)
+      );
+    }
+
     setFilteredDocuments(filtered);
     setPage(0); // Reset to first page when filters change
   }, [docHeaders, filters]);
@@ -156,6 +163,7 @@ function SearchTransactions(useProps) {
       Remarks: doc.Remarks,
       Department: doc.Departmnet,
       Location: doc.Location || doc.Maintenance || '',
+      Rejected: doc.DISAPPROVED,
       // Add placeholder fields for asset-specific data
       FacName: doc.type,
       ItemClass: '',

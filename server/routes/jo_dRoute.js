@@ -25,7 +25,7 @@
 
 
   // Get single jo_d
-  router.get(':JO_No', (req, res) => {
+  router.get('/:JO_No', (req, res) => {
     const {JO_No} = req.params;
 
     const decodedJONo = decodeURIComponent(JO_No);
@@ -39,7 +39,7 @@
         return res.status(500).json({err: 'Database connection failed jo_d'})
       }
 
-      const sql = 'SELECT * FORM jo_d WHERE JO_No = ?';
+      const sql = 'SELECT * FROM jo_d WHERE JO_No = ?';
 
       connection.query(sql, [cleanJONo], (error, result)=>{
         connection.release();
@@ -60,4 +60,52 @@
   
   export default router;
 
-  //Update the JO header xpost
+  //Create the JO details
+  router.post('/:JO_No', (req, res) => {
+    const [
+      JO_No,
+      FAC_NO,
+      FAC_name,
+      qty,
+      xDate,
+      xpost,
+      UOM,
+      brand,
+      serialNo,
+      workDet,
+      TargetDate,
+      Status,
+      ItemLocation
+     ] = req.body; 
+    
+      db.getConnection((err, connection) => {
+        if(err) return res.status(500).json({error: 'Database connection failed jo_d'})
+          
+        const sql = 'INSERT INTO jo_d (JO_No, FAC_NO, FAC_name, qty, xDate, xpost, UOM, brand, serialNo, workDet, targetDate, Status, ItemLocation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const values = [
+          JO_No,
+          FAC_NO || '',
+          FAC_name || '',
+          qty || 0,
+          xDate || null,
+          xpost || 0,
+          UOM || '',
+          brand || '',
+          serialNo || '',
+          workDet || '',
+          TargetDate || null,
+          Status || 'OPEN',
+          ItemLocation || ''
+        ];
+
+        connection.query(sql, values, (error, results) => {
+          connection.release();
+
+          if(error) return res.status(500).json({error: 'Database query failed jo_d'})
+          res.status(201).json({
+            message: 'JO details created successfully',
+            id: results.insertId,
+          });
+        });
+      })
+  });

@@ -1,5 +1,3 @@
-import { api } from '../../../api/axios';
-
 export const assetMasterFields = {
     // General Info fields
     FacNO: '',

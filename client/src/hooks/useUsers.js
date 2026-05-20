@@ -317,9 +317,7 @@ export const useUsers = () => {
 
         dispatch({ type: 'UPDATE_FORM', payload: formData });
     };
-    const cancelEdit = useCallback(() => {
-
-        
+    const cancelEdit = useCallback(() => {        
         if (state.hasUnsavedChanges) {
             dispatch({ type: 'OPEN_CANCEL_DIALOG' });
         } else {

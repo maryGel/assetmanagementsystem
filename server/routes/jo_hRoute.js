@@ -55,4 +55,81 @@
 
   export default router;
 
-  //Update the JO header xpost
+  //Create the JO header xpost
+  router.post('/', (req, res) => {
+    const { 
+      JO_No,
+      Remarks,
+      Sector_name,
+      Sector_Code,
+      xDate,
+      xpost,
+      Deparment_name,
+      Deaprtment_Code,
+      requested_by,
+    } = req.body;
+
+    db.getConnection((err, connection) => {
+      if(err) return res.status(500).json({error: 'Database connection error'});
+      
+      const sql = 'INSERT INTO jo_h (JO_No, Remarks, Sector_name, Sector_Code, xDate, xpost, Deparment_name, Deaprtment_Code, requested_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+      const values = [
+        JO_No,
+        Remarks || '',
+        Sector_name || '',
+        Sector_Code || '',
+        xDate ? new Date(xDate) : null,
+        xpost || 0,
+        Deparment_name || '',
+        Deaprtment_Code || '',
+        requested_by || '',
+      ]
+
+      connection.query(sql, values, (error, result) => {
+        connection.release();
+        if(error) return res.status(500).json({error: 'Database query failed'});
+        res.status(201).json({
+          message: 'JO header created successfully',
+          id: result.insertId,});
+      });
+    });
+  });
+
+  // Update JO header
+  router.put('/:JO_No', (req, res) => {
+    const { JO_No } = req.params;
+    const {
+      Remarks,
+      Sector_name,
+      Sector_Code,
+      xDate,
+      xpost,
+      Deparment_name,
+      Deaprtment_Code,
+      requested_by,
+    } = req.body;
+
+    db.getConnection((err, connection) => {
+      if(err) return res.status(500).json({error: 'Database connection error'});
+
+      const sql = 'UPDATE jo_h SET Remarks = ?, Sector_name = ?, Sector_Code = ?, xDate = ?, xpost = ?, Deparment_name = ?, Deaprtment_Code = ?, requested_by = ? WHERE JO_No = ?';
+      const values = [
+        Remarks,
+        Sector_name || '',
+        Sector_Code || '',
+        xDate ? new Date(xDate) : null,
+        xpost || 0,
+        Deparment_name || '',
+        Deaprtment_Code || '',
+        requested_by || '',
+        JO_No,
+      ];
+
+      connection.query(sql, values, (error, result) => {
+        connection.release();
+        if(error) return res.status(500).json({error: 'Database query failed'});
+        if(result.affectedRows === 0) return res.status(404).json({error: 'JO header not found'});
+        res.json({message: 'JO header updated successfully'});
+      });
+    });
+  });

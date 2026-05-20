@@ -220,12 +220,12 @@ export default function SearchTransactionTable({
 
   const rows = Array.isArray(displayedDocs) ? displayedDocs : [];
 
-  const handleDocStatus = (status) => {
+  const handleDocStatus = (status, reject) => {
     if (status === 0) return 'Draft';
-    if (status === 3) return 'For Approval';
+    if (status === 3) return 'For Approval';  
     if (status === 2) return 'Partially Approved';
     if (status === 1) return 'Fully Approved';
-    // if (status === 0) return 'Rejected';
+    if (status === 4) return 'Rejected';
     return '';
   }
 
@@ -236,7 +236,7 @@ export default function SearchTransactionTable({
   };
 
   const isSelected = (id) => selected.indexOf(id) !== -1;
-
+  console.log(`Selected IDs: ${selected.join(', ')}`);
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
       const newSelected = rows.map(row => row.DocNo);
@@ -277,10 +277,21 @@ export default function SearchTransactionTable({
 
   const handleSelectItem = (row) => {
     const transNo = row.DocNo;
-    const path = `/assetMovement/pages/JOFormPage?docId=${transNo}`;
-    
-    setHeaderTitle(`Document Display`);
-    window.open(path, '_blank');
+
+    switch (row.DocType) {
+      case 'Job Order':
+        return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
+      case 'Transfer Order Form':
+        return window.open(`/assetMovement/pages/TOFormPage?docId=${transNo}`, '_blank');
+      case 'Disposal Form':
+        return window.open(`/assetMovement/pages/DisposalFormPage?docId=${transNo}`, '_blank');
+      case 'Asset Accountability Form':
+        return window.open(`/assetMovement/pages/AccountabilityFormPage?docId=${transNo}`, '_blank');
+      case 'Lost Asset Form':
+        return window.open(`/assetMovement/pages/LostAssetFormPage?docId=${transNo}`, '_blank');
+      default:
+        return;
+    }        
   }; 
 
   const handleClickCopytoNew = (transNo) => {
@@ -419,7 +430,7 @@ export default function SearchTransactionTable({
                     </TableCell>
                     <TableCell align="left">{row.DocType}</TableCell>
                     <TableCell align="center"><DateDisplay value={row.Date} format="short" /></TableCell>
-                    <TableCell align="left">{handleDocStatus(row.Status)}</TableCell>
+                    <TableCell align="left">{handleDocStatus(row.Status, row.Rejected)}</TableCell>
                     <TableCell align="left">{row.Remarks}</TableCell>
                     <TableCell align="left">{row.Department}</TableCell>
                     <TableCell align="left">{row.Location}</TableCell>

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useEffect, useRef, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -22,37 +23,36 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 // Hooks
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
+// Custom Utils
+import { tableFieldFormat } from '../custom Utils/customLayout';
+// import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
 
-const EnhancedEditableTable = ({
-  isEditing,
+const JOLineItems = ({
+  state,
+  rows = [],
+  dispatch,
+  docStatus,
+  baseHeader,
+  currentHeader,
+  currentJOItems,
+  updateDetailRow,
+  addDetailRow
 }) => {
-  const { fetchAssetByFacN0, assets, allAssets, fetchAssets, isLoading, createAsset, updateAsset } = useAssetMasterData();
-  
-  // Initialize with ONE empty row directly
-  const [rows, setRows] = useState([{
-    id: Date.now(),
-    assetNum: '',
-    assetName: '',
-    qty: '',
-    workDetails: '',
-    targetDate: '',
-    status: 'OPEN',
-    brand: '',
-    serialNo: '',
-    location: '',
-    warrantyStartDate: '',
-    warrantyEndDate: ''
-  }]);
-  
-  const [loadingRows, setLoadingRows] = useState({});
-  const [errors, setErrors] = useState({});
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const {
+    allAssets,
+    fetchAssets,
+    isLoading
+  } = useAssetMasterData();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   const [assetOptions, setAssetOptions] = useState([]);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const fetchAttempted = useRef(false);
 
-
-  // Fetch assets for autocomplete suggestions - only once
+  // LOAD ASSETS
   useEffect(() => {
     if (!fetchAttempted.current && !assetsLoaded) {
       fetchAttempted.current = true;
@@ -61,10 +61,10 @@ const EnhancedEditableTable = ({
           await fetchAssets();
           setAssetsLoaded(true);
         } catch (error) {
-          console.error('Failed to fetch assets:', error);
+          console.error(error);
           setSnackbar({
             open: true,
-            message: 'Failed to load asset list',
+            message: 'Failed to load assets',
             severity: 'error'
           });
         }
@@ -72,364 +72,218 @@ const EnhancedEditableTable = ({
       loadAssets();
     }
   }, [fetchAssets, assetsLoaded]);
-
-  // Prepare asset options for autocomplete (for FacName field)
-  useEffect(() => {
-    if (allAssets && allAssets.length > 0) {
-      setAssetOptions(allAssets);
-    }
-  }, [allAssets]);
-
-  // REMOVED the useEffect that automatically adds a new row
-
-  const addNewRow = () => {
-    const newRow = {
-      id: Date.now(),
-      assetNum: '',
-      assetName: '',
-      qty: '',
-      workDetails: '',
-      targetDate: '',
-      status: 'OPEN',
-      brand: '',
-      serialNo: '',
-      location: '',
-      warrantyStartDate: '',
-      warrantyEndDate: ''
-    };
-    setRows(prev => [...prev, newRow]);
+  // SET ASSET OPTIONS
+useEffect(() => {
+  if (allAssets?.length > 0) {
+    setAssetOptions(
+      allAssets.map(a => ({
+        ...a,
+        FacNO: String(a.FacNO ?? '').trim(),
+      }))
+    );
+  }
+}, [allAssets]);
+  
+    useEffect(() => {
+    console.log("CURRENT ROWS", currentJOItems);
+  }, [currentJOItems]);
+  
+  // ADD ROW
+  const handleAddRow = () => {
+    addDetailRow();
+    // updateDetailRow(rowId, field, value);
   };
 
-  // // Auto-populate from FacNO
-  // const handleAssetNumChange = async (rowId, value) => {
-  //   // Update the assetNum field
-  //   setRows(prev => prev.map(row => 
-  //     row.id === rowId ? { ...row, assetName: value } : row
-  //   ));
-
-  //   if (value && value.trim()) {
-  //     setLoadingRows(prev => ({ ...prev, [rowId]: true }));
-  //     setErrors(prev => ({ ...prev, [rowId]: null }));
-      
-  //     try {
-  //       const assetData = await fetchAssetByFacN0(value);
-        
-  //       if (assetData) {
-  //         // Auto-populate all fields including FacName
-  //         setRows(prev => prev.map(row => 
-  //           row.id === rowId ? {
-  //             ...row,
-  //             assetName: assetData.FacName || '',
-  //             qty: assetData.balance_unit || '',
-  //             brand: assetData.Brand || '',
-  //             serialNo: assetData.serialNo || '',
-  //             location: assetData.ItemLocation || '',
-  //             warrantyStartDate: assetData.StartDate || '',
-  //             warrantyEndDate: assetData.EndDate || ''
-  //           } : row
-  //         ));
-  //         setSnackbar({
-  //           open: true,
-  //           message: 'Asset loaded successfully',
-  //           severity: 'success'
-  //         });
-  //       } else {
-  //         setErrors(prev => ({ 
-  //           ...prev, 
-  //           [rowId]: 'Asset number not found' 
-  //         }));
-  //       }
-  //     } catch (error) {
-  //       setErrors(prev => ({ 
-  //         ...prev, 
-  //         [rowId]: error.message || 'Failed to fetch asset' 
-  //       }));
-  //     } finally {
-  //       setLoadingRows(prev => ({ ...prev, [rowId]: false }));
-  //     }
-  //   } else if (!value) {
-  //     // Clear all fields if FacNO is cleared
-  //     setRows(prev => prev.map(row => 
-  //       row.id === rowId ? {
-  //         ...row,
-  //         assetNum: '',
-  //         assetName: '',
-  //         brand: '',
-  //         serialNo: '',
-  //         location: '',
-  //         warrantyStartDate: '',
-  //         warrantyEndDate: ''
-  //       } : row
-  //     ));
-  //   }
-  // };
-
-  // Auto-populate from FacName (when user selects from dropdown)
-  const handleAssetNameSelect = (rowId, selectedAsset) => {
-    if (selectedAsset) {
-      // Auto-populate all fields including FacNO
-      setRows(prev => prev.map(row => 
-        row.id === rowId ? {
-          ...row,
-          assetNum: selectedAsset.FacNO || '',
-          assetName: selectedAsset.FacName || '',
-          qty: selectedAsset.balance_unit || '',
-          brand: selectedAsset.Brand || '',
-          serialNo: selectedAsset.serialNo || '',
-          location: selectedAsset.ItemLocation || '',
-          warrantyStartDate: selectedAsset.StartDate || '',
-          warrantyEndDate: selectedAsset.EndDate || ''
-        } : row
-      ));
-      setErrors(prev => ({ ...prev, [rowId]: null }));
-      setSnackbar({
-        open: true,
-        message: 'Asset loaded successfully',
-        severity: 'success'
-      });
-    }
-  };
-
-  // Handle manual typing in FacName field
-  const handleAssetNameInput = (rowId, value) => {
-    setRows(prev => prev.map(row => 
-      row.id === rowId ? { ...row, assetNum: value } : row
-    ));
-  };
-
-  const handleRowFieldChange = (rowId, field, value) => {
-    setRows(prev => prev.map(row => 
-      row.id === rowId ? { ...row, [field]: value } : row
-    ));
-    
-    // Auto-adjust row height for workDetails
-    if (field === 'workDetails') {
-      adjustRowHeight(rowId);
-    }
-  };
-
-  const adjustRowHeight = (rowId) => {
-    const textarea = document.getElementById(`workDetails-${rowId}`);
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  };
-
+  // REMOVE ROW
   const handleDeleteRow = (rowId) => {
-    // Prevent deleting the last row
-    if (rows.length === 1) {
+    if (currentJOItems.length === 1) {
       setSnackbar({
         open: true,
-        message: 'Cannot delete the last row. At least one row is required.',
+        message: 'At least one row is required',
         severity: 'warning'
       });
       return;
     }
-    
-    setRows(prev => prev.filter(row => row.id !== rowId));
-    setLoadingRows(prev => {
-      const newState = { ...prev };
-      delete newState[rowId];
-      return newState;
-    });
-    setErrors(prev => {
-      const newState = { ...prev };
-      delete newState[rowId];
-      return newState;
+    dispatch({
+      type: 'REMOVE_DETAIL_ROW',
+      id: rowId
     });
   };
 
-  const handleSaveRow = async (row) => {
-    if (!row.assetNum || !row.assetNum.trim()) {
-      setErrors(prev => ({ 
-        ...prev, 
-        [row.id]: 'FacNO is required' 
-      }));
-      return;
-    }
-
-    setLoadingRows(prev => ({ ...prev, [row.id]: true }));
-    
-    try {
-      const payload = {
-        FacNO: row.assetNum,
-        FacName: row.assetName,
-        balance_unit: row.qty,
-        workDet: row.workDetails,
-        TargetDate: row.targetDate,
-        status: row.status,
-        brand: row.brand,
-        serialNo: row.serialNo,
-        ItemLocation: row.location,
-        StartDate: row.warrantyStartDate,
-        EndDate: row.warrantyEndDate
-      };
-
-      const isNew = !row.saved;
-      
-      if (isNew) {
-        await createAsset(payload);
-        setSnackbar({
-          open: true,
-          message: 'Item created successfully',
-          severity: 'success'
-        });
-      } else {
-        await updateAsset(row.assetNum, payload);
-        setSnackbar({
-          open: true,
-          message: 'Item updated successfully',
-          severity: 'success'
-        });
-      }
-
-      setRows(prev => prev.map(r => 
-        r.id === row.id ? { ...r, saved: true } : r
-      ));
-      setErrors(prev => ({ ...prev, [row.id]: null }));
-      
-    } catch (error) {
-      setErrors(prev => ({ 
-        ...prev, 
-        [row.id]: error.message || 'Failed to save item' 
-      }));
-      setSnackbar({
-        open: true,
-        message: 'Failed to save item',
-        severity: 'error'
-      });
-    } finally {
-      setLoadingRows(prev => ({ ...prev, [row.id]: false }));
-    }
+  // UPDATE FIELD
+  const handleRowFieldChange = (
+    rowId,
+    field,
+    value
+  ) => {
+    updateDetailRow(rowId, field, value);
   };
-
-  const handleSaveAll = async () => {
-    for (const row of rows) {
-      if (row.assetNum && row.assetNum.trim() && !row.saved) {
-        await handleSaveRow(row);
+  // ASSET SELECT
+  const handleAssetSelect = (
+    rowId,
+    selectedAsset
+  ) => {
+    if (!selectedAsset) return;
+    const updates = {
+      FAC_NO: selectedAsset.FacNO || '',
+      FAC_name: selectedAsset.FacName || '',
+      qty: selectedAsset.balance_unit || '',
+      UOM: selectedAsset.Unit || '',
+      brand: selectedAsset.Brand || '',
+      serialNo: selectedAsset.serialNo || '',
+      ItemLocation: selectedAsset.ItemLocation || '',
+    };
+      Object.entries(updates).forEach(([field, value]) => {
+        updateDetailRow(
+          rowId,
+          field,
+          value
+        );
+        // startEdit(rowId)
       }
-    }
+    );
+    setSnackbar({
+      open: true,
+      message: 'Asset selected successfully',
+      severity: 'success'
+    });
   };
-
-  // Filter options based on input - search by both Asset Name and Asset Number
+  
+  // FILTER OPTIONS
   const filterOptions = (options, { inputValue }) => {
-    if (!inputValue) return options.slice(0, 20);
-    
-    const searchTerm = inputValue.toLowerCase();
-    return options.filter(option => 
-      option.FacName?.toLowerCase().includes(searchTerm) ||
-      option.FacNO?.toLowerCase().includes(searchTerm)
+    if (!inputValue) {
+      return options.slice(0, 20);
+    }
+    const search = inputValue.toLowerCase();
+    return options.filter(option =>
+      option.FacName?.toLowerCase().includes(search) ||
+      option.FacNO?.toLowerCase().includes(search)
     ).slice(0, 20);
   };
 
-  // Custom popper for autocomplete dropdown
-  const CustomPopper = (props) => {
-    return (
-      <Popper {...props} placement="bottom-start" style={{ width: '100%', zIndex: 1300 }} />
-    );
-  };
+
+  
+  const canEditDocument =
+    state.isCreating ||
+    (state.isEditing && baseHeader?.xpost === 0);
+
+  const isReadOnly = !canEditDocument;
+
+  console.log(`currentHeader.status: ${currentHeader}`)
+    // console.log(`child:   baseHeader: ${baseHeader.xpost}`)
 
   return (
-    <Box sx={{ p: 2 }}>      
+    <Box sx={{ p: 2 }}>
       {!assetsLoaded && isLoading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            my: 2
+          }}
+        >
           <CircularProgress />
-          <Typography sx={{ ml: 2 }}>Loading assets...</Typography>
+          <Typography sx={{ ml: 2 }}>
+            Loading assets...
+          </Typography>
         </Box>
       )}
-      
-      {/* Table Container with horizontal scroll */}
-      <TableContainer 
-        component={Paper} 
-        sx={{ 
-          maxHeight: '70vh',
-          overflowX: 'auto',  // Enable horizontal scrolling
-          overflowY: 'auto',   // Enable vertical scrolling
+      <TableContainer
+        component={Paper}
+        sx={{
+          maxHeight: '72vh',
+          overflowX: 'auto',
+          overflowY: 'auto',
           '& .MuiTable-root': {
-            minWidth: 1600,    // Force horizontal scroll
+            minWidth: 1800
           }
         }}
       >
-        <Table 
-          stickyHeader 
-          sx={{ 
+        <Table
+          stickyHeader
+          sx={{
             minWidth: 1600,
-            borderCollapse: 'separate',
             '& .MuiTableCell-root': {
-              padding: '6px 8px',  // Denser padding
-              fontSize: '0.875rem', // Smaller font size
+              padding: '4px 8px',
+              fontSize: '0.875rem'
             },
             '& .MuiTableCell-head': {
               backgroundColor: '#f5f5f5',
-              fontWeight: 'bold',
-              padding: '8px 8px',  // Denser header
+              fontWeight: 'bold'
             }
           }}
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={{ minWidth: '60px' }}>Action</TableCell>
-              <TableCell sx={{ minWidth: '16rem' }}>Asset No.</TableCell>
-              <TableCell sx={{ minWidth: '21rem' }}>Asset Name</TableCell>
-              <TableCell sx={{ minWidth: '80px' }}>Qty</TableCell>
-              <TableCell sx={{ minWidth: '300px' }}>Work Details</TableCell>
-              <TableCell sx={{ minWidth: '130px' }}>Target Date</TableCell>
-              <TableCell sx={{ minWidth: '80px' }}>Status</TableCell>
-              <TableCell sx={{ minWidth: '150px' }}>Brand</TableCell>
-              <TableCell sx={{ minWidth: '150px' }}>Serial No</TableCell>
-              <TableCell sx={{ minWidth: '150px' }}>Location</TableCell>
-              <TableCell sx={{ minWidth: '130px' }}>Warranty Start</TableCell>
-              <TableCell sx={{ minWidth: '130px' }}>Warranty End</TableCell>
+              <TableCell>Action</TableCell>
+              <TableCell>Asset No.</TableCell>
+              <TableCell>Asset Name</TableCell>
+              <TableCell>Qty</TableCell>
+              <TableCell>UOM</TableCell>
+              <TableCell>Work Details</TableCell>
+              <TableCell>Target Date</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Brand</TableCell>
+              <TableCell>Serial No</TableCell>
+              <TableCell>Location</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
-              <TableRow 
-                key={row.id} 
+            {currentJOItems.map((row) => (
+              
+              <TableRow
+                key={row.id}
                 hover
-                sx={{ '&:hover': { backgroundColor: '#fafafa' } }}
               >
+                {/* DELETE */}
                 <TableCell>
                   <IconButton
-                    onClick={() => handleDeleteRow(row.id)}
                     color="error"
                     size="small"
-                    disabled={!isEditing}
-                    sx={{ padding: '4px' }}
+                    disabled={isReadOnly}
+                    onClick={() =>
+                      handleDeleteRow(row.id)
+                    }
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </TableCell>
-                              
-                {/* FacName Field */}
-                <TableCell>
+                {/* ASSET NO */}
+                <TableCell sx={{ minWidth: 300 }}>
                   <Autocomplete
                     options={assetOptions}
                     loading={!assetsLoaded && isLoading}
-                    value={null}
-                    inputValue={row.assetNum || ''}
-                    onInputChange={(event, newInputValue) => {
-                      handleAssetNameInput(row.id, newInputValue);
-                    }}
-                    onChange={(event, newValue) => {
-                      handleAssetNameSelect(row.id, newValue);
-                    }}
-                    getOptionLabel={(option) => {
-                      if (typeof option === 'string') return option;
-                      return `${option.FacName} (${option.FacNO})`;
-                    }}
-                    isOptionEqualToValue={(option, value) => {
-                      return option?.FacNO === value?.FacNO;
-                    }}
                     filterOptions={filterOptions}
+                    value={
+                      // FIX: Better null check and value matching
+                      row.FAC_NO && assetOptions.length > 0
+                        ? assetOptions.find(o => String(o.FacNO) === String(row.FAC_NO)) || null
+                        : null
+                    }
+                    onChange={(event, newValue) => {
+                      handleAssetSelect(row.id, newValue);
+                    }}
+                    getOptionLabel={(option) =>
+                      typeof option === 'string' ? option : option?.FacNO || ''
+                    }
+                    isOptionEqualToValue={(option, value) =>
+                      option.FacNO === value.FacNO
+                    }
                     renderOption={(props, option) => (
                       <li {...props}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                          <Typography variant="body2" component="span">
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }}
+                        >
+                          <Typography variant="body2">
                             <strong>{option.FacName}</strong>
                           </Typography>
-                          <Typography variant="caption" color="textSecondary" component="span">
+                          <Typography
+                            variant="caption"
+                            color="textSecondary"
+                          >
                             {option.FacNO}
                           </Typography>
                         </Box>
@@ -439,237 +293,231 @@ const EnhancedEditableTable = ({
                       <TextField
                         {...params}
                         size="small"
-                        placeholder="Type asset name or number..."
-                        variant="outlined"
-                        sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', backgroundColor: 'background.paper', backgroundColor: isEditing ? 'white' : '#f3f4f6',   } }}
+                        placeholder="Search Asset..."
+                        sx={{
+                          '& .MuiInputBase-root':
+                            tableFieldFormat(canEditDocument),
+                          // backgroundColor: state.isEditing && state.isCreating ? 'white' : 'grey.100',
+                          // bgColor: state.isEditing && state.isCreating ? 'white' : 'grey.100'
+
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
                             <>
-                              {(!assetsLoaded && isLoading) ? <CircularProgress size={16} /> : null}
+                              {!assetsLoaded && isLoading && (
+                                <CircularProgress size={16} />
+                              )}
                               {params.InputProps.endAdornment}
                             </>
-                          ),
+                          )
                         }}
                       />
                     )}
-                    disabled={!isEditing}
-                    fullWidth
-                    selectOnFocus
-                    clearOnBlur={false}
-                    handleHomeEndKeys
+                    disabled={isReadOnly}
                   />
                 </TableCell>
-
-                {/* FacName Field */}
+                {/* ASSET NAME */}
                 <TableCell>
                   <TextField
                     size="small"
-                    value={row.assetName}
-                    // onChange={(e) => handleAssetNumChange(row.id, e.target.value)}
-                    // placeholder="Enter asset number.."
-                    // disabled={loadingRows[row.id]}
+                    value={row.FAC_name || ''}
                     disabled
-                    error={!!errors[row.id]}
-                    helperText={errors[row.id]}
                     fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: isEditing ? 'white' : '#f3f4f6',   } }}
+                    sx={{
+                      '& .MuiInputBase-root': tableFieldFormat(canEditDocument),
+                      width: 300
+                    }}
                   />
-                  {/* {loadingRows[row.id] && <CircularProgress size={16} sx={{ mt: 0.5 }} />} */}
                 </TableCell>
-                
-                {/* Qty Field */}
+                {/* QTY */}
                 <TableCell>
                   <TextField
                     size="small"
-                    value={row.qty || ''}
-                    onChange={(e) => handleRowFieldChange(row.id, 'qty', e.target.value)}
-                    placeholder="Qty"
-                    disabled={!isEditing}
                     type="number"
+                    value={row.qty || ''}
+                    onChange={(e) =>
+                      handleRowFieldChange(
+                        row.id,
+                        'qty',
+                        e.target.value
+                      )
+                    }
+                    disabled={isReadOnly}
                     fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: isEditing ? 'white' : '#f3f4f6', } }}
+                    sx={{
+                      '& .MuiInputBase-root': tableFieldFormat(canEditDocument),
+                      width: 50
+                    }}
                   />
                 </TableCell>
-                
-                {/* Work Details - Resizable Textarea */}
+                {/* UOM */}
                 <TableCell>
+                  <TextField
+                    size="small"
+                    value={row.UOM || ''}
+                    disabled
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root':
+                        tableFieldFormat(state.isEditing), width: 60
+                    }}
+                  />
+                </TableCell>
+                {/* WORK DETAILS */}
+                <TableCell sx={{ minWidth: 400 }}>
                   <textarea
-                    id={`workDetails-${row.id}`}
-                    value={row.workDetails || ''}
-                    onChange={(e) => handleRowFieldChange(row.id, 'workDetails', e.target.value)}
-                    // className={`${!isEditing ? 'text-gray-400 border-gray-300' : 'text-black bg-white'}`}
-                    placeholder="Enter work details..."
-                    disabled={!isEditing}
-                    style={{
-                      width: '100%',
-                      minHeight: '60px',
-                      padding: '8px',
-                      fontSize: '0.875rem',
-                      fontFamily: 'inherit',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      resize: 'vertical',  // Allow vertical resizing
-                      boxSizing: 'border-box',
-                      backgroundColor: isEditing ? 'white' : '#f3f4f6', 
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#1976d2';
-                      e.target.style.outline = 'none';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#ccc';
-                    }}
+                    value={row.workDet || ''}
+                    onChange={(e) =>
+                      handleRowFieldChange(
+                        row.id,
+                        'workDet',
+                        e.target.value
+                      )
+                    }
+                    disabled={isReadOnly}
+                    className={`
+                      w-full
+                      border
+                      rounded-md
+                      p-2
+                      border-gray-300
+                      ${
+                        isReadOnly
+                          ? 'bg-gray-100 text-gray-400'
+                          : 'bg-white text-black'
+                      }
+                    `}
                   />
                 </TableCell>
-                
-                {/* Target Date */}
+                {/* TARGET DATE */}
                 <TableCell>
                   <TextField
                     size="small"
-                    value={row.targetDate}
-                    onChange={(e) => handleRowFieldChange(row.id, 'targetDate', e.target.value)}
-                    disabled={!isEditing}
                     type="date"
+                    value={
+                    row.TargetDate
+                      ? (() => {
+                          const d = new Date(row.TargetDate)
+                          return `${d.getFullYear()}-${String(
+                            d.getMonth() + 1
+                          ).padStart(2, '0')}-${String(
+                            d.getDate()
+                          ).padStart(2, '0')}`
+                        })()
+                      : ''
+                    }
+                    onChange={(e) => handleRowFieldChange( row.id, 'TargetDate', e.target.value)}
+                    disabled={isReadOnly}
                     fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: 'background.paper', backgroundColor: isEditing ? 'white' : '#f3f4f6',   } }}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </TableCell>
-                
-                {/* Status */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.status}
-                    disabled
-                    fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: isEditing ? 'white' : '#f3f4f6',  } }}
-                  />
-                </TableCell>
-                
-                {/* brand - Read Only */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.brand}
-                    disabled
-                    fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: '#f3f4f6',  } }}
-                  />
-                </TableCell>
-                
-                {/* Serial No - Read Only */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.serialNo}
-                    disabled
-                    fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: '#f3f4f6',  } }}
-                  />
-                </TableCell>
-                
-                {/* Location - Read Only */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.location}
-                    disabled
-                    fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: '#f3f4f6',  } }}
-                  />
-                </TableCell>
-                
-                {/* Warranty Start Date - Read Only */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.warrantyStartDate}
-                    disabled
-                    fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor:  '#f3f4f6',  } }}
-                  />
-                </TableCell>
-                
-                {/* Warranty End Date - Read Only */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.warrantyEndDate}
-                    disabled
-                    fullWidth
-                    variant="outlined"
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem', padding: 1, backgroundColor: '#f3f4f6',  } }}
-                  />
-                </TableCell>
-                
-                {/* Save Button */}
-                {/* <TableCell>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => handleSaveRow(row)}
-                    disabled={loadingRows[row.id] || !row.assetNum}
-                    fullWidth
-                    sx={{ 
-                      padding: '4px 8px',
-                      fontSize: '0.75rem',
-                      minWidth: '60px'
+                    InputLabelProps={{
+                      shrink: true
                     }}
-                  >
-                    {loadingRows[row.id] ? <CircularProgress size={16} /> : 'Save'}
-                  </Button>
-                </TableCell> */}
+                    sx={{
+                      '& .MuiInputBase-root':
+                        tableFieldFormat(canEditDocument)
+                    }}
+                  />
+                </TableCell>
+                {/* STATUS */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    value={row.Status || 'OPEN'}
+                    disabled
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root':
+                        tableFieldFormat(state.isEditing), width: 80
+                    }}
+                  />
+                </TableCell>
+                {/* BRAND */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    value={row.brand || ''}
+                    disabled
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root':
+                        tableFieldFormat(state.isEditing), width: 150
+                    }}
+                  />
+                </TableCell>
+                {/* SERIAL */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    value={row.serialNo || ''}
+                    disabled
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root':
+                        tableFieldFormat(state.isEditing), width: 150
+                    }}
+                  />
+                </TableCell>
+                {/* LOCATION */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    value={row.ItemLocation || ''}
+                    disabled
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root':
+                        tableFieldFormat(state.isEditing), width: 200
+                    }}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
-      
-      {/* Buttons Container */}
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+
+      {/* BUTTONS */}
+      <Box
+        sx={{
+          mt: 2,
+          display: 'flex',
+          justifyContent: 'space-between'
+        }}
+      >
         <Button
-          variant="contained"
+          variant="body2"
           startIcon={<AddIcon />}
-          onClick={addNewRow}
-          size="small"
-          disabled={!isEditing}
+          onClick={handleAddRow}
+          disabled={isReadOnly}
         >
           Add Row
         </Button>
-        
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleSaveAll}
-          disabled={!isEditing}
-          size="small"
-        >
-          Save All
-        </Button>
       </Box>
-
-      {/* Snackbar for notifications */}
+      {/* SNACKBAR */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        autoHideDuration={3000}
+        onClose={() =>
+          setSnackbar(prev => ({
+            ...prev,
+            open: false
+          }))
+        }
       >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
+        <Alert
+          severity={snackbar.severity}
+          onClose={() =>
+            setSnackbar(prev => ({
+              ...prev,
+              open: false
+            }))
+          }
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
     </Box>
   );
 };
-
-export default EnhancedEditableTable;
+export default JOLineItems;

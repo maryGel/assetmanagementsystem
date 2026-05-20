@@ -46,9 +46,16 @@ function a11yProps(index) {
   };
 }
 
-export default function AssetMoveTabs({
-  isEditing,
-  setIsEditing
+export default function DocumentTabs({
+    isEditing,
+    rows,
+    dispatch,
+    baseHeader,
+    currentHeader,
+    currentJOItems,
+    updateDetailRow,
+    addDetailRow,
+    state
 }){
 
   const theme = useTheme();
@@ -75,8 +82,15 @@ export default function AssetMoveTabs({
       </AppBar>
       <TabPanel value={value} index={0} dir={theme.direction} sx={{ width: '100%' }}>
         <JOLineItems 
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
+          state={state}
+          isEditing = {isEditing}
+          rows={rows}
+          dispatch={dispatch}
+          baseHeader={baseHeader}
+          currentHeader={currentHeader}
+          currentJOItems={currentJOItems}
+          updateDetailRow={updateDetailRow}
+          addDetailRow={addDetailRow}
         />
       </TabPanel>
       <TabPanel value={value} index={1} dir={theme.direction}>

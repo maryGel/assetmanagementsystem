@@ -16,19 +16,17 @@ export const useJO_d = () => {
           const data = response.data;
           
           setJoDetails(data);
-
-
         } catch (error) {
           console.error('Error details:', {
-                message: error.message,
-                response: error.response,
-                config: error.config
+              message: error.message,
+              response: error.response,
+              config: error.config
             });
             
             setError(
-                error.response?.data?.error || 
-                error.message || 
-                'Failed to fetch JO headers'
+              error.response?.data?.error || 
+              error.message || 
+              'Failed to fetch JO headers'
             );
         } finally {
           setIsLoading(false);
