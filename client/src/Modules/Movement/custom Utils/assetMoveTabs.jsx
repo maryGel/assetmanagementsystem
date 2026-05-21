@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, {useState, useEffect} from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
@@ -11,6 +11,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 //import display tabs fields
 import JOLineItems from '../jobOrder/joLineItems';
+import DisplayApprovalHistory from '../jobOrder/displayApprovalHistory';
+
 
 
 function TabPanel(props) {
@@ -47,10 +49,12 @@ function a11yProps(index) {
 }
 
 export default function DocumentTabs({
+    useProps,
+    isCreating,
     isEditing,
     rows,
     dispatch,
-    baseHeader,
+    isReadOnly,
     currentHeader,
     currentJOItems,
     updateDetailRow,
@@ -60,6 +64,16 @@ export default function DocumentTabs({
 
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
+  const [viewApproval, setViewApproval] = useState(false)
+
+  useEffect(() => {
+    const hideViewapproval = currentHeader?.xpost === 0 || currentHeader?.xpost === 3;
+    if(hideViewapproval) {
+      setViewApproval(true);
+    }
+  }, [])
+
+  console.log(`isCreating: ${isCreating}`)
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -77,8 +91,10 @@ export default function DocumentTabs({
           aria-label="full width tabs example"
         >
           <Tab label="Item List" {...a11yProps(0)} sx={{ letterSpacing: '0.10em' }}/>
-          <Tab label="Approval Logs" {...a11yProps(1)} sx={{ letterSpacing: '0.10em' }}/>
-        </Tabs>
+          {(!viewApproval && !isCreating) &&
+            <Tab label="Approval Logs" {...a11yProps(1)} sx={{ letterSpacing: '0.10em' }}/>
+          }
+        </Tabs> 
       </AppBar>
       <TabPanel value={value} index={0} dir={theme.direction} sx={{ width: '100%' }}>
         <JOLineItems 
@@ -86,7 +102,7 @@ export default function DocumentTabs({
           isEditing = {isEditing}
           rows={rows}
           dispatch={dispatch}
-          baseHeader={baseHeader}
+          isReadOnly={isReadOnly}
           currentHeader={currentHeader}
           currentJOItems={currentJOItems}
           updateDetailRow={updateDetailRow}
@@ -94,7 +110,19 @@ export default function DocumentTabs({
         />
       </TabPanel>
       <TabPanel value={value} index={1} dir={theme.direction}>
-
+        {(!viewApproval && !isCreating) && (
+          <DisplayApprovalHistory
+            state={state}
+            isEditing = {isEditing}
+            rows={rows}
+            dispatch={dispatch}
+            isReadOnly={isReadOnly}
+            currentHeader={currentHeader}
+            currentJOItems={currentJOItems}
+            updateDetailRow={updateDetailRow}
+            addDetailRow={addDetailRow}
+          />
+        )}
       </TabPanel>
     </Box>
   );

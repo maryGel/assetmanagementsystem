@@ -71,17 +71,26 @@ export default function JOFormPage(useProps) {
     }
   }
 
+
+
   const baseHeader = state.selectedJO; // ALWAYS source of truth for status
-    // console.log(`parent: baseHeader: ${baseHeader.xpost}`)
+  // const hidePostBtn =  baseHeader.find(jo => jo.xpost === 4  || (jo.TRNO === copyDocNo && jo.xpost === 0) || jo.xpost === 1)
 
   const currentHeader = state.isCreating || state.isEditing
           ? state.createJOHeader
           : state.selectedJO;
-  
+
+  console.log(`currentHeader.xpost : ${currentHeader?.xpost}`)
 
   const currentJOItems = state.isCreating || state.isEditing
           ? state.createJODetails
           : state.joDetails;
+
+  const canEditDocument =
+    state.isCreating ||
+    (state.isEditing && baseHeader?.xpost === 0);
+
+  const isReadOnly = !canEditDocument;
   
   const handleHeaderChange = (field, value) => {
     updateHeaderField(field,value)
@@ -104,6 +113,7 @@ export default function JOFormPage(useProps) {
     );
   };
 
+    console.log(`baseHeader ${baseHeader}`)
   return (
     <>
       {/* ... B u t t o n s ... */}     
@@ -116,6 +126,7 @@ export default function JOFormPage(useProps) {
             variant='saveBtn'
             iconType='save'
             onClick={handleSave}
+            title='Save changes made in this Job Order'
           >
             Save
           </CustomBtn>
@@ -127,6 +138,7 @@ export default function JOFormPage(useProps) {
               variant='editBtn'
               iconType='edit'
               onClick={handleEdit}
+              title='Edit this Job Order'
             >
               Edit
             </CustomBtn>       
@@ -136,6 +148,7 @@ export default function JOFormPage(useProps) {
             variant='createBtn'
             iconType='add'
             onClick={handleCreate}
+            title='Create new Job Order'
           >
             Create
           </CustomBtn>
@@ -146,17 +159,20 @@ export default function JOFormPage(useProps) {
             variant='cancelBtn'
             iconType='cancel'
             onClick={handleCancel}
+            title='Cancel & Discard Changes'
           >
             Cancel
           </CustomBtn>
         )}
-          <CustomBtn
+          {state.isCreating || state.isEditing || !copyDocNo || baseHeader?.xpost === 4 || baseHeader?.xpost !== 1 &&
+            <CustomBtn
             variant='postBtn'
             iconType='post'
-            title='Post this document'
-          >           
-            Post
-          </CustomBtn>
+            title='Post/Approve this document'
+            >           
+              {baseHeader?.xpost === 0 ? 'Post' : 'Approve'}
+            </CustomBtn>
+          }
           <CustomBtn
             variant='printBtn'
             iconType='print'
@@ -168,7 +184,10 @@ export default function JOFormPage(useProps) {
           
       <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
         <Box className='flex justify-between w-full h-full gap-1'>
-          <h1 className='text-sm font-bold text-gray-800 '>Display Job Order</h1>
+          <h1 className='text-sm font-bold text-gray-800 '>{
+            state.isCreating ? 'Creating Job Order' : state.isEditing ? 'Editing Job Order' : 'Display Job Order'
+          }
+          </h1>
           <div className='flex gap-2'>
             <text className='text-xs text-gray-500'>Last JO created :</text>
             <text className='text-xs text-gray-500'>NNN-JO-0000014</text>
@@ -184,13 +203,11 @@ export default function JOFormPage(useProps) {
             <label className='text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
             
             <Box className='mt-2 '>
-
-
               <div className='flex items-center justify-start w-full gap-10 mt-4'>
                 <label className='text-base font-normal text-gray-500 w-28 '>Department :</label>
                 <Autocomplete 
                   variant='body2'
-                  disabled={!state.isEditing && !state.isCreating}
+                  disabled={isReadOnly}
                   className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
                   size = 'small'
                   options= {departments} 
@@ -204,7 +221,7 @@ export default function JOFormPage(useProps) {
                 />
                 <label className='text-base font-normal text-gray-500 w-38 '>Maintenance Service :</label>
                 <Autocomplete 
-                  disabled={!state.isEditing && !state.isCreating}
+                  disabled={isReadOnly}
                   className={`rounded-sm  ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
                   size = 'small'
                   options= {sections} 
@@ -247,10 +264,11 @@ export default function JOFormPage(useProps) {
         <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
           <DocumentTabs
             state={state}
+            isCreating={state.isCreating}
             isEditing={state.isEditing}
             setIsEditing={state.setIsEditing}
             docStatus={docStatus}
-            baseHeader={baseHeader}
+            isReadOnly={isReadOnly}
             currentHeader={currentHeader}
             currentJOItems={currentJOItems}
             updateDetailRow={updateDetailRow}

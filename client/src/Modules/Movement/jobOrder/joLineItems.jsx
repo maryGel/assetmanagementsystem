@@ -32,7 +32,7 @@ const JOLineItems = ({
   rows = [],
   dispatch,
   docStatus,
-  baseHeader,
+  isReadOnly,
   currentHeader,
   currentJOItems,
   updateDetailRow,
@@ -142,11 +142,11 @@ useEffect(() => {
         // startEdit(rowId)
       }
     );
-    setSnackbar({
-      open: true,
-      message: 'Asset selected successfully',
-      severity: 'success'
-    });
+    // setSnackbar({
+    //   open: true,
+    //   message: 'Asset selected successfully',
+    //   severity: 'success'
+    // });
   };
   
   // FILTER OPTIONS
@@ -163,14 +163,13 @@ useEffect(() => {
 
 
   
-  const canEditDocument =
-    state.isCreating ||
-    (state.isEditing && baseHeader?.xpost === 0);
+  // const !isReadOnly =
+  //   state.isCreating ||
+  //   (state.isEditing && baseHeader?.xpost === 0);
 
-  const isReadOnly = !canEditDocument;
+  // const isReadOnly = !!isReadOnly;
 
-  console.log(`currentHeader.status: ${currentHeader}`)
-    // console.log(`child:   baseHeader: ${baseHeader.xpost}`)
+
 
   return (
     <Box sx={{ p: 2 }}>
@@ -256,9 +255,7 @@ useEffect(() => {
                     filterOptions={filterOptions}
                     value={
                       // FIX: Better null check and value matching
-                      row.FAC_NO && assetOptions.length > 0
-                        ? assetOptions.find(o => String(o.FacNO) === String(row.FAC_NO)) || null
-                        : null
+                      row.FAC_NO || ''
                     }
                     onChange={(event, newValue) => {
                       handleAssetSelect(row.id, newValue);
@@ -296,7 +293,7 @@ useEffect(() => {
                         placeholder="Search Asset..."
                         sx={{
                           '& .MuiInputBase-root':
-                            tableFieldFormat(canEditDocument),
+                            tableFieldFormat(!isReadOnly),
                           // backgroundColor: state.isEditing && state.isCreating ? 'white' : 'grey.100',
                           // bgColor: state.isEditing && state.isCreating ? 'white' : 'grey.100'
 
@@ -325,7 +322,7 @@ useEffect(() => {
                     disabled
                     fullWidth
                     sx={{
-                      '& .MuiInputBase-root': tableFieldFormat(canEditDocument),
+                      '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
                       width: 300
                     }}
                   />
@@ -346,7 +343,7 @@ useEffect(() => {
                     disabled={isReadOnly}
                     fullWidth
                     sx={{
-                      '& .MuiInputBase-root': tableFieldFormat(canEditDocument),
+                      '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
                       width: 50
                     }}
                   />
@@ -415,7 +412,7 @@ useEffect(() => {
                     }}
                     sx={{
                       '& .MuiInputBase-root':
-                        tableFieldFormat(canEditDocument)
+                        tableFieldFormat(!isReadOnly)
                     }}
                   />
                 </TableCell>
