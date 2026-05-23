@@ -65,71 +65,95 @@
       xDate,
       xpost,
       Deparment_name,
-      Deaprtment_Code,
+      Department_Code,
       requested_by,
     } = req.body;
+
+    // Format date properly
+    const formatDate = (dateStr) => {
+      if (!dateStr) return null;
+      // If already in YYYY-MM-DD format
+      if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return dateStr;
+      }
+      // Convert from other formats
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString().split('T')[0];
+    };
 
     db.getConnection((err, connection) => {
       if(err) return res.status(500).json({error: 'Database connection error'});
       
-      const sql = 'INSERT INTO jo_h (JO_No, Remarks, Sector_name, Sector_Code, xDate, xpost, Deparment_name, Deaprtment_Code, requested_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+      const sql = `INSERT INTO jo_h (
+        JO_No, Remarks, Sector_name, Sector_Code, 
+        xDate, xpost, Deparment_name, Department_Code, requested_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      
       const values = [
         JO_No,
         Remarks || '',
         Sector_name || '',
         Sector_Code || '',
-        xDate ? new Date(xDate) : null,
-        xpost || 0,
+        formatDate(xDate),  // Use formatted date
+        xpost !== undefined ? xpost : 0,
         Deparment_name || '',
-        Deaprtment_Code || '',
+        Department_Code || '',
         requested_by || '',
-      ]
+      ];
+
+      console.log('Inserting header:', { sql, values });
 
       connection.query(sql, values, (error, result) => {
         connection.release();
-        if(error) return res.status(500).json({error: 'Database query failed'});
+        if(error) {
+          console.error('Header insert error:', error);
+          return res.status(500).json({error: 'Database query failed', details: error.sqlMessage});
+        }
         res.status(201).json({
           message: 'JO header created successfully',
-          id: result.insertId,});
+          id: result.insertId,
+          JO_No: JO_No
+        });
       });
     });
   });
 
   // Update JO header
-  router.put('/:JO_No', (req, res) => {
-    const { JO_No } = req.params;
-    const {
-      Remarks,
-      Sector_name,
-      Sector_Code,
-      xDate,
-      xpost,
-      Deparment_name,
-      Deaprtment_Code,
-      requested_by,
-    } = req.body;
 
+  router.put('/:joNo', (req, res) => {
+    const joNo = req.params.joNo;
+    const updateData = req.body;
+    
+    // Remove any fields that shouldn't be updated
+    const { id, ...cleanData } = updateData;
+    
+    // Build dynamic UPDATE query
+    const fields = Object.keys(cleanData).map(field => `${field} = ?`).join(', ');
+    const values = [...Object.values(cleanData), joNo];
+    
+    const sql = `UPDATE jo_h SET ${fields} WHERE JO_No = ?`;
+    
     db.getConnection((err, connection) => {
-      if(err) return res.status(500).json({error: 'Database connection error'});
-
-      const sql = 'UPDATE jo_h SET Remarks = ?, Sector_name = ?, Sector_Code = ?, xDate = ?, xpost = ?, Deparment_name = ?, Deaprtment_Code = ?, requested_by = ? WHERE JO_No = ?';
-      const values = [
-        Remarks,
-        Sector_name || '',
-        Sector_Code || '',
-        xDate ? new Date(xDate) : null,
-        xpost || 0,
-        Deparment_name || '',
-        Deaprtment_Code || '',
-        requested_by || '',
-        JO_No,
-      ];
-
-      connection.query(sql, values, (error, result) => {
+      if (err) return res.status(500).json({ error: 'DB connection error' });
+      
+      connection.query(sql, values, (err, result) => {
         connection.release();
-        if(error) return res.status(500).json({error: 'Database query failed'});
-        if(result.affectedRows === 0) return res.status(404).json({error: 'JO header not found'});
-        res.json({message: 'JO header updated successfully'});
+        
+        if (err) {
+          console.error('Error updating JO header:', err);
+          return res.status(500).json({ error: 'Error updating JO header', details: err.message });
+        }
+        
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'JO not found' });
+        }
+        
+        res.json({ 
+          success: true, 
+          message: 'JO header updated successfully',
+          affectedRows: result.affectedRows
+        });
       });
     });
   });

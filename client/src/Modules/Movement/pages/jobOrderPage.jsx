@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';  
 
 // MUI Components
-import { Box, Autocomplete, TextField, TextareaAutosize, ThemeProvider } from '@mui/material';
+import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert} from '@mui/material';
 
 // Components
 import DocumentTabs from '../custom Utils/assetMoveTabs';
@@ -11,23 +11,19 @@ import DocumentTabs from '../custom Utils/assetMoveTabs';
 import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn } from '../../../Utils/groupbtns';
+import { CustomDialog } from '../../../Utils/customDialog'
 
 // Custom Hooks
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
 import { useSections } from '../../../hooks/refSection';
 import { useJOData } from '../../../hooks/useJO_reducer';
-import { useJO_h } from '../../../hooks/useJO_h';
-import { useJO_d } from '../../../hooks/useJO_d';
-import { useApprovalLogs } from '../../../hooks/useApprovalLogs';
-import { docHeaderFields } from '../custom Utils/docMasterFields';
-import { set } from 'date-fns';
+import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
+
 
 export default function JOFormPage(useProps) {
   const {
     state,
-
     getJOData,
-    createJO,
 
     startCreate,
     startEdit,
@@ -38,40 +34,47 @@ export default function JOFormPage(useProps) {
     updateDetailRow,  
     removeDetailRow,
 
+    openSaveDialog,      
+    closeSaveDialog,     
+    openCancelDialog,    
+    closeCancelDialog,   
+    confirmSave,         
+    confirmCancel,   
+    hideSnackbar,     
+
   } = useJOData();
 
-  const [searchParams] = useSearchParams();
-  const copyDocNo = searchParams.get('docId');
-  
+
+  // reference data for dropdowns
   const { refDeptData } = useRefDepartment();
   const { refSections } = useSections();
   const departments = refDeptData.map(item => item.Department);
   const sections = refSections.map(item => item.xdesc);
 
-  console.log(`copyDocNo: ${copyDocNo}`)
+  // get JO data if copyDocNo exists in URL
+  const navigate = useNavigate(); // Add this
+  const [searchParams, setSearchParams] = useSearchParams();
+  const copyDocNo = searchParams.get('docId');
+  const isCreatingRef = useRef(false);
+
   useEffect(() => {
     if (!copyDocNo) return;
+    // Don't fetch if we're in the middle of creating a new JO
+    if (isCreatingRef.current) return;
     getJOData(copyDocNo);    
   }, [copyDocNo, getJOData]);
 
+  // Status mapping function
   const docStatus = (status) => {
     switch (status) {
-      case 0:
-        return 'Draft';
-      case 1:
-        return 'Fully Approved';
-      case 2:
-        return 'Partially Approved';
-      case 3:
-        return 'For Approval';
-      case 4:
-        return 'Rejected';
-      default:
-        return 'Draft'; // Good practice to handle unexpected values
+      case 0: return 'Draft';
+      case 1: return 'Fully Approved';
+      case 2: return 'Partially Approved';
+      case 3: return 'For Approval';
+      case 4: return 'Rejected';
+      default: return 'Draft'; // Good practice to handle unexpected values
     }
   }
-
-
 
   const baseHeader = state.selectedJO; // ALWAYS source of truth for status
   // const hidePostBtn =  baseHeader.find(jo => jo.xpost === 4  || (jo.TRNO === copyDocNo && jo.xpost === 0) || jo.xpost === 1)
@@ -80,42 +83,173 @@ export default function JOFormPage(useProps) {
           ? state.createJOHeader
           : state.selectedJO;
 
-  console.log(`currentHeader.xpost : ${currentHeader?.xpost}`)
-
   const currentJOItems = state.isCreating || state.isEditing
           ? state.createJODetails
           : state.joDetails;
 
-  const canEditDocument =
-    state.isCreating ||
-    (state.isEditing && baseHeader?.xpost === 0);
+  console.log(`currentHeader`, currentHeader)
+  console.log(`currentJOItems`, currentJOItems)
+  const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
 
   const isReadOnly = !canEditDocument;
+
+  // Generate Auto JO number based on the company config (db table: user0002inv)
+  const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
+  console.log(`companyConfig:`, companyConfig,)
   
   const handleHeaderChange = (field, value) => {
     updateHeaderField(field,value)
   };
 
   const handleCreate = () => {
-   startCreate();
+    isCreatingRef.current = true;
+    const config = Array.isArray(companyConfig) ? companyConfig[0] : companyConfig;
+    console.log('Correct config:', config);
+    startCreate(config);
   };
+  
   const handleEdit = () => {
     if (!copyDocNo) return;
     startEdit(copyDocNo);
   };
   const handleCancel = () => {
-    cancelEditCreate();
+    // Check if there are unsaved changes
+    if (state.hasUnsavedChanges) {
+      openCancelDialog(); // Open confirmation dialog
+    } else {
+      cancelEditCreate(); // Cancel directly
+    }
   };
   const handleSave = async () => {
-    await createJO(
-      state.createJOHeader,
-      state.createJODetails
-    );
+    // Validate header fields
+    if (!state.createJOHeader?.JO_No) {
+      alert('Job Order number is required');
+      return;
+    }
+    
+    if (!state.createJOHeader?.Department && !state.createJOHeader?.Department_Code) {
+      alert('Please select a department');
+      return;
+    }
+    
+    if (!state.createJOHeader?.Sector_name) {
+      alert('Please select a maintenance service');
+      return;
+    }
+    
+    // Validate details
+    if (!state.createJODetails || state.createJODetails.length === 0) {
+      alert('Please add at least one item');
+      return;
+    }
+    
+    // Check for empty required fields in details
+    const invalidRows = state.createJODetails.filter(row => !row.FAC_NO);
+    if (invalidRows.length > 0) {
+      alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
+      return;
+    }
+    
+      // If validation passes, open save confirmation dialog
+    openSaveDialog();
   };
 
+   // Add a function to handle successful creation
+  const handleSuccessfulCreate = useCallback(async (newJONo) => {
+    console.log('Successfully created JO:', newJONo);
+
+    await refreshCompanyConfig();
+    
+    setSearchParams({ docId: newJONo });
+    isCreatingRef.current = false; // Reset the creating flag
+  }, [setSearchParams, refreshCompanyConfig]);
+
+  // Modify your confirmSave to handle the new JO number
+  const originalConfirmSave = confirmSave;
+
+  const handleConfirmSave = async () => {
+    // Capture the JO number before saving
+    const newJONo = state.createJOHeader?.JO_No;
+    const wasCreating = state.isCreating;
+    
+    // Call the original confirmSave (which calls createJO)
+    await confirmSave();
+    
+    // If this was a creation and we have a JO number, update the URL
+    if (wasCreating && newJONo) {
+      handleSuccessfulCreate(newJONo);
+    }
+  };
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    // Dispatch hide snackbar action
+    // You'll need to add this to your hook or directly call hideSnackbar
+    hideSnackbar();
+  };
+
+  // warn users if they try to leave with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (state.hasUnsavedChanges && (state.isCreating || state.isEditing)) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [state.hasUnsavedChanges, state.isCreating, state.isEditing]);
+
     console.log(`baseHeader ${baseHeader}`)
+    
   return (
     <>
+      {/* Dialogs */}
+      <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
+        <CustomDialog
+          title="Confirm Save"
+          text="Are you sure you want to save this Job Order? Please review all information before saving."
+          cancelText="Cancel"
+          confirmText="Save"
+          cancel={closeSaveDialog}
+          confirm={handleConfirmSave}
+        />
+      </Dialog>
+
+      <Dialog open={state.cancelDialogOpen} onClose={closeCancelDialog}>
+        <CustomDialog
+          title="Confirm Cancel"
+          text="Are you sure you want to cancel? All unsaved changes will be lost."
+          cancelText="Keep Editing"
+          confirmText="Discard Changes"
+          cancel={closeCancelDialog}
+          confirm={confirmCancel}
+        />
+      </Dialog>
+
+      <Snackbar
+        open={state.snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={state.snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {state.snackbar.message}
+        </Alert>
+      </Snackbar>
+
       {/* ... B u t t o n s ... */}     
       {/* Edit */}          
       <div className='flex justify-end gap-3 mx-20 my-4'>
@@ -128,7 +262,7 @@ export default function JOFormPage(useProps) {
             onClick={handleSave}
             title='Save changes made in this Job Order'
           >
-            Save
+            {state.saving ? 'Saving...' : 'Save'}
           </CustomBtn>
         )}
         
@@ -197,7 +331,7 @@ export default function JOFormPage(useProps) {
         </Box>
         <form className='mt-8'>
             <label className='text-base font-normal text-gray-500 '>Job Order No : </label>
-            <label className='text-base font-semibold text-gray-800 '>{currentHeader?.JO_No}</label> 
+            <label className='text-base font-semibold text-gray-800 '>{currentHeader?.JO_No || ''}</label> 
             <br/>
             <label className='text-base font-normal text-gray-500 '>Status : </label>
             <label className='text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
@@ -212,7 +346,7 @@ export default function JOFormPage(useProps) {
                   size = 'small'
                   options= {departments} 
                   value={currentHeader?.Department_Code || currentHeader?.Department  || '' }
-                  onChange={(e, newValue) => handleHeaderChange('Department', newValue)}
+                  onChange={(e, newValue) => handleHeaderChange('Department_Code', newValue)}
                   renderInput={(params) => (
                     <TextField {...params} 
                       sx={getAutocompleteSx(state.isEditing || state.isCreating)}

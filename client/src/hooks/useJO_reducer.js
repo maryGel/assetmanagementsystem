@@ -63,7 +63,10 @@ function joReducer(state, action) {
       ...state,
 
       selectedJO: action.payload.data,
-      joDetails: action.payload.details,
+      joDetails: action.payload.details.map((row, index) => ({
+        ...row,
+        id: row.id || `detail_${row.JO_No}_${row.FAC_NO}_${Date.now()}_${index}`
+      })),
 
       // IMPORTANT: reset working buffer
       createJOHeader: null,
@@ -82,15 +85,6 @@ function joReducer(state, action) {
 
     case 'START_EDIT':
 
-      // const isDraft = action.payload.data?.xpost === 0;
-      //   if (!isDraft) {
-      //   return {
-      //     ...state,
-      //     isEditing: false,
-      //     error: "Only draft JO can be edited",
-      //   };
-      // }
-
       return {
         ...state,
         isEditing: true,
@@ -98,13 +92,19 @@ function joReducer(state, action) {
         createJOHeader: {
           ...action.payload.data,
         },
-        createJODetails: action.payload.details.map(row => ({
+        createJODetails: action.payload.details.map((row, index) => ({
           ...row,
+          id: row.id || `detail_${row.JO_No}_${row.FAC_NO}_${Date.now()}_${index}` // Ensure unique ID
         })),
         hasUnsavedChanges: false,
       };
 
-    case 'START_CREATE':
+    case 'START_CREATE': {
+      // Use the pre-generated JO number if available
+      const newJO_No = action.payload?.generatedJO_No || '';
+      const today = new Date().toISOString().split('T')[0];
+      
+      console.log('START_CREATE - Setting JO_No:', newJO_No);
       return {
         ...state,
         isCreating: true,
@@ -113,24 +113,24 @@ function joReducer(state, action) {
         // joDetails: [],
 
         createJOHeader: {
-          JO_No: '',
+          JO_No: newJO_No,
           Remarks: '',
           Sector_name: '',
           Sector_Code: '',
-          xDate: new Date().toISOString(),
+          xDate: today,
           xpost: 0,
           Deparment_name: '',
-          Deaprtment_Code: '',
+          Department_Code: '',
           requested_by: '',
         },
         createJODetails: [
           {
             id: Date.now(),
-            JO_No: '',
+            JO_No: newJO_No,
             FAC_NO: '',
             FAC_name: '',
             qty: 1,
-            xDate: new Date().toISOString(),
+            xDate: today,
             xpost: 0,
             UOM: '',
             brand: '',
@@ -141,22 +141,21 @@ function joReducer(state, action) {
             ItemLocation: '',
             },
         ],
-
-        // createJODetails: [],
-
         hasUnsavedChanges: false,
       };
-
+    }
+        
     // FIXED: REMOVE THE DUPLICATE CODE
     case 'ADD_DETAIL_ROW':
       // Get the new row from payload or create default
+      const today = new Date().toISOString().split('T')[0];
       const newRow = action.payload || {
         id: Date.now(),
         JO_No: '',
         FAC_NO: '',
         FAC_name: '',
         qty: 1,
-        xDate: new Date().toISOString(),
+        xDate: today,
         xpost: 0,
         UOM: '',
         brand: '',
@@ -175,19 +174,26 @@ function joReducer(state, action) {
       
 
     // FIXED: UPDATE_DETAIL_ROW to handle both create and edit modes
-    case 'UPDATE_DETAIL_ROW':
-      const { id, field, value } = action;
+      case 'UPDATE_DETAIL_ROW':
+        const { id, field, value } = action;
+        
+        console.log('Reducer - Updating row with id:', id);
+        console.log('Reducer - Available row IDs:', state.createJODetails.map(r => String(r.id)));
+        
+        const updatedDetails = state.createJODetails.map((row) => {
+          const rowId = String(row.id);
+          const actionId = String(id);
+          
+          if (rowId === actionId) {
+            console.log('Reducer - Matched row:', rowId, 'Updating field:', field, 'to:', value);
+            return { ...row, [field]: value };
+          }
+          return row;
+        });
       
-      console.log('UPDATE_DETAIL_ROW:', { id, field, value, hasSelectedJO: !!state.selectedJO });
-
-      // For EDIT mode
       return {
         ...state,
-        createJODetails: state.createJODetails.map((row) =>
-          String(row.id) === String(id)
-            ? { ...row, [field]: value }
-            : row
-        ),
+        createJODetails: updatedDetails,
         hasUnsavedChanges: true,
       };
 
@@ -235,6 +241,25 @@ function joReducer(state, action) {
         error: null,
       };
 
+    case 'SHOW_SNACKBAR':
+      return {
+        ...state,
+        snackbar: {
+          open: true,
+          message: action.payload.message,
+          severity: action.payload.severity || 'success',
+        },
+      };
+
+    case 'HIDE_SNACKBAR':
+      return {
+        ...state,
+        snackbar: {
+          ...state.snackbar,
+          open: false,
+        },
+      };
+
     case 'SAVE_SUCCESS':
       return {
         ...state,
@@ -244,10 +269,13 @@ function joReducer(state, action) {
         createJOHeader: null,
         createJODetails: [],
         hasUnsavedChanges: false,
-
+        error: null,
+        // Keep the selectedJO as the newly created one
+        selectedJO: action.payload?.newJONo ? state.createJOHeader : null,
+        joDetails: action.payload?.newJONo ? state.createJODetails: null,
         snackbar: {
           open: true,
-          message: 'Job Order saved successfully!',
+          message: action.payload?.message || 'Job Order saved successfully!',
           severity: 'success',
         },
       };
@@ -265,13 +293,37 @@ function joReducer(state, action) {
         currentPage: 1,
       };
 
+    case 'OPEN_SAVE_DIALOG':
+      return {
+        ...state,
+        saveDialogOpen: true,
+      };
+
+    case 'CLOSE_SAVE_DIALOG':
+      return {
+        ...state,
+        saveDialogOpen: false,
+      };
+
+    case 'OPEN_CANCEL_DIALOG':
+      return {
+        ...state,
+        cancelDialogOpen: true,
+      };
+
+    case 'CLOSE_CANCEL_DIALOG':
+      return {
+        ...state,
+        cancelDialogOpen: false,
+      };
+
     default:
       return state;
   }
 }
 
 // ==================== FIXED HOOK ====================
-export const useJOData = () => {
+export const useJOData = (onSaveSuccess) => {
 
   const [state, dispatch] = useReducer(joReducer, initialState);
 
@@ -315,41 +367,226 @@ export const useJOData = () => {
   // =========================
 
   const createJO = useCallback(async () => {
+    if (!state.createJOHeader?.JO_No) {
+      console.error('JO_No is missing');
+      dispatch({
+        type: 'ERROR',
+        payload: 'Job Order number is required'
+      });
+      return;
+    }
+
     dispatch({ type: 'SAVE_START' });
 
     try {
+      const formatDate = (dateString) => {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+      };
+      
+      const { id, ...headerData } = state.createJOHeader;
+      headerData.xDate = formatDate(headerData.xDate);
+      
+      console.log('Header Data:', headerData);
+      
       // Create Header
-      const headerResponse = await api.post('/jo_hRoute', state.createJOHeader);
-
-      // Create Details
-      const detailPayload = state.createJODetails.map((item) => ({
-        ...item,
-        JO_No: state.createJOHeader.JO_No,
-      }));
-
+      const res = await api.post('/jo_hRoute', headerData);
+      console.log('Header saved:', res.data);
+      
+      const detailPayload = state.createJODetails.map((item) => {
+        const { id, ...cleanItem } = item;
+        return {
+          ...cleanItem,
+          JO_No: state.createJOHeader.JO_No,
+          xDate: formatDate(cleanItem.xDate),
+          TargetDate: cleanItem.TargetDate ? formatDate(cleanItem.TargetDate) : null,
+          qty: Number(cleanItem.qty) || 1,
+          xpost: 0,
+        };
+      });
+      
+      console.log('Details Payload:', detailPayload);
+      
       await api.post('/jo_dRoute', detailPayload);
-
+      
+      // ========== INCREMENT XJONum AFTER SUCCESSFUL JO CREATION ==========
+      console.log('Starting XJONum increment process...');
+      
+      try {
+        // Get current config
+        const configRes = await api.get('/companyConfig');
+        console.log('Full config response:', configRes.data);
+        
+        const currentConfig = configRes.data[0];
+        console.log('Current config object:', currentConfig);
+        
+        // Log all available fields to see what we have
+        console.log('Available fields in config:', Object.keys(currentConfig));
+        
+        // Get current XJONum
+        const currentXJONum = Number(currentConfig?.XJONum || 0);
+        console.log('Current XJONum value:', currentXJONum);
+        
+        // Calculate next number
+        const nextXJONum = currentXJONum + 1;
+        console.log('Next XJONum will be:', nextXJONum);
+        
+        // Update the XJONum in the database
+        const updateResponse = await api.put('/companyConfig/xjo', { XJONum: nextXJONum });
+        console.log('Update response:', updateResponse.data);
+        console.log('XJONum incremented successfully from', currentXJONum, 'to', nextXJONum);
+        
+      } catch (incError) {
+        console.error('FAILED to increment XJONum - Full error:', incError);
+        console.error('Error response data:', incError.response?.data);
+        console.error('Error status:', incError.response?.status);
+        // Don't fail the JO creation if increment fails, just log the error
+      }
+      // ========== END OF INCREMENT LOGIC ==========
+      
+      await joRefresh();
+      await joDetailsRefresh();
+      
+        // ========== DISPLAY THE NEWLY CREATED JO ==========
+      const newJONo = state.createJOHeader.JO_No;
+      console.log('Newly created JO_No:', newJONo);
+      
+      // Fetch and display the new JO
+      await getJOData(newJONo);
+      
       dispatch({ type: 'SAVE_SUCCESS' });
-      joRefresh();
-      joDetailsRefresh();
+      console.log('JO Created Successfully and loaded:', newJONo);
+      
+      // Show success message with JO number
+      dispatch({ 
+        type: 'SAVE_SUCCESS',
+        payload: {
+          newJONo: newJONo,
+          message: `Job Order ${newJONo} created successfully!`
+        }
+      });
 
-      console.log('JO Created Successfully');
+      if (onSuccess && typeof onSuccess === 'function') {
+        onSuccess(newJONo);
+      }
+        
     } catch (error) {
-      console.error(error);
+      console.error('Save Error:', error);
+      console.error('Error Response:', error.response?.data);
+      
       dispatch({
         type: 'ERROR',
-        payload: 'Failed to create JO',
+        payload: error.response?.data?.error || 'Failed to create JO'
       });
     }
-  }, [state.createJOHeader, state.createJODetails, joRefresh, joDetailsRefresh]);
+  }, [state.createJOHeader, state.createJODetails, joRefresh, joDetailsRefresh, getJOData]);
+
+  // =========================
+  // UPDATE JO
+  // =========================
+
+  // Update existing JO (not create)
+const updateJO = useCallback(async () => {
+  if (!state.createJOHeader?.JO_No) {
+    console.error('JO_No is missing');
+    dispatch({
+      type: 'ERROR',
+      payload: 'Job Order number is required'
+    });
+    return;
+  }
+
+  dispatch({ type: 'SAVE_START' });
+
+  try {
+    const formatDate = (dateString) => {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    };
+    
+    // Format header data
+    const { id, ...headerData } = state.createJOHeader;
+    headerData.xDate = formatDate(headerData.xDate);
+    
+    console.log('Updating Header:', headerData);
+    
+    // UPDATE Header using PUT
+    await api.put(`/jo_hRoute/${state.createJOHeader.JO_No}`, headerData);
+    
+    // Format details
+    const detailPayload = state.createJODetails.map((item) => {
+      const { id, ...cleanItem } = item;
+      return {
+        ...cleanItem,
+        JO_No: state.createJOHeader.JO_No,
+        xDate: formatDate(cleanItem.xDate),
+        TargetDate: cleanItem.TargetDate ? formatDate(cleanItem.TargetDate) : null,
+        qty: Number(cleanItem.qty) || 1,
+        xpost: 0,
+      };
+    });
+    
+    console.log('Updating Details:', detailPayload);
+    
+    // UPDATE Details - replace all details for this JO
+    await api.put(`/jo_dRoute/${state.createJOHeader.JO_No}`, detailPayload);
+    
+    await joRefresh();
+    await joDetailsRefresh();
+    
+    // Refresh the displayed JO
+    await getJOData(state.createJOHeader.JO_No);
+    
+    dispatch({ 
+      type: 'SAVE_SUCCESS',
+      payload: {
+        newJONo: state.createJOHeader.JO_No,
+        message: `Job Order ${state.createJOHeader.JO_No} updated successfully!`
+      }
+    });
+    
+  } catch (error) {
+    console.error('Update Error:', error);
+    dispatch({
+      type: 'ERROR',
+      payload: error.response?.data?.error || 'Failed to update JO'
+    });
+  }
+}, [state.createJOHeader, state.createJODetails, joRefresh, joDetailsRefresh, getJOData]);
 
   // =========================
   // ACTION HELPERS
   // =========================
 
-  const startCreate = () => {
-    dispatch({ type: 'START_CREATE' });
-  };
+  const startCreate = useCallback((companyConfig) => {
+
+  // Ensure we have valid companyConfig
+  if (!companyConfig) {
+    console.error('Company config is required for creating JO');
+    return;
+  }
+  
+  // Generate the JO number immediately
+  const autoNumbering = Number(companyConfig?.xAutoJO ?? 0);
+  const prefix = companyConfig?.CInitial || '';
+  const lastNumber = Number(companyConfig?.XJONum || 0);
+  
+  let newJO_No = '';
+  
+  if (autoNumbering === 1) {
+    newJO_No = `${prefix}-JO-${String(lastNumber + 1).padStart(7, '0')}`;
+  }
+  
+  dispatch({ 
+    type: 'START_CREATE', 
+    payload: {
+      ...companyConfig,
+      generatedJO_No: newJO_No  // Pass the generated number
+    }
+  });
+}, [dispatch]);
 
   const startEdit = (JO_No) => {
     const selectJO = joHeaders.find(jo => jo.JO_No === JO_No);
@@ -361,6 +598,12 @@ export const useJOData = () => {
         details: selectedDetails,
       }
     });
+    showSnackbar('Editing mode activated', 'info');
+    return {
+      // ... existing returns ...
+      showSnackbar,
+      hideSnackbar,
+    };
   };
 
   const cancelEditCreate = () => {
@@ -373,6 +616,7 @@ export const useJOData = () => {
 
   // FIXED: addDetailRow - using only ADD_DETAIL_ROW (no non-existent types)
   const addDetailRow = () => {
+    const today = new Date().toISOString().split('T')[0];
     const newRow = {
       id: Date.now(),
       JO_No: state.isCreating ? state.createJOHeader?.JO_No || '' : state.selectedJO?.JO_No || '',
@@ -386,7 +630,7 @@ export const useJOData = () => {
       brand: '',
       serialNo: '',
       ItemLocation: '',
-      xDate: new Date().toISOString(),
+      xDate: today,
       xpost: 0,
     };
     
@@ -409,7 +653,7 @@ export const useJOData = () => {
     
     dispatch({
       type: 'UPDATE_DETAIL_ROW',
-      id,
+      id: String(id),
       field,
       value,
     });
@@ -421,6 +665,55 @@ export const useJOData = () => {
       type: 'REMOVE_DETAIL_ROW',
       id,
     });
+  };
+
+  const showSnackbar = (message, severity = 'success') => {
+    dispatch({
+      type: 'SHOW_SNACKBAR',
+      payload: { message, severity }
+    });
+  };
+
+  const hideSnackbar = () => {
+    dispatch({ type: 'HIDE_SNACKBAR' });
+  };
+
+  const openSaveDialog = () => {
+    dispatch({ type: 'OPEN_SAVE_DIALOG' });
+  };
+
+  const closeSaveDialog = () => {
+    dispatch({ type: 'CLOSE_SAVE_DIALOG' });
+  };
+
+  const openCancelDialog = () => {
+    dispatch({ type: 'OPEN_CANCEL_DIALOG' });
+  };
+
+  const closeCancelDialog = () => {
+    dispatch({ type: 'CLOSE_CANCEL_DIALOG' });
+  };
+
+  // confirmSave and confirmCancel functions
+  const confirmSave = async () => {
+    closeSaveDialog();
+    
+    if (state.isCreating) {
+      await createJO();
+      if (onSaveSuccess && typeof onSaveSuccess === 'function') {
+        const newJONo = state.createJOHeader?.JO_No;
+        if (newJONo) {
+          onSaveSuccess(newJONo);
+        }
+      }
+    } else if (state.isEditing) {
+      await updateJO();
+    }
+  };
+
+  const confirmCancel = () => {
+    closeCancelDialog();
+    cancelEditCreate();
   };
 
   // =========================
@@ -445,5 +738,11 @@ export const useJOData = () => {
     updateHeaderField,
     updateDetailRow,
     removeDetailRow,
+    openSaveDialog,      
+    closeSaveDialog,     
+    openCancelDialog,    
+    closeCancelDialog,   
+    confirmSave,         
+    confirmCancel,       
   };
 };

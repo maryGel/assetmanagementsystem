@@ -46,6 +46,14 @@ function App() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('MUI: The value provided to Autocomplete')) {
+      return; // ignore this warning
+    }
+    originalWarn(...args);
+  };
+
   
   useEffect(() => {
     document.title = headerTitle;

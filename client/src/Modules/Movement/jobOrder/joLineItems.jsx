@@ -119,34 +119,26 @@ useEffect(() => {
     updateDetailRow(rowId, field, value);
   };
   // ASSET SELECT
-  const handleAssetSelect = (
-    rowId,
-    selectedAsset
-  ) => {
+
+  const handleAssetSelect = (rowId, selectedAsset) => {
     if (!selectedAsset) return;
+    
+    console.log('Selected asset for row:', rowId, selectedAsset);
+    
     const updates = {
-      FAC_NO: selectedAsset.FacNO || '',
+      FAC_NO: selectedAsset.FacNO || 'n ',
       FAC_name: selectedAsset.FacName || '',
-      qty: selectedAsset.balance_unit || '',
+      qty: selectedAsset.balance_unit || 1,
       UOM: selectedAsset.Unit || '',
       brand: selectedAsset.Brand || '',
       serialNo: selectedAsset.serialNo || '',
       ItemLocation: selectedAsset.ItemLocation || '',
     };
-      Object.entries(updates).forEach(([field, value]) => {
-        updateDetailRow(
-          rowId,
-          field,
-          value
-        );
-        // startEdit(rowId)
-      }
-    );
-    // setSnackbar({
-    //   open: true,
-    //   message: 'Asset selected successfully',
-    //   severity: 'success'
-    // });
+    
+    // Update each field individually
+    Object.entries(updates).forEach(([field, value]) => {
+      updateDetailRow(rowId, field, value);
+    });
   };
   
   // FILTER OPTIONS
@@ -160,15 +152,6 @@ useEffect(() => {
       option.FacNO?.toLowerCase().includes(search)
     ).slice(0, 20);
   };
-
-
-  
-  // const !isReadOnly =
-  //   state.isCreating ||
-  //   (state.isEditing && baseHeader?.xpost === 0);
-
-  // const isReadOnly = !!isReadOnly;
-
 
 
   return (
@@ -254,33 +237,31 @@ useEffect(() => {
                     loading={!assetsLoaded && isLoading}
                     filterOptions={filterOptions}
                     value={
-                      // FIX: Better null check and value matching
-                      row.FAC_NO || ''
+                      // FIX: Find the full asset object from options
+                      assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
                     }
                     onChange={(event, newValue) => {
                       handleAssetSelect(row.id, newValue);
                     }}
-                    getOptionLabel={(option) =>
-                      typeof option === 'string' ? option : option?.FacNO || ''
-                    }
-                    isOptionEqualToValue={(option, value) =>
-                      option.FacNO === value.FacNO
-                    }
+                    getOptionLabel={(option) => {
+                      if (!option) return '';
+                      if (typeof option === 'string') return option;
+                      return `${option.FacNO} - ${option.FacName}`;
+                    }}
+                    isOptionEqualToValue={(option, value) => {
+                      // FIX: Properly compare both cases
+                      if (!value) return false;
+                      const optionFacNO = String(option?.FacNO || '');
+                      const valueFacNO = String(value?.FacNO || value || '');
+                      return optionFacNO === valueFacNO;
+                    }}
                     renderOption={(props, option) => (
                       <li {...props}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }}
-                        >
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           <Typography variant="body2">
                             <strong>{option.FacName}</strong>
                           </Typography>
-                          <Typography
-                            variant="caption"
-                            color="textSecondary"
-                          >
+                          <Typography variant="caption" color="textSecondary">
                             {option.FacNO}
                           </Typography>
                         </Box>
@@ -292,11 +273,7 @@ useEffect(() => {
                         size="small"
                         placeholder="Search Asset..."
                         sx={{
-                          '& .MuiInputBase-root':
-                            tableFieldFormat(!isReadOnly),
-                          // backgroundColor: state.isEditing && state.isCreating ? 'white' : 'grey.100',
-                          // bgColor: state.isEditing && state.isCreating ? 'white' : 'grey.100'
-
+                          '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
                         }}
                         InputProps={{
                           ...params.InputProps,
