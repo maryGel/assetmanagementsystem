@@ -238,7 +238,8 @@ useEffect(() => {
                     filterOptions={filterOptions}
                     value={
                       // FIX: Find the full asset object from options
-                      assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
+                      // assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
+                      row.FAC_NO
                     }
                     onChange={(event, newValue) => {
                       handleAssetSelect(row.id, newValue);

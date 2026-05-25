@@ -193,7 +193,7 @@ router.put('/:joNo', (req, res) => {
         detail.brand || '',
         detail.serialNo || '',
         detail.ItemLocation || '',
-        detail.xDate || new Date().toISOString().split('T')[0],
+        detail.xDate || null,
         detail.xpost || 0
       ]);
       

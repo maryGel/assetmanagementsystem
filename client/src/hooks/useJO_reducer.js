@@ -37,7 +37,33 @@ const initialState = {
   },
 };
 
-// ==================== FIXED REDUCER ====================
+
+
+const safeDate = (value) => {
+  if (!value) return null;
+
+  // Already YYYY-MM-DD - return as is, NO transformation
+  if (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) {
+    return value; // <-- NO CHANGE, return exactly as received
+  }
+
+  // Date object - convert to local date string without timezone shift
+  if (value instanceof Date) {
+    // Use getFullYear, getMonth, getDate (local time) NOT UTC methods
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return null;
+};
+
+
+// ==================== REDUCER ====================
 function joReducer(state, action) {
   switch (action.type) {
 
@@ -84,7 +110,9 @@ function joReducer(state, action) {
   }
 
     case 'START_EDIT':
-
+      console.log('START_EDIT - Original xDate:', action.payload.data?.xDate);
+      console.log('START_EDIT - Date type:', typeof action.payload.data?.xDate);
+      
       return {
         ...state,
         isEditing: true,
@@ -94,7 +122,7 @@ function joReducer(state, action) {
         },
         createJODetails: action.payload.details.map((row, index) => ({
           ...row,
-          id: row.id || `detail_${row.JO_No}_${row.FAC_NO}_${Date.now()}_${index}` // Ensure unique ID
+          id: row.id || `detail_${row.JO_No}_${row.FAC_NO}_${Date.now()}_${index}`,
         })),
         hasUnsavedChanges: false,
       };
@@ -102,7 +130,12 @@ function joReducer(state, action) {
     case 'START_CREATE': {
       // Use the pre-generated JO number if available
       const newJO_No = action.payload?.generatedJO_No || '';
-      const today = new Date().toISOString().split('T')[0];
+      const todayObj = new Date();
+
+      const today = `${todayObj.getFullYear()}-${String(
+        todayObj.getMonth() + 1
+      ).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+      // const today = new Date().toISOString().split('T')[0];
       
       console.log('START_CREATE - Setting JO_No:', newJO_No);
       return {
@@ -148,7 +181,10 @@ function joReducer(state, action) {
     // FIXED: REMOVE THE DUPLICATE CODE
     case 'ADD_DETAIL_ROW':
       // Get the new row from payload or create default
-      const today = new Date().toISOString().split('T')[0];
+      const todayObj = new Date();
+      const today = `${todayObj.getFullYear()}-${String(
+        todayObj.getMonth() + 1
+      ).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
       const newRow = action.payload || {
         id: Date.now(),
         JO_No: '',
@@ -242,6 +278,7 @@ function joReducer(state, action) {
       };
 
     case 'SHOW_SNACKBAR':
+      console.log('SHOW_SNACKBAR dispatched:', action.payload);
       return {
         ...state,
         snackbar: {
@@ -252,6 +289,7 @@ function joReducer(state, action) {
       };
 
     case 'HIDE_SNACKBAR':
+      console.log('HIDE_SNACKBAR dispatched');
       return {
         ...state,
         snackbar: {
@@ -293,7 +331,7 @@ function joReducer(state, action) {
         currentPage: 1,
       };
 
-    case 'OPEN_SAVE_DIALOG':
+    case 'OPEN_SAVE_DIALOG':  
       return {
         ...state,
         saveDialogOpen: true,
@@ -360,6 +398,7 @@ export const useJOData = (onSaveSuccess) => {
         payload: 'Failed to fetch JO data',
       });
     }
+
   }, [joHeaders, joDetails]);
 
   // =========================
@@ -379,16 +418,41 @@ export const useJOData = (onSaveSuccess) => {
     dispatch({ type: 'SAVE_START' });
 
     try {
-      const formatDate = (dateString) => {
-        if (!dateString) return null;
-        const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
-      };
+      // const safeDate = (dateString) => {
+      //   if (!dateString) return null;
+        
+      //   // If it's already in YYYY-MM-DD format, return as is
+      //   if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      //     return dateString;
+      //   }
+        
+      //   const date = new Date(dateString);
+      //   if (isNaN(date.getTime())) return null;
+        
+      //   // Use UTC to avoid timezone shift
+      //   const year = date.getUTCFullYear();
+      //   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      //   const day = String(date.getUTCDate()).padStart(2, '0');
+        
+      //   return `${year}-${month}-${day}`;
+      // };
       
       const { id, ...headerData } = state.createJOHeader;
-      headerData.xDate = formatDate(headerData.xDate);
+      // IMPORTANT: Only format the date if it's a new creation
+      // For editing, preserve the original date format
+      if (state.isCreating) {
+        headerData.xDate = safeDate(headerData.xDate) || new Date().toISOString().split('T')[0];
+      } else {
+        // For editing, keep the original date without reformatting
+        // Only ensure it's in YYYY-MM-DD format if it's a Date object
+        if (headerData.xDate && typeof headerData.xDate === 'object') {
+          headerData.xDate = safeDate(headerData.xDate);
+        }
+        // Otherwise, leave it as is
+      }
       
       console.log('Header Data:', headerData);
+      console.log('Is Editing Mode:', state.isEditing);
       
       // Create Header
       const res = await api.post('/jo_hRoute', headerData);
@@ -399,8 +463,8 @@ export const useJOData = (onSaveSuccess) => {
         return {
           ...cleanItem,
           JO_No: state.createJOHeader.JO_No,
-          xDate: formatDate(cleanItem.xDate),
-          TargetDate: cleanItem.TargetDate ? formatDate(cleanItem.TargetDate) : null,
+          xDate: safeDate(cleanItem.xDate),
+          TargetDate: cleanItem.TargetDate ? safeDate(cleanItem.TargetDate) : null,
           qty: Number(cleanItem.qty) || 1,
           xpost: 0,
         };
@@ -470,6 +534,8 @@ export const useJOData = (onSaveSuccess) => {
       if (onSuccess && typeof onSuccess === 'function') {
         onSuccess(newJONo);
       }
+      console.log('FETCHED HEADER:', header);
+      console.log('FETCHED DETAILS:', details);
         
     } catch (error) {
       console.error('Save Error:', error);
@@ -487,78 +553,87 @@ export const useJOData = (onSaveSuccess) => {
   // =========================
 
   // Update existing JO (not create)
-const updateJO = useCallback(async () => {
-  if (!state.createJOHeader?.JO_No) {
-    console.error('JO_No is missing');
-    dispatch({
-      type: 'ERROR',
-      payload: 'Job Order number is required'
-    });
-    return;
-  }
+  const updateJO = useCallback(async () => {
+    if (!state.createJOHeader?.JO_No) {
+      console.error('JO_No is missing');
+      dispatch({
+        type: 'ERROR',
+        payload: 'Job Order number is required'
+      });
+      return;
+    }
 
-  dispatch({ type: 'SAVE_START' });
+    dispatch({ type: 'SAVE_START' });
 
-  try {
-    const formatDate = (dateString) => {
-      if (!dateString) return null;
-      const date = new Date(dateString);
-      return date.toISOString().split('T')[0];
-    };
-    
-    // Format header data
-    const { id, ...headerData } = state.createJOHeader;
-    headerData.xDate = formatDate(headerData.xDate);
-    
-    console.log('Updating Header:', headerData);
-    
-    // UPDATE Header using PUT
-    await api.put(`/jo_hRoute/${state.createJOHeader.JO_No}`, headerData);
-    
-    // Format details
-    const detailPayload = state.createJODetails.map((item) => {
-      const { id, ...cleanItem } = item;
-      return {
-        ...cleanItem,
-        JO_No: state.createJOHeader.JO_No,
-        xDate: formatDate(cleanItem.xDate),
-        TargetDate: cleanItem.TargetDate ? formatDate(cleanItem.TargetDate) : null,
-        qty: Number(cleanItem.qty) || 1,
-        xpost: 0,
-      };
-    });
-    
-    console.log('Updating Details:', detailPayload);
-    
-    // UPDATE Details - replace all details for this JO
-    await api.put(`/jo_dRoute/${state.createJOHeader.JO_No}`, detailPayload);
-    
-    await joRefresh();
-    await joDetailsRefresh();
-    
-    // Refresh the displayed JO
-    await getJOData(state.createJOHeader.JO_No);
-    
-    dispatch({ 
-      type: 'SAVE_SUCCESS',
-      payload: {
-        newJONo: state.createJOHeader.JO_No,
-        message: `Job Order ${state.createJOHeader.JO_No} updated successfully!`
-      }
-    });
-    
-  } catch (error) {
-    console.error('Update Error:', error);
-    dispatch({
-      type: 'ERROR',
-      payload: error.response?.data?.error || 'Failed to update JO'
-    });
-  }
-}, [state.createJOHeader, state.createJODetails, joRefresh, joDetailsRefresh, getJOData]);
+    try {
+      // Format header data - preserve dates WITHOUT modification
+      const { id, ...headerData } = state.createJOHeader;
+      
+      // CRITICAL FIX: Don't transform xDate at all - send exactly as is
+      // The date should already be in YYYY-MM-DD format from the database
+      
+      console.log('Updating Header - preserving date:', headerData.xDate);
+      console.log('Date type:', typeof headerData.xDate);
+      
+      // UPDATE Header using PUT
+      await api.put(`/jo_hRoute/${state.createJOHeader.JO_No}`, headerData);
+      
+      // Format details - PRESERVE dates exactly as they are
+      const detailPayload = state.createJODetails.map((item) => {
+        const { id, ...cleanItem } = item;
+        return {
+          ...cleanItem,
+          JO_No: state.createJOHeader.JO_No,
+          // DON'T transform dates - they're already in correct format
+          xDate: cleanItem.xDate,  // Send exactly as is
+          TargetDate: cleanItem.TargetDate,  // Send exactly as is
+          qty: Number(cleanItem.qty) || 1,
+          xpost: cleanItem.xpost || 0,
+        };
+      });
+      
+      console.log('Updating Details with preserved dates:', detailPayload.map(d => ({ xDate: d.xDate, TargetDate: d.TargetDate })));
+      
+      // UPDATE Details - replace all details for this JO
+      await api.put(`/jo_dRoute/${state.createJOHeader.JO_No}`, detailPayload);
+      
+      await joRefresh();
+      await joDetailsRefresh();
+      
+      // Refresh the displayed JO
+      await getJOData(state.createJOHeader.JO_No);
+      
+      dispatch({ 
+        type: 'SAVE_SUCCESS',
+        payload: {
+          newJONo: state.createJOHeader.JO_No,
+          message: `Job Order ${state.createJOHeader.JO_No} updated successfully!`
+        }
+      });
+      
+    } catch (error) {
+      console.error('Update Error:', error);
+      dispatch({
+        type: 'ERROR',
+        payload: error.response?.data?.error || 'Failed to update JO'
+      });
+    }
+  }, [state.createJOHeader, state.createJODetails, joRefresh, joDetailsRefresh, getJOData]);
 
   // =========================
   // ACTION HELPERS
   // =========================
+
+  const showSnackbar = (message, severity = 'success') => {
+    dispatch({
+      type: 'SHOW_SNACKBAR',
+      payload: { message, severity }
+    });
+  };
+
+  const hideSnackbar = () => {
+    dispatch({ type: 'HIDE_SNACKBAR' });
+  };
 
   const startCreate = useCallback((companyConfig) => {
 
@@ -616,7 +691,11 @@ const updateJO = useCallback(async () => {
 
   // FIXED: addDetailRow - using only ADD_DETAIL_ROW (no non-existent types)
   const addDetailRow = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const todayObj = new Date();
+    const today = `${todayObj.getFullYear()}-${String(
+      todayObj.getMonth() + 1
+    ).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+
     const newRow = {
       id: Date.now(),
       JO_No: state.isCreating ? state.createJOHeader?.JO_No || '' : state.selectedJO?.JO_No || '',
@@ -665,17 +744,6 @@ const updateJO = useCallback(async () => {
       type: 'REMOVE_DETAIL_ROW',
       id,
     });
-  };
-
-  const showSnackbar = (message, severity = 'success') => {
-    dispatch({
-      type: 'SHOW_SNACKBAR',
-      payload: { message, severity }
-    });
-  };
-
-  const hideSnackbar = () => {
-    dispatch({ type: 'HIDE_SNACKBAR' });
   };
 
   const openSaveDialog = () => {
@@ -728,7 +796,6 @@ const updateJO = useCallback(async () => {
     joDetails,
 
     getJOData,
-    createJO,
 
     startCreate,
     startEdit,
@@ -743,6 +810,8 @@ const updateJO = useCallback(async () => {
     openCancelDialog,    
     closeCancelDialog,   
     confirmSave,         
-    confirmCancel,       
+    confirmCancel,   
+    showSnackbar,
+    hideSnackbar,
   };
 };

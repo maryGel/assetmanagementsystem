@@ -70,17 +70,17 @@
     } = req.body;
 
     // Format date properly
-    const formatDate = (dateStr) => {
-      if (!dateStr) return null;
-      // If already in YYYY-MM-DD format
-      if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return dateStr;
-      }
-      // Convert from other formats
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return null;
-      return date.toISOString().split('T')[0];
-    };
+  const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    // If already in YYYY-MM-DD format, return as is
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;  // NO transformation
+    }
+    // Convert from other formats
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return null;
+    return date.toISOString().split('T')[0];
+  };
 
     db.getConnection((err, connection) => {
       if(err) return res.status(500).json({error: 'Database connection error'});

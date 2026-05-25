@@ -25,21 +25,56 @@ export const formatDateForInput = (dateString, formatType = 'P') => {
 const DateDisplay = ({ value, format = 'short' }) => {
   const formatDate = (dateString) => {
     if (!dateString) return '—';
-    
+
+    // Handle YYYY-MM-DD safely
+    if (
+      typeof dateString === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(dateString)
+    ) {
+      const [year, month, day] = dateString.split('-');
+
+      switch (format) {
+        case 'short':
+          return `${month}/${day}/${year}`;
+
+        case 'long':
+          return new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }).format(new Date(Number(year), Number(month) - 1, Number(day)));
+
+        case 'iso':
+          return dateString;
+
+        default:
+          return `${month}/${day}/${year}`;
+      }
+    }
+
+    // fallback for true Date objects or timestamps
     const date = new Date(dateString);
+
     if (isNaN(date.getTime())) return dateString;
-    
-    switch(format) {
+
+    switch (format) {
       case 'short':
         return date.toLocaleDateString();
+
       case 'long':
-        return date.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
         });
+
       case 'iso':
-        return date.toISOString().split('T')[0];
+        return [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, '0'),
+          String(date.getDate()).padStart(2, '0'),
+        ].join('-');
+
       default:
         return date.toLocaleDateString();
     }

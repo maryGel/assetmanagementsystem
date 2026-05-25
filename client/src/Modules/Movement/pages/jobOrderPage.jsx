@@ -12,12 +12,15 @@ import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
+import DateDisplay from '../../../Utils/formatDateForInput';
 
 // Custom Hooks
+import { useJO_h} from '../../../hooks/useJO_h';
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
 import { useSections } from '../../../hooks/refSection';
 import { useJOData } from '../../../hooks/useJO_reducer';
 import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
+
 
 
 export default function JOFormPage(useProps) {
@@ -46,6 +49,7 @@ export default function JOFormPage(useProps) {
 
 
   // reference data for dropdowns
+  const {joHeaders} = useJO_h();
   const { refDeptData } = useRefDepartment();
   const { refSections } = useSections();
   const departments = refDeptData.map(item => item.Department);
@@ -108,10 +112,11 @@ export default function JOFormPage(useProps) {
     startCreate(config);
   };
   
-  const handleEdit = () => {
+  const handleEdit = () => {confirmSave
     if (!copyDocNo) return;
     startEdit(copyDocNo);
   };
+
   const handleCancel = () => {
     // Check if there are unsaved changes
     if (state.hasUnsavedChanges) {
@@ -120,6 +125,7 @@ export default function JOFormPage(useProps) {
       cancelEditCreate(); // Cancel directly
     }
   };
+  
   const handleSave = async () => {
     // Validate header fields
     if (!state.createJOHeader?.JO_No) {
@@ -154,7 +160,7 @@ export default function JOFormPage(useProps) {
     openSaveDialog();
   };
 
-   // Add a function to handle successful creation
+   // function to handle successful creation
   const handleSuccessfulCreate = useCallback(async (newJONo) => {
     console.log('Successfully created JO:', newJONo);
 
@@ -164,8 +170,8 @@ export default function JOFormPage(useProps) {
     isCreatingRef.current = false; // Reset the creating flag
   }, [setSearchParams, refreshCompanyConfig]);
 
-  // Modify your confirmSave to handle the new JO number
-  const originalConfirmSave = confirmSave;
+  // confirmSave to handle the new JO number
+  // const originalConfirmSave = confirmSave;
 
   const handleConfirmSave = async () => {
     // Capture the JO number before saving
@@ -324,22 +330,56 @@ export default function JOFormPage(useProps) {
           </h1>
           <div className='flex gap-2'>
             <text className='text-xs text-gray-500'>Last JO created :</text>
-            <text className='text-xs text-gray-500'>NNN-JO-0000014</text>
+            <text className='text-xs text-gray-500'>
+                  {/* Get the latest JO from joHeaders */}
+                  {joHeaders && joHeaders.length > 0 
+                    ? [...joHeaders].sort((a, b) => {
+                        const numA = parseInt(String(a.JO_No).split('-').pop() || 0);
+                        const numB = parseInt(String(b.JO_No).split('-').pop() || 0);
+                        return numB - numA;
+                      })[0]?.JO_No 
+                    : '---'}
+
+            </text>
             <text className='text-xs text-gray-500'>Created on:</text>
-            <text className='text-xs text-gray-500'>12/23/2026</text>
+            <text className='text-xs text-gray-500'>
+                    {joHeaders && joHeaders.length > 0 
+                    ? (() => {
+                        const latest = [...joHeaders].sort((a, b) => {
+                          const numA = parseInt(String(a.JO_No).split('-').pop() || 0);
+                          const numB = parseInt(String(b.JO_No).split('-').pop() || 0);
+                          return numB - numA;
+                        })[0];
+                        return latest?.xDate ? new Date(latest.xDate).toLocaleDateString() : '---';
+                      })()
+                    : '---'}
+
+            </text>
           </div>
         </Box>
         <form className='mt-8'>
             <label className='text-base font-normal text-gray-500 '>Job Order No : </label>
-            <label className='text-base font-semibold text-gray-800 '>{currentHeader?.JO_No || ''}</label> 
+            <label className='pl-3 text-base font-semibold text-gray-800 '>{currentHeader?.JO_No || ''}</label> 
+            <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
+            <input 
+              className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : ' bg-white'} border border-gray-300`}
+              type='date' 
+              value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10): ""} 
+              disabled={isReadOnly}
+              onChange={(e) => {
+                if (!isReadOnly) {
+                  updateHeaderField('xDate', e.target.value);
+                }
+              }}
+            /> 
             <br/>
             <label className='text-base font-normal text-gray-500 '>Status : </label>
-            <label className='text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
+            <label className='pl-3 text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
             
             <Box className='mt-2 '>
               <div className='flex items-center justify-start w-full gap-10 mt-4'>
                 <label className='text-base font-normal text-gray-500 w-28 '>Department :</label>
-                <Autocomplete 
+                <Autocomplete
                   variant='body2'
                   disabled={isReadOnly}
                   className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
