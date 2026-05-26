@@ -91,7 +91,7 @@ export default function DocumentTabs({
           aria-label="full width tabs example"
         >
           <Tab label="Item List" {...a11yProps(0)} sx={{ letterSpacing: '0.10em' }}/>
-          {(!viewApproval && !isCreating) &&
+          {(!viewApproval && currentHeader?.xpost !== 0 && currentHeader?.xpost !== 3) &&
             <Tab label="Approval Logs" {...a11yProps(1)} sx={{ letterSpacing: '0.10em' }}/>
           }
         </Tabs> 
@@ -110,7 +110,7 @@ export default function DocumentTabs({
         />
       </TabPanel>
       <TabPanel value={value} index={1} dir={theme.direction}>
-        {(!viewApproval && !isCreating) && (
+        {(!viewApproval && currentHeader?.xpost !== 0 && currentHeader?.xpost !== 3) && (
           <DisplayApprovalHistory
             state={state}
             isEditing = {isEditing}

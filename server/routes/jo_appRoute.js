@@ -433,4 +433,141 @@ router.get('/test', (req, res) => {
 });
 
 
+/**
+ * Post a Job Order for approval - updates xpost to 3 only
+ * This is just to mark the JO as ready for approval, no approval action yet
+ */
+
+router.put('/post/:JO_No', (req, res) => {
+  const { JO_No } = req.params;
+
+  console.log('Post Job Order request:', { JO_No });
+
+  const decodedJONo = decodeURIComponent(JO_No)
+    .replace(/\u00A0/g, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
+
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error('Database connection error:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Database connection error'
+      });
+    }
+
+    // Begin transaction
+    connection.beginTransaction(async (transactionErr) => {
+      if (transactionErr) {
+        connection.release();
+        console.error('Transaction begin error:', transactionErr);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to start transaction'
+        });
+      }
+
+      try {
+        // 1. Check current status of the JO
+        const checkSql = `
+          SELECT JO_No, xpost, disapproved 
+          FROM jo_h 
+          WHERE JO_No = ?
+        `;
+        
+        const currentDoc = await new Promise((resolve, reject) => {
+          connection.query(checkSql, [decodedJONo], (error, results) => {
+            if (error) reject(error);
+            else resolve(results[0]);
+          });
+        });
+
+        if (!currentDoc) {
+          throw new Error(`Job Order ${decodedJONo} not found`);
+        }
+
+        // 2. Validate if it can be posted
+        if (currentDoc.xpost === 3) {
+          throw new Error('Job Order is already posted for approval');
+        }
+        
+        if (currentDoc.xpost === 1) {
+          throw new Error('Job Order is already fully approved');
+        }
+        
+        if (currentDoc.disapproved === 1) {
+          throw new Error('Cannot post a disapproved Job Order');
+        }
+
+        // 3. Update jo_h table - set xpost = 3
+        const updateHeaderSql = `
+          UPDATE jo_h 
+          SET xpost = 3
+          WHERE JO_No = ?
+        `;
+        
+        const updateResult = await new Promise((resolve, reject) => {
+          connection.query(updateHeaderSql, [decodedJONo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+        
+        if (updateResult.affectedRows === 0) {
+          throw new Error('Failed to update Job Order');
+        }
+
+        // 4. Update jo_d table - set xpost = 3 for all detail items
+        const updateDetailsSql = `UPDATE jo_d SET xpost = 3 WHERE JO_No = ?`;
+        const detailsResult = await new Promise((resolve, reject) => {
+          connection.query(updateDetailsSql, [decodedJONo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+
+        // 5. Commit transaction
+        connection.commit((commitErr) => {
+          if (commitErr) {
+            console.error('Commit error:', commitErr);
+            return connection.rollback(() => {
+              connection.release();
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to commit transaction'
+              });
+            });
+          }
+          
+          connection.release();
+          
+          res.json({
+            success: true,
+            message: `Job Order ${JO_No} has been posted for approval`,
+            data: {
+              JO_No: decodedJONo,
+              old_xpost: currentDoc.xpost,
+              new_xpost: 3,
+              details_updated: detailsResult.affectedRows,
+              status: 'Pending Approval'
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error('Error in post Job Order process:', error);
+        connection.rollback(() => {
+          connection.release();
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to post Job Order for approval'
+          });
+        });
+      }
+    });
+  });
+});
+
+
 export default router;

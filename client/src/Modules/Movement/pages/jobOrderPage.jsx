@@ -20,7 +20,8 @@ import { useRefDepartment } from '../../../hooks/refDepartment';
 import { useSections } from '../../../hooks/refSection';
 import { useJOData } from '../../../hooks/useJO_reducer';
 import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
-
+// import Post and Approve
+import { useJobOrderApproval } from '../../../hooks/useJobOrderApproval';
 
 
 export default function JOFormPage(useProps) {
@@ -47,6 +48,17 @@ export default function JOFormPage(useProps) {
 
   } = useJOData();
 
+  const { postJobOrder, canPost, loading: approvalLoading } = useJobOrderApproval();
+
+   // Add state for post dialog
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Add this with your other state declarations
+  const [localSnackbar, setLocalSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
 
   // reference data for dropdowns
   const {joHeaders} = useJO_h();
@@ -67,6 +79,16 @@ export default function JOFormPage(useProps) {
     if (isCreatingRef.current) return;
     getJOData(copyDocNo);    
   }, [copyDocNo, getJOData]);
+
+// Add this useEffect after your other useEffects
+  useEffect(() => {
+    if (refreshTrigger > 0 && copyDocNo) {
+      const refreshData = async () => {
+        await getJOData(copyDocNo);
+      };
+      refreshData();
+    }
+  }, [refreshTrigger, copyDocNo, getJOData]);
 
   // Status mapping function
   const docStatus = (status) => {
@@ -196,6 +218,72 @@ export default function JOFormPage(useProps) {
     hideSnackbar();
   };
 
+  // Open post confirmation dialog
+  const openPostDialog = () => {
+    setPostDialogOpen(true);
+  };
+
+  // Close post confirmation dialog
+  const closePostDialog = () => {
+    setPostDialogOpen(false);
+  };
+
+  // Handle the actual post action
+  const handleConfirmPost = async () => {
+    closePostDialog();
+    
+    if (!copyDocNo && !baseHeader?.JO_No) {
+      setLocalSnackbar({
+        open: true,
+        message: 'No document to post',
+        severity: 'error'
+      });
+      return;
+    }
+
+    const docNo = copyDocNo || baseHeader?.JO_No;
+    const postCheck = canPost({ xpost: baseHeader?.xpost, disapproved: baseHeader?.disapproved });
+    
+    if (!postCheck.canPost) {
+      setLocalSnackbar({
+        open: true,
+        message: postCheck.reason,
+        severity: 'error'
+      });
+      return;
+    }
+    
+    const result = await postJobOrder(docNo);
+    
+    if (result.success) {
+      setLocalSnackbar({
+        open: true,
+        message: result.message,
+        severity: 'success'
+      });
+      
+      // Refresh the data
+      await getJOData(docNo);
+      setRefreshTrigger(prev => prev + 1);
+      
+    } else {
+      setLocalSnackbar({
+        open: true,
+        message: 'Failed to post: ' + result.error,
+        severity: 'error'
+      });
+    }
+  };
+
+// Add local snackbar close handler
+const handleLocalSnackbarClose = (event, reason) => {
+  if (reason === 'clickaway') {
+    return;
+  }
+  setLocalSnackbar(prev => ({ ...prev, open: false }));
+};
+
+
   // warn users if they try to leave with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -240,6 +328,18 @@ export default function JOFormPage(useProps) {
         />
       </Dialog>
 
+      {/* Post Confirmation Dialog */}
+      <Dialog open={postDialogOpen} onClose={closePostDialog}>
+        <CustomDialog
+          title="Confirm Post"
+          text="Would you like to post this Job Order now? Once posted, it will be sent for approval."
+          cancelText="Cancel"
+          confirmText="Post"
+          cancel={closePostDialog}
+          confirm={handleConfirmPost}
+        />
+      </Dialog>
+
       <Snackbar
         open={state.snackbar.open}
         autoHideDuration={4000}
@@ -253,6 +353,23 @@ export default function JOFormPage(useProps) {
           sx={{ width: '100%' }}
         >
           {state.snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Local Snackbar for post operations */}
+      <Snackbar
+        open={localSnackbar.open}
+        autoHideDuration={4000}
+        onClose={handleLocalSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleLocalSnackbarClose}
+          severity={localSnackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {localSnackbar.message}
         </Alert>
       </Snackbar>
 
@@ -309,6 +426,8 @@ export default function JOFormPage(useProps) {
             variant='postBtn'
             iconType='post'
             title='Post/Approve this document'
+            onClick={openPostDialog}
+            disabled={approvalLoading}
             >           
               {baseHeader?.xpost === 0 ? 'Post' : 'Approve'}
             </CustomBtn>
