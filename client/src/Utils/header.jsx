@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { headerTitleMap, getBackPath  } from './headerTitleMap';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
+import { useUsers } from '../hooks/useUsers';
 
 // MUI Icons
 import { Box, InputBase, Menu, MenuItem, CircularProgress, Backdrop, Button } from '@mui/material';
@@ -22,6 +23,22 @@ function Header({ username, headerTitle, setHeaderTitle }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  // Get the user first name for greeting
+  const { 
+    selectedUser, 
+    setSelectedUser, 
+    loading, 
+  } = useUsers();
+
+   useEffect(() => {
+    if (username && username !== 'User') {
+      console.log('Setting selected user:', username);
+      setSelectedUser(username);
+    }
+  }, [username, setSelectedUser]);
+    
+  const firstName = selectedUser?.fname || username;
   
   const isMenuOpen = Boolean(anchorEl);
   
@@ -140,7 +157,7 @@ function Header({ username, headerTitle, setHeaderTitle }) {
             >
               <AccountCircleIcon sx={{ fontSize: 30, marginRight: 1 }} />
             </button>
-            <span className='flex gap-1'>Hi <img className='w-5' src='/icons/actions/wavehand.png'/>, {username}!</span>
+            <span className='flex gap-1'>Hi <img className='w-5' src='/icons/actions/wavehand.png'/>, {firstName}!</span>
 
             <Menu
               id="account-menu"

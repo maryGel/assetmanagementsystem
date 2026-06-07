@@ -59,6 +59,10 @@ export default function DocumentTabs({
     currentJOItems,
     updateDetailRow,
     addDetailRow,
+    removeDetailRow,
+    handleDeleteClick,
+    handleConfirmDelete,
+    handleCancelDelete,
     state
 }){
 
@@ -107,6 +111,10 @@ export default function DocumentTabs({
           currentJOItems={currentJOItems}
           updateDetailRow={updateDetailRow}
           addDetailRow={addDetailRow}
+          removeDetailRow={removeDetailRow}
+          handleDeleteClick={handleDeleteClick}
+          handleConfirmDelete={handleConfirmDelete}
+          handleCancelDelete={handleCancelDelete}
         />
       </TabPanel>
       <TabPanel value={value} index={1} dir={theme.direction}>
@@ -121,6 +129,7 @@ export default function DocumentTabs({
             currentJOItems={currentJOItems}
             updateDetailRow={updateDetailRow}
             addDetailRow={addDetailRow}
+            
           />
         )}
       </TabPanel>

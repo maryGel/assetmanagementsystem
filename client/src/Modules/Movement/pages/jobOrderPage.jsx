@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';  
+import { useSearchParams, useNavigate } from 'react-router-dom'; 
 
 // MUI Components
-import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert} from '@mui/material';
+import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert, TextareaAutosize } from '@mui/material';
+
 
 // Components
 import DocumentTabs from '../custom Utils/assetMoveTabs';
@@ -20,14 +21,44 @@ import { useRefDepartment } from '../../../hooks/refDepartment';
 import { useSections } from '../../../hooks/refSection';
 import { useJOData } from '../../../hooks/useJO_reducer';
 import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
-// import Post and Approve
 import { useJobOrderApproval } from '../../../hooks/useJobOrderApproval';
-
+import { useApprovalActions } from '../../../Utils/approvalActionHandler';
+import { useUsers } from '../../../hooks/useUsers';
 
 export default function JOFormPage(useProps) {
+
+  const { 
+    selectedUser, 
+    setSelectedUser, 
+    loading, 
+  } = useUsers();
+  // In JOFormPage.jsx - modify the userInfo
+  const userName = localStorage.getItem('username') || 'User';
+  const rawUserId = localStorage.getItem('userId') || userName;
+
+  useEffect(() => {
+    if (userName && userName !== 'User') {
+        console.log('Setting selected user:', userName);
+        setSelectedUser(userName);
+    }
+  }, [userName, setSelectedUser]);
+
+  // Clean the userId
+  const cleanUserId = String(rawUserId).replace(/\s*-\s*$/, '').trim();
+    const userInfo = {
+      // userId: cleanUserId,
+      user: cleanUserId,
+      fname: selectedUser?.fname || '',
+      lname: selectedUser?.lname || '',
+      multiApp: selectedUser?.multiApp || []
+    };
+
+  console.log('User Info:', userInfo);
+  
   const {
     state,
     getJOData,
+    forceRefreshJO,
 
     startCreate,
     startEdit,
@@ -41,18 +72,32 @@ export default function JOFormPage(useProps) {
     openSaveDialog,      
     closeSaveDialog,     
     openCancelDialog,    
-    closeCancelDialog,   
+    closeCancelDialog,  
+    openDeleteDialog,
+    closeDeleteDialog,
+
     confirmSave,         
-    confirmCancel,   
+    confirmCancel, 
+    confirmDelete,
+ 
     hideSnackbar,     
 
   } = useJOData();
 
-  const { postJobOrder, canPost, loading: approvalLoading } = useJobOrderApproval();
+  const { 
+    postJobOrder, 
+    canPost, 
+    approveJobOrder,
+    rejectJobOrder,
+    canApprove,
+    loading: approvalLoading 
+  } = useJobOrderApproval();
 
-   // Add state for post dialog
+  // Add state for post dialog
   const [postDialogOpen, setPostDialogOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [rowToDelete, setRowToDelete] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0); // Used to trigger refresh
+  
   // Add this with your other state declarations
   const [localSnackbar, setLocalSnackbar] = useState({
     open: false,
@@ -68,27 +113,100 @@ export default function JOFormPage(useProps) {
   const sections = refSections.map(item => item.xdesc);
 
   // get JO data if copyDocNo exists in URL
-  const navigate = useNavigate(); // Add this
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const copyDocNo = searchParams.get('docId');
   const isCreatingRef = useRef(false);
 
+  // Function to show toast messages
+  const showToast = useCallback((message, severity = 'info') => {
+    setLocalSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  }, []);
+
+  // ===== REFRESH DATA - Define BEFORE useApprovalActions =====
+  const refreshData = useCallback(async () => {
+    if (!copyDocNo) return;
+    
+    console.log('🔄 Refreshing data for JO:', copyDocNo);
+    try {
+      // Force refresh using the hook's method
+      await forceRefreshJO(copyDocNo);
+      
+      // Also call getJOData directly to ensure data is updated
+      await getJOData(copyDocNo);
+      
+      // Increment refresh key to trigger any dependent effects
+      setRefreshKey(prev => prev + 1);
+      
+      console.log('✅ Data refresh completed');
+    } catch (error) {
+      console.error('❌ Error refreshing data:', error);
+    }
+  }, [copyDocNo, forceRefreshJO, getJOData]);
+
+  // Function to get item approval level (for multi-level approval)
+  const getItemApprovalLevel = useCallback((itemData, isApprove) => {
+    if (!itemData) return null;
+    
+    if (isApprove) {
+      return itemData.currentApprovalLevel || 1;
+    } else {
+      return itemData.currentApprovalLevel || 1;
+    }
+  }, []);
+
+  // ===== APPROVAL ACTIONS HOOK - Define AFTER refreshData =====
+  const {
+    processingItem,
+    remarks,
+    bulkDialogOpen,
+    bulkActionType,
+    bulkRemarks,
+    bulkLoading,
+    handleIndividualAction,
+    processBulkAction,
+    openBulkDialog,
+    closeBulkDialog,
+    updateRemarks,
+    clearRemarks,
+    setBulkRemarks
+  } = useApprovalActions({
+    onApprove: approveJobOrder,
+    onReject: rejectJobOrder,
+    getItemLevel: getItemApprovalLevel,
+    onRefresh: refreshData,
+    showToast,
+    getUserInfo: () => userInfo
+  });
+
+  // Initial data load when copyDocNo changes
   useEffect(() => {
     if (!copyDocNo) return;
-    // Don't fetch if we're in the middle of creating a new JO
     if (isCreatingRef.current) return;
+    
+    console.log('📥 Loading initial data for JO:', copyDocNo);
     getJOData(copyDocNo);    
   }, [copyDocNo, getJOData]);
 
-// Add this useEffect after your other useEffects
+  // Refresh data when refreshKey changes (after actions)
   useEffect(() => {
-    if (refreshTrigger > 0 && copyDocNo) {
-      const refreshData = async () => {
-        await getJOData(copyDocNo);
-      };
-      refreshData();
+    if (refreshKey > 0 && copyDocNo) {
+      console.log('🔄 Refresh triggered by key change');
+      getJOData(copyDocNo);
     }
-  }, [refreshTrigger, copyDocNo, getJOData]);
+  }, [refreshKey, copyDocNo, getJOData]);
+
+  // Add this in your parent component to debug
+  useEffect(() => {
+    console.log('Raw userId from localStorage:', localStorage.getItem('userId'));
+    console.log('Raw username from localStorage:', localStorage.getItem('username'));
+    console.log('Raw firstName:', localStorage.getItem('firstName'));
+    console.log('Raw lastName:', localStorage.getItem('lastName'));
+  }, []);
 
   // Status mapping function
   const docStatus = (status) => {
@@ -98,13 +216,11 @@ export default function JOFormPage(useProps) {
       case 2: return 'Partially Approved';
       case 3: return 'For Approval';
       case 4: return 'Rejected';
-      default: return 'Draft'; // Good practice to handle unexpected values
+      default: return 'Draft';
     }
   }
 
-  const baseHeader = state.selectedJO; // ALWAYS source of truth for status
-  // const hidePostBtn =  baseHeader.find(jo => jo.xpost === 4  || (jo.TRNO === copyDocNo && jo.xpost === 0) || jo.xpost === 1)
-
+  const baseHeader = state.selectedJO;
   const currentHeader = state.isCreating || state.isEditing
           ? state.createJOHeader
           : state.selectedJO;
@@ -113,15 +229,11 @@ export default function JOFormPage(useProps) {
           ? state.createJODetails
           : state.joDetails;
 
-  console.log(`currentHeader`, currentHeader)
-  console.log(`currentJOItems`, currentJOItems)
   const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
-
   const isReadOnly = !canEditDocument;
 
   // Generate Auto JO number based on the company config (db table: user0002inv)
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
-  console.log(`companyConfig:`, companyConfig,)
   
   const handleHeaderChange = (field, value) => {
     updateHeaderField(field,value)
@@ -134,7 +246,7 @@ export default function JOFormPage(useProps) {
     startCreate(config);
   };
   
-  const handleEdit = () => {confirmSave
+  const handleEdit = () => {
     if (!copyDocNo) return;
     startEdit(copyDocNo);
   };
@@ -178,11 +290,11 @@ export default function JOFormPage(useProps) {
       return;
     }
     
-      // If validation passes, open save confirmation dialog
+    // If validation passes, open save confirmation dialog
     openSaveDialog();
   };
 
-   // function to handle successful creation
+  // function to handle successful creation
   const handleSuccessfulCreate = useCallback(async (newJONo) => {
     console.log('Successfully created JO:', newJONo);
 
@@ -191,9 +303,6 @@ export default function JOFormPage(useProps) {
     setSearchParams({ docId: newJONo });
     isCreatingRef.current = false; // Reset the creating flag
   }, [setSearchParams, refreshCompanyConfig]);
-
-  // confirmSave to handle the new JO number
-  // const originalConfirmSave = confirmSave;
 
   const handleConfirmSave = async () => {
     // Capture the JO number before saving
@@ -213,8 +322,6 @@ export default function JOFormPage(useProps) {
     if (reason === 'clickaway') {
       return;
     }
-    // Dispatch hide snackbar action
-    // You'll need to add this to your hook or directly call hideSnackbar
     hideSnackbar();
   };
 
@@ -233,11 +340,7 @@ export default function JOFormPage(useProps) {
     closePostDialog();
     
     if (!copyDocNo && !baseHeader?.JO_No) {
-      setLocalSnackbar({
-        open: true,
-        message: 'No document to post',
-        severity: 'error'
-      });
+      showToast('No document to post', 'error');
       return;
     }
 
@@ -245,44 +348,166 @@ export default function JOFormPage(useProps) {
     const postCheck = canPost({ xpost: baseHeader?.xpost, disapproved: baseHeader?.disapproved });
     
     if (!postCheck.canPost) {
-      setLocalSnackbar({
-        open: true,
-        message: postCheck.reason,
-        severity: 'error'
-      });
+      showToast(postCheck.reason, 'error');
       return;
     }
-    
+
     const result = await postJobOrder(docNo);
-    
-    if (result.success) {
-      setLocalSnackbar({
-        open: true,
-        message: result.message,
-        severity: 'success'
-      });
       
-      // Refresh the data
-      await getJOData(docNo);
-      setRefreshTrigger(prev => prev + 1);
+    if (result.success) {
+      showToast(result.message, 'success');
+      
+      // Wait a moment for the database to update
+      setTimeout(async () => {
+        // Force refresh the data
+        await refreshData();
+        
+        // Also refresh the JO headers list if needed
+        if (window.refreshJOData) {
+          await window.refreshJOData();
+        }
+      }, 500);
       
     } else {
-      setLocalSnackbar({
-        open: true,
-        message: 'Failed to post: ' + result.error,
-        severity: 'error'
-      });
+      showToast('Failed to post: ' + result.error, 'error');
     }
   };
 
-// Add local snackbar close handler
-const handleLocalSnackbarClose = (event, reason) => {
-  if (reason === 'clickaway') {
-    return;
-  }
-  setLocalSnackbar(prev => ({ ...prev, open: false }));
-};
+  // Handle approval with dialog
+  const handleApproveClick = () => {
+    if (!copyDocNo && !baseHeader?.JO_No) {
+      showToast('No document to approve', 'error');
+      return;
+    }
 
+    const docNo = copyDocNo || baseHeader?.JO_No;
+    const approvalCheck = canApprove({ 
+      xpost: baseHeader?.xpost, 
+      disapproved: baseHeader?.disapproved 
+    });
+    
+    if (!approvalCheck.canApprove) {
+      showToast(approvalCheck.reason, 'error');
+      return;
+    }
+
+    // Open bulk dialog for single approval
+    openBulkDialog('approve');
+    // Store the current item ID for the bulk action
+    window.currentApprovalItem = docNo;
+  };
+
+  // Handle rejection with dialog
+  const handleRejectClick = () => {
+    if (!copyDocNo && !baseHeader?.JO_No) {
+      showToast('No document to reject', 'error');
+      return;
+    }
+
+    const docNo = copyDocNo || baseHeader?.JO_No;
+    
+    // Open bulk dialog for single rejection
+    openBulkDialog('reject');
+    // Store the current item ID for the bulk action
+    window.currentApprovalItem = docNo;
+  };
+
+  // Handle single item action from bulk dialog
+  const handleSingleItemAction = async () => {
+    if (!window.currentApprovalItem) return;
+    
+    const result = await handleIndividualAction(
+      window.currentApprovalItem,
+      bulkActionType,
+      bulkRemarks,
+      baseHeader,
+      userInfo
+    );
+    
+    if (result?.success) {
+      closeBulkDialog();
+      setBulkRemarks('');
+      window.currentApprovalItem = null;
+      setRefreshKey(prev => prev + 1);
+    }
+  };
+
+  const handleDeleteClick = (rowId) => {
+    if (currentJOItems.length === 1) {
+      // Show snackbar or alert that at least one row is required
+      showToast('At least one row is required', 'warning');
+      return;
+    }
+    setRowToDelete(rowId);
+    openDeleteDialog();
+  };
+
+  const handleConfirmDelete = () => {
+    if (rowToDelete) {
+      confirmDelete(rowToDelete);
+      setRowToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setRowToDelete(null);
+    closeDeleteDialog();
+  };
+
+  // Add local snackbar close handler
+  const handleLocalSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setLocalSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // Determine button visibility and text based on document status
+  const getButtonConfig = () => {
+    // If creating new document
+    if (state.isCreating) {
+      return { showPost: false, showApprove: false, showReject: false };
+    }
+    
+    // If editing draft
+    if (state.isEditing && baseHeader?.xpost === 0) {
+      return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
+    }
+    
+    // For existing documents
+    if (baseHeader) {
+      // Draft - not posted yet
+      if (baseHeader.xpost === 0) {
+        return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
+      }
+      
+      // For approval status
+      if (baseHeader.xpost === 3) {
+        const approvalCheck = canApprove({ xpost: baseHeader.xpost, disapproved: baseHeader.disapproved });
+        return { 
+          showPost: false, 
+          showApprove: approvalCheck.canApprove, 
+          showReject: true,
+          approveText: 'Approve',
+          rejectText: 'Reject'
+        };
+      }
+      
+      // Fully approved
+      if (baseHeader.xpost === 1) {
+        return { showPost: false, showApprove: false, showReject: false };
+      }
+      
+      // Rejected
+      if (baseHeader.xpost === 4) {
+        return { showPost: false, showApprove: false, showReject: false };
+      }
+    }
+    
+    return { showPost: false, showApprove: false, showReject: false };
+  };
+
+  const buttonConfig = getButtonConfig();
 
   // warn users if they try to leave with unsaved changes
   useEffect(() => {
@@ -301,11 +526,12 @@ const handleLocalSnackbarClose = (event, reason) => {
     };
   }, [state.hasUnsavedChanges, state.isCreating, state.isEditing]);
 
-    console.log(`baseHeader ${baseHeader}`)
+  console.log('Current status:', baseHeader?.xpost);
+  console.log('Button config:', buttonConfig);
     
   return (
     <>
-      {/* Dialogs */}
+      {/* Save Confirmation Dialog */}
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
           title="Confirm Save"
@@ -314,6 +540,18 @@ const handleLocalSnackbarClose = (event, reason) => {
           confirmText="Save"
           cancel={closeSaveDialog}
           confirm={handleConfirmSave}
+        />
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={state.deleteDialogOpen} onClose={closeDeleteDialog}>
+        <CustomDialog
+          title="Confirm Delete"
+          text="Are you sure you want to delete this item? This action cannot be undone."
+          cancelText="Cancel"
+          confirmText="Delete"
+          cancel={closeDeleteDialog}
+          confirm={handleConfirmDelete}
         />
       </Dialog>
 
@@ -340,6 +578,63 @@ const handleLocalSnackbarClose = (event, reason) => {
         />
       </Dialog>
 
+      {/* Bulk Action Dialog (used for both single and bulk approval/rejection) */}
+      {bulkDialogOpen && (
+        <Dialog open={bulkDialogOpen} onClose={closeBulkDialog} maxWidth="sm" fullWidth>
+          <Box sx={{ p: 3 }}>
+            <h2 className="mb-4 text-xl font-bold">
+              {bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
+            </h2>
+            <p className="mb-4 text-gray-600">
+              {bulkActionType === 'approve' 
+                ? `Are you sure you want to approve ${window.currentApprovalItem ? 'this Job Order' : 'the selected Job Orders'}?` 
+                : `Are you sure you want to reject ${window.currentApprovalItem ? 'this Job Order' : 'the selected Job Orders'}? This action cannot be undone.`
+              }
+            </p>
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Remarks {bulkActionType === 'reject' && <span className="text-red-500">*</span>}
+              </label>
+              <TextareaAutosize
+                minRows={3}
+                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Enter approval remarks (optional)..."}
+                value={bulkRemarks}
+                onChange={(e) => setBulkRemarks(e.target.value)}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '14px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  resize: 'vertical',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <CustomBtn
+                variant="cancelBtn"
+                onClick={closeBulkDialog}
+                disabled={bulkLoading}
+              >
+                Cancel
+              </CustomBtn>
+              <CustomBtn
+                variant={bulkActionType === 'approve' ? 'saveBtn' : 'rejectBtn'}
+                onClick={window.currentApprovalItem ? handleSingleItemAction : () => {
+                  // Handle bulk action here if needed
+                  showToast('Bulk action not yet implemented', 'info');
+                }}
+                disabled={bulkLoading || (bulkActionType === 'reject' && !bulkRemarks.trim())}
+              >
+                {bulkLoading ? 'Processing...' : (bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection')}
+              </CustomBtn>
+            </Box>
+          </Box>
+        </Dialog>
+      )}
+
       <Snackbar
         open={state.snackbar.open}
         autoHideDuration={4000}
@@ -356,7 +651,7 @@ const handleLocalSnackbarClose = (event, reason) => {
         </Alert>
       </Snackbar>
 
-      {/* Local Snackbar for post operations */}
+      {/* Local Snackbar for post/approval/rejection operations */}
       <Snackbar
         open={localSnackbar.open}
         autoHideDuration={4000}
@@ -373,11 +668,10 @@ const handleLocalSnackbarClose = (event, reason) => {
         </Alert>
       </Snackbar>
 
-      {/* ... B u t t o n s ... */}     
-      {/* Edit */}          
-      <div className='flex justify-end gap-3 mx-20 my-4'>
+      {/* Buttons Section */}
+      <div className='flex justify-end gap-3 my-4 mx-14'>
         
-        {/* Save */}
+        {/* Save Button */}
         {(state.isCreating || state.isEditing) && (
           <CustomBtn
             variant='saveBtn'
@@ -389,17 +683,19 @@ const handleLocalSnackbarClose = (event, reason) => {
           </CustomBtn>
         )}
         
-        {/* Edit and Cancel */}
+        {/* Edit Button */}
         {!state.isEditing && !state.isCreating && copyDocNo && (
-            <CustomBtn
-              variant='editBtn'
-              iconType='edit'
-              onClick={handleEdit}
-              title='Edit this Job Order'
-            >
-              Edit
-            </CustomBtn>       
+          <CustomBtn
+            variant='editBtn'
+            iconType='edit'
+            onClick={handleEdit}
+            title='Edit this Job Order'
+          >
+            Edit
+          </CustomBtn>       
         )}
+        
+        {/* Create Button */}
         {!state.isEditing && !state.isCreating && (
           <CustomBtn
             variant='createBtn'
@@ -411,6 +707,7 @@ const handleLocalSnackbarClose = (event, reason) => {
           </CustomBtn>
         )}
         
+        {/* Cancel Button */}
         {(state.isEditing || state.isCreating) && (
           <CustomBtn
             variant='cancelBtn'
@@ -421,24 +718,56 @@ const handleLocalSnackbarClose = (event, reason) => {
             Cancel
           </CustomBtn>
         )}
-          {state.isCreating || state.isEditing || !copyDocNo || baseHeader?.xpost === 4 || baseHeader?.xpost !== 1 &&
-            <CustomBtn
+
+        {/* Post Button - for draft documents */}
+        {buttonConfig.showPost && (
+          <CustomBtn
             variant='postBtn'
             iconType='post'
-            title='Post/Approve this document'
+            title='Post this document for approval'
             onClick={openPostDialog}
             disabled={approvalLoading}
-            >           
-              {baseHeader?.xpost === 0 ? 'Post' : 'Approve'}
-            </CustomBtn>
-          }
+          >
+            {buttonConfig.postText || 'Post'}
+          </CustomBtn>
+        )}
+
+        {/* Approve Button - for documents pending approval */}
+        {buttonConfig.showApprove && (
+          <CustomBtn
+            variant='saveBtn'
+            iconType='save'
+            title='Approve this document'
+            onClick={handleApproveClick}
+            disabled={approvalLoading || processingItem === copyDocNo}
+          >
+            {processingItem === copyDocNo ? 'Approving...' : (buttonConfig.approveText || 'Approve')}
+          </CustomBtn>
+        )}
+
+        {/* Reject Button - for documents pending approval */}
+        {buttonConfig.showReject && (
+          <CustomBtn
+            variant='rejectBtn'
+            iconType='reject'
+            title='Reject this document'
+            onClick={handleRejectClick}
+            disabled={approvalLoading || processingItem === copyDocNo}
+          >
+            {processingItem === copyDocNo ? 'Rejecting...' : (buttonConfig.rejectText || 'Reject')}
+          </CustomBtn>
+        )}
+
+        {/* Print Button - always show for existing documents */}
+        {copyDocNo && (
           <CustomBtn
             variant='printBtn'
             iconType='print'
             title='Preview and Print'
-          >           
+          >
             Preview
           </CustomBtn>
+        )}
       </div>
           
       <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
@@ -527,7 +856,7 @@ const handleLocalSnackbarClose = (event, reason) => {
                   )} 
                 />
                 <label className='text-base font-normal text-gray-500 w-28 '>Requested by : </label>
-                <label className='text-base font-semibold text-gray-500 '>{currentHeader?.requested_by || ''}</label>
+                <label className='text-base font-semibold text-gray-500 '>{currentHeader?.requested_by || userName }</label>
               </div>
 
               <div className='flex items-start justify-start w-full gap-10 mt-4'>
@@ -566,6 +895,10 @@ const handleLocalSnackbarClose = (event, reason) => {
             currentJOItems={currentJOItems}
             updateDetailRow={updateDetailRow}
             addDetailRow={addDetailRow}
+            removeDetailRow={removeDetailRow}
+            handleDeleteClick={handleDeleteClick}
+            handleConfirmDelete={handleConfirmDelete}
+            handleCancelDelete={handleCancelDelete}
           />
         </div>
       </ThemeProvider>

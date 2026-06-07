@@ -156,6 +156,8 @@ const postJobOrder = async (JO_No) => {
     const response = await axios.put(`/approval/post/${encodeURIComponent(JO_No)}`);
     
     setLoading(false);
+
+    
     return { 
       success: true, 
       data: response.data.data,
@@ -215,7 +217,6 @@ const canPost = (docStatus) => {
     // New functions
     postJobOrder,
     canPost,
-
 
     loading,
     error

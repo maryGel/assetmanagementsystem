@@ -30,6 +30,7 @@ const initialState = {
   saving: false,
   cancelDialogOpen: false,
   saveDialogOpen: false,
+  deleteDialogOpen: false,
   snackbar: {
     open: false,
     message: '',
@@ -355,6 +356,18 @@ function joReducer(state, action) {
         cancelDialogOpen: false,
       };
 
+    case 'OPEN_DELETE_DIALOG':
+      return {
+        ...state,
+        deleteDialogOpen: true,
+      };
+
+    case 'CLOSE_DELETE_DIALOG':
+      return {
+        ...state,
+        deleteDialogOpen: false,
+      };
+    
     default:
       return state;
   }
@@ -762,7 +775,16 @@ export const useJOData = (onSaveSuccess) => {
     dispatch({ type: 'CLOSE_CANCEL_DIALOG' });
   };
 
-  // confirmSave and confirmCancel functions
+  const openDeleteDialog = () => {
+    dispatch({ type: 'OPEN_DELETE_DIALOG' });
+  };
+
+  const closeDeleteDialog = () => {
+    dispatch({ type: 'CLOSE_DELETE_DIALOG' });
+  };
+
+
+  // saving JO - used for both create and update
   const confirmSave = async () => {
     closeSaveDialog();
     
@@ -779,10 +801,45 @@ export const useJOData = (onSaveSuccess) => {
     }
   };
 
+  // delete the JO row - used for both create and update (but only if it's not posted for approval)
+  const confirmDelete = (rowId) => {
+    // Perform the actual deletion
+    if (state.createJODetails.length <= 1) {
+      closeDeleteDialog();
+      showSnackbar('At least one row is required', 'warning');
+      return;
+    }
+    
+    removeDetailRow(rowId);
+    closeDeleteDialog();
+    showSnackbar('Row deleted successfully', 'success');
+  };
+
   const confirmCancel = () => {
     closeCancelDialog();
     cancelEditCreate();
   };
+
+  // Add this function to your useJOData hook
+const forceRefreshJO = useCallback(async (JO_No) => {
+  if (!JO_No) return;
+  
+  try {
+    // Refresh the hooks first
+    await joRefresh();
+    await joDetailsRefresh();
+    
+    // Then fetch the updated data
+    await getJOData(JO_No);
+    
+    return true;
+  } catch (error) {
+    console.error('Force refresh failed:', error);
+    return false;
+  }
+}, [joRefresh, joDetailsRefresh, getJOData]);
+
+
 
   // =========================
   // RETURN
@@ -796,6 +853,7 @@ export const useJOData = (onSaveSuccess) => {
     joDetails,
 
     getJOData,
+    forceRefreshJO,
 
     startCreate,
     startEdit,
@@ -805,12 +863,19 @@ export const useJOData = (onSaveSuccess) => {
     updateHeaderField,
     updateDetailRow,
     removeDetailRow,
+
+    // dialogs
     openSaveDialog,      
     closeSaveDialog,     
     openCancelDialog,    
-    closeCancelDialog,   
-    confirmSave,         
+    closeCancelDialog, 
+    openDeleteDialog,
+    closeDeleteDialog,
+
+    confirmSave,  
+    confirmDelete,   
     confirmCancel,   
+
     showSnackbar,
     hideSnackbar,
   };

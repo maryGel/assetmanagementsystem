@@ -30,13 +30,15 @@ import { tableFieldFormat } from '../custom Utils/customLayout';
 const JOLineItems = ({
   state,
   rows = [],
-  dispatch,
+  // dispatch,
   docStatus,
   isReadOnly,
   currentHeader,
   currentJOItems,
   updateDetailRow,
-  addDetailRow
+  addDetailRow,
+  removeDetailRow,
+  handleDeleteClick
 }) => {
   const {
     allAssets,
@@ -73,18 +75,18 @@ const JOLineItems = ({
     }
   }, [fetchAssets, assetsLoaded]);
   // SET ASSET OPTIONS
-useEffect(() => {
-  if (allAssets?.length > 0) {
-    setAssetOptions(
-      allAssets.map(a => ({
-        ...a,
-        FacNO: String(a.FacNO ?? '').trim(),
-      }))
-    );
-  }
-}, [allAssets]);
+  useEffect(() => {
+    if (allAssets?.length > 0) {
+      setAssetOptions(
+        allAssets.map(a => ({
+          ...a,
+          FacNO: String(a.FacNO ?? '').trim(),
+        }))
+      );
+    }
+  }, [allAssets]);
   
-    useEffect(() => {
+  useEffect(() => {
     console.log("CURRENT ROWS", currentJOItems);
   }, [currentJOItems]);
   
@@ -95,20 +97,17 @@ useEffect(() => {
   };
 
   // REMOVE ROW
-  const handleDeleteRow = (rowId) => {
-    if (currentJOItems.length === 1) {
-      setSnackbar({
-        open: true,
-        message: 'At least one row is required',
-        severity: 'warning'
-      });
-      return;
-    }
-    dispatch({
-      type: 'REMOVE_DETAIL_ROW',
-      id: rowId
-    });
-  };
+  // const handleDeleteRow = (rowId) => {
+  //   if (currentJOItems.length === 1) {
+  //     setSnackbar({
+  //       open: true,
+  //       message: 'At least one row is required',
+  //       severity: 'warning'
+  //     });
+  //     return;
+  //   }
+  //   removeDetailRow(rowId);
+  // };
 
   // UPDATE FIELD
   const handleRowFieldChange = (
@@ -155,6 +154,8 @@ useEffect(() => {
 
 
   return (
+
+    
     <Box sx={{ p: 2 }}>
       {!assetsLoaded && isLoading && (
         <Box
@@ -223,9 +224,7 @@ useEffect(() => {
                     color="error"
                     size="small"
                     disabled={isReadOnly}
-                    onClick={() =>
-                      handleDeleteRow(row.id)
-                    }
+                    onClick={() =>handleDeleteClick(row.id)}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
