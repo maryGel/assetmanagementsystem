@@ -12,12 +12,13 @@ import {TextareaAutosize, CircularProgress} from '@mui/material';
 // Hooks
 import {useApprovalLogs} from '../../hooks/useApprovalLogs';
 import { useAssetAccApproval } from '../../hooks/useAssetAccApproval';
-// Custom Utils
 import { useApprovalActions } from '../../Utils/approvalActionHandler';
 // Components
 import BulkActionDialog from '../../Utils/bulkActionDialog';
 import Toast from '../../Utils/toast';
 import SelectionModeHeader from '../../Utils/selectionModeHeader';
+// Custom Utils
+import { getStatusBadge } from '../../Utils/filters';
 
 
 function MvAAForm({
@@ -278,31 +279,6 @@ function MvAAForm({
         });
     }, [filteredAA]);
 
-// Get status badge color and text
-  const getStatusBadge = (header) => {
-    if (header.DISAPPROVED === 1) {
-      return { text: 'Rejected', color: 'text-slate-400' };
-    }
-    
-    if (header.xPosted === 1) {
-      return { text: 'Fully Approved', color: 'text-slate-400' };
-    }
-    
-    if (header.xPosted === 2) {
-      const approvedLevels = header.appStat ? header.appStat.split(',').length : 0;
-
-      return { 
-        text: `Partially Approved (${approvedLevels}/${totalLevels})`, 
-        color: 'bg-yellow-100 text-yellow-800' 
-      };
-    }
-    
-    if (header.xPosted === 3) {
-      return { text: 'For Approval', color: 'bg-gray-100 text-gray-800' };
-    }
-    
-    return { text: 'Unknown', color: 'bg-gray-100 text-gray-800' };
-  };
   
   // Check if TR is eligible for selection
   const isEligibleForSelection = (header) => {
@@ -373,7 +349,7 @@ function MvAAForm({
           sortedFilteredAA?.map((header) => {
           const items = getItemsByAANo(header.AAFNo);
           const logs = getAppLogByAANo(header.AAFNo);
-          const statusBadge = getStatusBadge(header);
+          const statusBadge = getStatusBadge(header, totalLevels);
           const eligibleForSelection = isEligibleForSelection(header);
           const nextLevel = getNextLevel(header);             
 

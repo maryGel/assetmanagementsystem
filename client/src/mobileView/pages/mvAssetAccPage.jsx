@@ -129,22 +129,18 @@ function MvAssetAccPage({
     // First, apply the status filter
     const statusFilteredAA = useMemo(() => {
       return assetAccHeaders.filter((aa) => {
-        if(filter === 'All') return true;
-        
-        if(filter === 'Waiting'){
-          return (aa.xPosted === 3 || aa.xPosted === 2) && aa.DISAPPROVED === 0; 
+        switch (filter) {
+          case 'All':
+            return true
+          case 'Waiting':
+            return aa.xPosted === 3 || aa.xPosted === 2;
+          case 'Fully Approved':
+            return aa.xPosted === 1;
+          case 'Rejected':
+            return aa.xPosted === 4 || aa.xPosted === 4;
+          default:
+            return true; // 'All' or any other value shows everything
         }
-        if(filter === 'Fully Approved'){
-          return aa.xPosted === 1 && aa.DISAPPROVED === 0;
-        }
-        if(filter === 'Rejected'){
-          return (aa.xPosted === 3 || aa.xPosted ===2) && aa.DISAPPROVED === 1;
-        }
-        if(filter === 'Partially Approved'){
-          return aa.xpost === 2 && aa.DISAPPROVED === 0;
-        }
-
-        return false;
       });
     }, [assetAccHeaders, filter]);
 

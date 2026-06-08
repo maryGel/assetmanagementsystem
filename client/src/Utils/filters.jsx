@@ -63,6 +63,31 @@ export const docStatus = (xpost, disapproved) => {
   return null;
 }
 
+         // Get status badge color and text
+export const getStatusBadge = (header, totalLevels) => {
+        if (header.xpost === 4 || header.xPosted  === 4) {
+            return { text: 'Rejected', color: 'text-slate-400' };
+        }
+        
+        if (header.xpost === 1 || header.xPosted === 1) {
+            return { text: 'Fully Approved', color: 'text-slate-400' };
+        }
+        
+        if (header.xpost === 2 || header.xPosted === 2) {
+            const approvedLevels = header.appStat ? header.appStat.split(',').length : 0;
+            return { 
+                text: `Partially Approved (${approvedLevels}/${totalLevels})`, 
+                color: 'bg-yellow-100 text-yellow-800' 
+            };
+        }
+        
+        if (header.xpost === 3 || header.xPosted === 3) {
+            return { text: 'For Approval', color: 'bg-gray-100 text-gray-800' };
+        }
+        
+        // return { text: 'Unknown', color: 'bg-gray-100 text-gray-800' };
+    };
+
 // Destructure props here for cleaner access
 function CustomFilter({ options, value, getOptionLabel, onChange, label }) {
   const [isFocused, setIsFocused] = useState(false);

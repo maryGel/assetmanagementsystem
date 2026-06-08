@@ -130,22 +130,20 @@ function MvDisposalPage({
     // First, apply the status filter
     const statusFilteredAD = useMemo(() => {
       return adHeaders.filter((ad) => {
-        if(filter === 'All') return true;
-        
-        if(filter === 'Waiting'){
-          return (ad.xpost === 3 || ad.xpost === 2) && ad.DISAPPROVED === 0; 
-        }
-        if(filter === 'Fully Approved'){
-          return ad.xpost === 1 && ad.DISAPPROVED === 0;
-        }
-        if(filter === 'Rejected'){
-          return (ad.xpost === 3 || ad.xpost ===2) && ad.DISAPPROVED === 1;
-        }
-        if(filter === 'Partially Approved'){
-          return ad.xpost === 2 && ad.DISAPPROVED === 0;
-        }
-
-        return false;
+        switch (filter) {
+          case 'All':
+            return true;
+          case 'Waiting':
+            return ad.xpost === 3 || ad.xpost === 2;
+          case 'Fully Approved':
+            return ad.xpost === 1;
+          case 'Rejected':
+            return ad.xpost === 4;
+          case 'Partially Approved':
+            return ad.xpost === 2;  
+          default:
+            return true; // 'All' or any unrecognized filter shows everything
+        } 
       });
     }, [adHeaders, filter]);
 

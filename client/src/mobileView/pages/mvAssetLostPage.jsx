@@ -129,22 +129,18 @@ function MVAssetLostPage({
     // First, apply the status filter
     const statusFilteredAL = useMemo(() => {
       return assetLostHeaders.filter((al) => {
-        if(filter === 'All') return true;
-        
-        if(filter === 'Waiting'){
-          return (al.xPosted === 3 || al.xPosted === 2) && al.DISAPPROVED === 0; 
+        switch (filter) {
+          case 'All':
+            return true;
+          case 'Waiting':
+            return al.xPosted === 3 || al.xPosted === 2;
+          case 'Fully Approved':
+            return al.xPosted === 1;
+          case 'Rejected':
+            return al.xPosted === 4;
+          default:
+            return true;      
         }
-        if(filter === 'Fully Approved'){
-          return al.xPosted === 1 && al.DISAPPROVED === 0;
-        }
-        if(filter === 'Rejected'){
-          return (al.xPosted === 3 || al.xPosted === 2) && al.DISAPPROVED === 1;
-        }
-        if(filter === 'Partially Approved'){
-          return al.xPosted === 2 && al.DISAPPROVED === 0;
-        }
-
-        return false;
       });
     }, [assetLostHeaders, filter]);
 

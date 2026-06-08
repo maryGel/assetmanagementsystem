@@ -131,22 +131,26 @@ function MvTransferPage({
     // First, apply the status filter with multi-level support
     const statusFilteredTR = useMemo(() => {
         return trHeaders.filter((tr) => {
-            if(filter === 'All') return true;
-            
-            if(filter === 'Waiting'){
-                // Waiting includes: Not Started (xpost=3) and Partially Approved (xpost=2)
-                return (tr.xpost === 3 || tr.xpost === 2) && tr.DISAPPROVED === 0; 
+            switch (filter) {
+                case 'All':
+                    return true;
+
+                case 'Waiting':
+                    // Waiting includes: Not Started (xpost=3) and Partially Approved (xpost=2)
+                    return tr.xpost === 3 || tr.xpost === 2;
+
+                case 'Fully Approved':
+                    return tr.xpost === 1;
+
+                case 'Rejected':
+                    return tr.xpost === 4;
+
+                case 'Partially Approved':
+                    return tr.xpost === 2;
+
+                default:
+                    return false;
             }
-            if(filter === 'Fully Approved'){
-                return tr.xpost === 1 && tr.DISAPPROVED === 0;
-            }
-            if(filter === 'Rejected'){
-                return (tr.xpost === 3 || tr.xpost === 2) && tr.DISAPPROVED === 1;
-            }
-            if(filter === 'Partially Approved'){
-                return tr.xpost === 2 && tr.DISAPPROVED === 0;
-            }
-            return false;
         });
     }, [trHeaders, filter]);
 

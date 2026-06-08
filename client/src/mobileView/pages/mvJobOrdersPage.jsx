@@ -127,25 +127,20 @@ function MvJobOrderPage({
     // First, apply the status filter
     const statusFilteredJO = useMemo(() => {
         return [...joHeaders].filter((jo) => {
-            // Convert xpost to number for comparison
-            const xpostValue = Number(jo.xpost);
-            
-            if(filter === 'All') return true;
-            
-            if(filter === 'Waiting'){
-                // Waiting includes: Not Started (xpost=3) and Partially Approved (xpost=2)
-                return (xpostValue === 3 || xpostValue === 2); 
+            switch (filter) {
+                case 'All':
+                    return true;
+                case 'Waiting':
+                    return (jo.xpost === 3 || jo.xpost === 2);
+                case 'Fully Approved':
+                    return jo.xpost === 1;
+                case 'Rejected':
+                    return jo.xpost === 4;
+                case 'Partially Approved':
+                    return jo.xpost === 2;
+                default:
+                    return true;        
             }
-            if(filter === 'Fully Approved'){
-                return xpostValue === 1;
-            }
-            if(filter === 'Rejected'){
-                return xpostValue === 4; // Rejected status (xpost=4)
-            }
-            if(filter === 'Partially Approved'){
-                return xpostValue === 2;
-            }
-            return false;
         });
     }, [joHeaders, filter]);
 

@@ -21,7 +21,7 @@ import Toast from '../../Utils/toast';
 import SelectionModeHeader from '../../Utils/selectionModeHeader';
 
 // Custom Utils
-import { borderColor } from '../../Utils/filters';
+import { getStatusBadge } from '../../Utils/filters';
 
 function MvJOForm({
     useProps,
@@ -272,30 +272,6 @@ function MvJOForm({
         return [...filteredJO].sort((a, b) => b.JO_No.localeCompare(a.JO_No));
     }, [filteredJO]);
 
-        // Get status badge color and text
-    const getStatusBadge = (header) => {
-        if (header.xpost === 4) {
-            return { text: 'Rejected', color: 'text-slate-400' };
-        }
-        
-        if (header.xpost === 1) {
-            return { text: 'Fully Approved', color: 'text-slate-400' };
-        }
-        
-        if (header.xpost === 2) {
-            const approvedLevels = header.appStat ? header.appStat.split(',').length : 0;
-            return { 
-                text: `Partially Approved (${approvedLevels}/${totalLevels})`, 
-                color: 'bg-yellow-100 text-yellow-800' 
-            };
-        }
-        
-        if (header.xpost === 3) {
-            return { text: 'For Approval', color: 'bg-gray-100 text-gray-800' };
-        }
-        
-        // return { text: 'Unknown', color: 'bg-gray-100 text-gray-800' };
-    };
 
     // Check if TR is eligible for selection
     const isEligibleForSelection = (header) => {
@@ -369,7 +345,7 @@ function MvJOForm({
       sortedFilteredJo.map((header) => {
         const items = getItemsByJONo(header.JO_No);
         const logs = getApprovalLogs(header.JO_No);
-        const statusBadge = getStatusBadge(header);
+        const statusBadge = getStatusBadge(header, totalLevels);
         const eligibleForSelection = isEligibleForSelection(header);
         const nextLevel = getNextLevel(header);
         // const totalLevels = 1;
