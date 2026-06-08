@@ -286,16 +286,15 @@ router.put('/reject/:AAFNo', (req, res) => {
         const processedLevelsCount = newAppStat.split(',').filter(l => l.trim()).length;
         
         // 5. Calculate new xPosted - RESET TO 3 for rejection (but follow same calculation pattern)
-        const newXpost = 3; // Reset to 3 on rejection
+        const newXpost = 4; // Reset to 3 on rejection
         
         // 6. Determine the STAT value for the approval log - ALWAYS 'Disapproved' for rejection
-        const approvalStat = 'Disapproved';
+        const approvalStat = 'Rejected';
         
         // 7. Update assestacch table - Set DISAPPROVED to 1, keep appStat same as approve flow
         const updateHeaderSql = `
           UPDATE assestacch 
-          SET DISAPPROVED = 1,
-              xPosted = ?, 
+          SET xPosted = ?, 
               appStat = ?,
               approver = ?
           WHERE AAFNo = ?

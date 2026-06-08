@@ -388,6 +388,7 @@ router.get('/total-levels', (req, res) => {
   const { module } = req.query;
   
   console.log('=== TOTAL LEVELS API CALLED ===');
+
   console.log('Module requested:', module);
   
   // Simple query without connection pooling issues

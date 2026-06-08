@@ -87,8 +87,8 @@ export const useDisposalApproval = () => {
   const canApprove = (docStatus) => {
     if (!docStatus) return { canApprove: false, reason: 'No document status available' };
     
-    if (docStatus.disapproved === 1) {
-      return { canApprove: false, reason: 'Document has been disapproved' };
+    if (docStatus.xpost === 4) {
+      return { canApprove: false, reason: 'Document has been rejected' };
     }
     
     if (docStatus.xpost === 1) {

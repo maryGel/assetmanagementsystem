@@ -483,7 +483,7 @@ function MvTRForm({
                           <div className='flex items-center justify-between'>
                             <div className='flex items-center gap-2'>
                               <span className='w-5'>
-                                {log.STAT !== 'Disapproved' ? 
+                                {log.STAT !== 'Disapproved' && log.STAT !== 'Rejected' ? 
                                   <CheckCircleIcon fontSize='small' className='text-green-500' /> : 
                                   <CancelIcon fontSize='small' className='text-red-500'/>
                                 }
@@ -492,7 +492,7 @@ function MvTRForm({
                               <span className="font-medium">{log.X_USER?.split('-')[1]}</span>
                             </div>
                             <div className='flex gap-2 text-xs text-gray-500'>
-                                {log.STAT !== 'Disapproved' && <span > {log.STAT}</span> }
+                                {log.STAT !== 'Disapproved' && log.STAT !== 'Rejected' && <span > {log.STAT}</span> }
                               <span><DateDisplay value={log.DT} format="short" /></span>       
                             </div>                             
                           </div>

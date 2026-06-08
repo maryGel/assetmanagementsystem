@@ -286,16 +286,15 @@ router.put('/reject/:AD_No', (req, res) => {
         const processedLevelsCount = newAppStat.split(',').filter(l => l.trim()).length;
         
         // 5. Calculate new xpost - RESET TO 3 for rejection (but follow same calculation pattern)
-        const newXpost = 3; // Reset to 3 on rejection
+        const newXpost = 4; // Reset to 3 on rejection
         
         // 6. Determine the STAT value for the approval log - ALWAYS 'Disapproved' for rejection
-        const approvalStat = 'Disapproved';
+        const approvalStat = 'Rejected';
         
         // 7. Update ad_h table - Set DISAPPROVED to 1, keep appStat same as approve flow
         const updateHeaderSql = `
           UPDATE ad_h 
-          SET DISAPPROVED = 1,
-              xpost = ?, 
+          SET xpost = ?, 
               appStat = ?,
               approved_by = ?
           WHERE AD_No = ?
@@ -312,8 +311,8 @@ router.put('/reject/:AD_No', (req, res) => {
           throw new Error('TR header not found');
         }
         
-        // 8. Reset ad_d table xpost to 3 on rejection
-        const updateDetailsSql = `UPDATE ad_d SET xpost = 3 WHERE AD_No = ?`;
+        // 8. Reset ad_d table xpost to 4 on rejection
+        const updateDetailsSql = `UPDATE ad_d SET xpost = 4 WHERE AD_No = ?`;
         const DetailsUpdateResult = await new Promise((resolve, reject) => {
           connection.query(updateDetailsSql, [cleanDocNo], (error, result) => {
             if (error) reject(error);

@@ -87,7 +87,7 @@ export const useAssetAccApproval = () => {
   const canApprove = (docStatus) => {
     if (!docStatus) return { canApprove: false, reason: 'No document status available' };
     
-    if (docStatus.disapproved === 1) {
+    if (docStatus.xPosted === 4) {
       return { canApprove: false, reason: 'Document has been disapproved' };
     }
     

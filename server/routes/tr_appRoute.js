@@ -285,17 +285,16 @@ router.put('/reject/:TR_No', (req, res) => {
         // Calculate the processed level count (same as approve)
         const processedLevelsCount = newAppStat.split(',').filter(l => l.trim()).length;
         
-        // 5. Calculate new xpost - RESET TO 3 for rejection (but follow same calculation pattern)
-        const newXpost = 3; // Reset to 3 on rejection
+        // 5. Calculate new xpost - RESET TO 4 for rejection (but follow same calculation pattern)
+        const newXpost = 4; // Reset to 4 on rejection
         
         // 6. Determine the STAT value for the approval log - ALWAYS 'Disapproved' for rejection
-        const approvalStat = 'Disapproved';
+        const approvalStat = 'Rejected';
         
         // 7. Update tr_h table - Set DISAPPROVED to 1, keep appStat same as approve flow
         const updateHeaderSql = `
           UPDATE tr_h 
-          SET DISAPPROVED = 1,
-              xpost = ?, 
+          SET xpost = ?, 
               appStat = ?,
               approved = ?
           WHERE TR_No = ?
@@ -313,7 +312,7 @@ router.put('/reject/:TR_No', (req, res) => {
         }
         
         // 8. Reset tr_d table xpost to 3 on rejection
-        const updateDetailsSql = `UPDATE tr_d SET xpost = 3 WHERE TR_No = ?`;
+        const updateDetailsSql = `UPDATE tr_d SET xpost = 4 WHERE TR_No = ?`;
         const DetailsUpdateResult = await new Promise((resolve, reject) => {
           connection.query(updateDetailsSql, [cleanDocNo], (error, result) => {
             if (error) reject(error);
