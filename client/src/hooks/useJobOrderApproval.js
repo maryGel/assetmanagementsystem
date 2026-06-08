@@ -87,8 +87,8 @@ export const useJobOrderApproval = () => {
   const canApprove = (docStatus) => {
     if (!docStatus) return { canApprove: false, reason: 'No document status available' };
     
-    if (docStatus.disapproved === 1) {
-      return { canApprove: false, reason: 'Document has been disapproved' };
+    if (docStatus.xpost === 4) {
+      return { canApprove: false, reason: 'Document has been rejected' };
     }
     
     if (docStatus.xpost === 1) {
@@ -184,7 +184,7 @@ const postJobOrder = async (JO_No) => {
 const canPost = (docStatus) => {
   if (!docStatus) return { canPost: false, reason: 'No document status available' };
   
-  if (docStatus.disapproved === 1) {
+  if (docStatus.xpost === 4) {
     return { canPost: false, reason: 'Document has been disapproved' };
   }
   

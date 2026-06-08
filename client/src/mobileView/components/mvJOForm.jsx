@@ -274,7 +274,7 @@ function MvJOForm({
 
         // Get status badge color and text
     const getStatusBadge = (header) => {
-        if (header.DISAPPROVED === 1) {
+        if (header.xpost === 4) {
             return { text: 'Rejected', color: 'text-slate-400' };
         }
         
@@ -294,13 +294,13 @@ function MvJOForm({
             return { text: 'For Approval', color: 'bg-gray-100 text-gray-800' };
         }
         
-        return { text: 'Unknown', color: 'bg-gray-100 text-gray-800' };
+        // return { text: 'Unknown', color: 'bg-gray-100 text-gray-800' };
     };
 
     // Check if TR is eligible for selection
     const isEligibleForSelection = (header) => {
         const approvalCheck = canApprove(header);
-        return approvalCheck.canApprove && header.DISAPPROVED !== 1 && header.xpost !== 1;
+        return approvalCheck.canApprove && header.xpost !== 4 && header.xpost !== 1;
     };
 
     // Get next level for display
@@ -441,7 +441,7 @@ function MvJOForm({
                   </button>
                 )}
               </div>
-              {eligibleForSelection && header.xpost !== 1 && header.DISAPPROVED !== 1 && (
+              {eligibleForSelection && header.xpost !== 1 && header.xpost !== 4 && (
                   <button 
                     onClick={(e) => handleOpenAppOptions(e, header.JO_No)}
                     className="p-1 transition-colors rounded-full hover:bg-gray-100"
@@ -490,7 +490,7 @@ function MvJOForm({
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center gap-2'>
                         <span className='w-5'>
-                          {log.STAT !== 'Disapproved' ? 
+                          {log.STAT !== 'Disapproved' && log.STAT !== 'Rejected'? 
                             <CheckCircleIcon fontSize='small' className='text-green-500' /> : 
                             <CancelIcon fontSize='small' className='text-red-500'/>
                           }
@@ -499,7 +499,8 @@ function MvJOForm({
                         <span className="font-medium">{log.X_USER?.split('-')[1]}</span>
                       </div>
                       <div className='flex gap-2 text-xs text-gray-500'>
-                         {log.STAT !== 'Disapproved' && <span > {log.STAT}</span> }
+                         {log.STAT !== 'Disapproved' &&
+                          log.STAT !== 'Rejected' ? <span > {log.STAT}</span> : null}
                         <span><DateDisplay value={log.DT} format="short" /></span>       
                       </div>                             
                     </div>

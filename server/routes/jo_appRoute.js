@@ -212,8 +212,7 @@ router.put('/reject/:JO_No', (req, res) => {
 
   console.log('Rejection request:', { JO_No, approved_by, remarks });
 
-  const decodedJONo = decodeURIComponent(JO_No);
-  const cleanDocNo = decodedJONo
+  const cleanDocNo = decodeURIComponent(JO_No)
     .replace(/\u00A0/g, '')
     .replace(/\s/g, '')
     .toUpperCase();
@@ -285,17 +284,16 @@ router.put('/reject/:JO_No', (req, res) => {
         // Calculate the processed level count (same as approve)
         const processedLevelsCount = newAppStat.split(',').filter(l => l.trim()).length;
         
-        // 5. Calculate new xpost - RESET TO 3 for rejection (but follow same calculation pattern)
-        const newXpost = 3; // Reset to 3 on rejection
+        // 5. REVISED: Set xpost to 4 for rejection (instead of 3)
+        const newXpost = 4; // Set to 4 on rejection (disapproved status)
         
         // 6. Determine the STAT value for the approval log - ALWAYS 'Disapproved' for rejection
-        const approvalStat = 'Disapproved';
+        const approvalStat = 'Rejected';
         
-        // 7. Update jo_h table - Set DISAPPROVED to 1, keep appStat same as approve flow
+        // 7. REVISED: Update jo_h table - Remove DISAPPROVED flag, just set xpost = 4
         const updateHeaderSql = `
           UPDATE jo_h 
-          SET DISAPPROVED = 1,
-              xpost = ?, 
+          SET xpost = ?, 
               appStat = ?,
               approved_by = ?
           WHERE JO_No = ?
@@ -312,8 +310,8 @@ router.put('/reject/:JO_No', (req, res) => {
           throw new Error('JO header not found');
         }
         
-        // 8. Reset jo_d table xpost to 3 on rejection
-        const updateDetailsSql = `UPDATE jo_d SET xpost = 3 WHERE JO_No = ?`;
+        // 8. REVISED: Reset jo_d table xpost to 4 on rejection
+        const updateDetailsSql = `UPDATE jo_d SET xpost = 4 WHERE JO_No = ?`;
         const DetailsUpdateResult = await new Promise((resolve, reject) => {
           connection.query(updateDetailsSql, [cleanDocNo], (error, result) => {
             if (error) reject(error);
@@ -328,7 +326,7 @@ router.put('/reject/:JO_No', (req, res) => {
           VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)
         `;
         
-        const xUser = userInfo ? `${userInfo.user} - ${userInfo.lname}, ${userInfo.fname}` : String(approved);
+        const xUser = userInfo ? `${userInfo.user} - ${userInfo.lname}, ${userInfo.fname}` : String(approved_by || '');
         
         await new Promise((resolve, reject) => {
           connection.query(insertLogSql, [cleanDocNo, 'Job Order', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
@@ -354,7 +352,7 @@ router.put('/reject/:JO_No', (req, res) => {
           
           res.json({
             success: true,
-            message: 'Transfer rejected successfully',
+            message: 'Job Order rejected successfully',
             data: {
               doc_h_updated: updateResult.affectedRows,
               doc_d_updated: DetailsUpdateResult?.affectedRows || 0,
@@ -363,8 +361,7 @@ router.put('/reject/:JO_No', (req, res) => {
               processedLevels: processedLevelsCount,
               totalLevels: totalLevels,
               xpost: newXpost,
-              appStat: newAppStat,
-              disapproved: 1
+              appStat: newAppStat
             }
           });
         });

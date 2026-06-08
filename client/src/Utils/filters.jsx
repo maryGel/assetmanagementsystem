@@ -26,7 +26,7 @@ export const maintStatus = [
 ]
 export const borderColor = (xpost, disapproved) => {
 
-  if (disapproved === 1) return "border-red-600";
+  if (xpost === 4) return "border-red-600";
   if (xpost === 1) return "border-green-600";
   if (xpost === 3 && xpost === 2) return "border-slate-200";
   return "";
@@ -34,31 +34,34 @@ export const borderColor = (xpost, disapproved) => {
   
     
 export const docStatus = (xpost, disapproved) => {
-    
-  if(xpost === 1 && !disapproved) return (
+  const xpostValue = Number(xpost);
+  
+  if(xpostValue === 1) return (
     <div className='flex items-center '>  
       <span className='text-xs tracking-wide text-green-500'>Fully Approved</span>          
     </div>
   );
 
-  if(xpost === 2 && !disapproved) return (
+  if(xpostValue === 2) return (
     <div className='flex items-center mx-1'> 
       <span className='text-xs tracking-wide'>Partially Approved</span>          
     </div>
   );
 
-  if(xpost === 3  && !disapproved) return (
+  if(xpostValue === 3) return (
     <div className='flex items-center mx-1'>     
       <span className='text-xs tracking-wide text-yellow-600'>Pending</span>          
     </div>
   );
 
-  if(xpost === 3 && disapproved === 1) return (
+  if(xpostValue === 4) return (
     <div className='flex items-center mx-1'>     
       <span className='text-xs tracking-wide text-red-600'>Rejected</span>          
     </div>
   );
-} 
+  
+  return null;
+}
 
 // Destructure props here for cleaner access
 function CustomFilter({ options, value, getOptionLabel, onChange, label }) {
