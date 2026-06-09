@@ -48,7 +48,7 @@ function a11yProps(index) {
   };
 }
 
-export default function DocumentTabs({
+export default function JobOrderTabs({
     useProps,
     isCreating,
     isEditing,
@@ -63,19 +63,27 @@ export default function DocumentTabs({
     handleDeleteClick,
     handleConfirmDelete,
     handleCancelDelete,
-    state
+    state,
+    copyDocNo
 }){
 
   const theme = useTheme();
-  const [value, setValue] = React.useState(0);
-  const [viewApproval, setViewApproval] = useState(false)
+  const [value, setValue] = useState(0);
+  const [viewApproval, setViewApproval] = useState(true);
+  const [approvalKey, setApprovalKey] = useState(0);
 
   useEffect(() => {
     const hideViewapproval = currentHeader?.xpost === 0 || currentHeader?.xpost === 3;
     if(hideViewapproval) {
+      setViewApproval(false);
+      // If approval tab is currently active and becomes hidden, switch to first tab
+      if (value === 1) {
+        setValue(0);
+      }
+    } else {
       setViewApproval(true);
     }
-  }, [])
+  }, [currentHeader?.xpost, value]) // Listen specifically to xpost changes
 
   console.log(`isCreating: ${isCreating}`)
 
@@ -95,7 +103,7 @@ export default function DocumentTabs({
           aria-label="full width tabs example"
         >
           <Tab label="Item List" {...a11yProps(0)} sx={{ letterSpacing: '0.10em' }}/>
-          {(!viewApproval && currentHeader?.xpost !== 0 && currentHeader?.xpost !== 3) &&
+          {(viewApproval && copyDocNo?.length > 0 && currentHeader?.xpost !== 0 && currentHeader?.xpost !== 3) &&
             <Tab label="Approval Logs" {...a11yProps(1)} sx={{ letterSpacing: '0.10em' }}/>
           }
         </Tabs> 
@@ -118,7 +126,7 @@ export default function DocumentTabs({
         />
       </TabPanel>
       <TabPanel value={value} index={1} dir={theme.direction}>
-        {(!viewApproval && currentHeader?.xpost !== 0 && currentHeader?.xpost !== 3) && (
+        {(viewApproval && currentHeader?.xpost !== 0 && currentHeader?.xpost !== 3) && (
           <DisplayApprovalHistory
             state={state}
             isEditing = {isEditing}

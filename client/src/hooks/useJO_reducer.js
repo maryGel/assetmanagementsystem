@@ -131,6 +131,7 @@ function joReducer(state, action) {
     case 'START_CREATE': {
       // Use the pre-generated JO number if available
       const newJO_No = action.payload?.generatedJO_No || '';
+      const requestedBy = action.payload?.requestedBy || ''; 
       const todayObj = new Date();
 
       const today = `${todayObj.getFullYear()}-${String(
@@ -155,7 +156,7 @@ function joReducer(state, action) {
           xpost: 0,
           Deparment_name: '',
           Department_Code: '',
-          requested_by: '',
+          requested_by: requestedBy,
         },
         createJODetails: [
           {
@@ -648,7 +649,7 @@ export const useJOData = (onSaveSuccess) => {
     dispatch({ type: 'HIDE_SNACKBAR' });
   };
 
-  const startCreate = useCallback((companyConfig) => {
+  const startCreate = useCallback((companyConfig, requestedBy = '') => {
 
   // Ensure we have valid companyConfig
   if (!companyConfig) {
@@ -671,7 +672,8 @@ export const useJOData = (onSaveSuccess) => {
     type: 'START_CREATE', 
     payload: {
       ...companyConfig,
-      generatedJO_No: newJO_No  // Pass the generated number
+      generatedJO_No: newJO_No,  // Pass the generated number
+      requestedBy: requestedBy 
     }
   });
 }, [dispatch]);

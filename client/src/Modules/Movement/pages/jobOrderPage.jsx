@@ -6,14 +6,15 @@ import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert, 
 
 
 // Components
-import DocumentTabs from '../custom Utils/assetMoveTabs';
+import JobOrderTabs from '../custom Utils/jobOrderTabs';
 
 // Custom Utils
 import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
 import { customTheme } from '../../../Utils/customTable';
-import { CustomBtn } from '../../../Utils/groupbtns';
+import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
 import DateDisplay from '../../../Utils/formatDateForInput';
+
 
 // Custom Hooks
 import { useJO_h} from '../../../hooks/useJO_h';
@@ -243,7 +244,8 @@ export default function JOFormPage(useProps) {
     isCreatingRef.current = true;
     const config = Array.isArray(companyConfig) ? companyConfig[0] : companyConfig;
     console.log('Correct config:', config);
-    startCreate(config);
+    startCreate(config, userName);
+    
   };
   
   const handleEdit = () => {
@@ -283,6 +285,16 @@ export default function JOFormPage(useProps) {
       return;
     }
     
+    if (!state.createJODetails?.find(item => item.TargetDate )) {
+      alert('Please provide Target Date for all items');
+      return;
+    }
+    
+    if (!state.createJODetails?.find(item => item.workDet )) {
+      alert('Please provide work details for all items');
+      return;
+    }
+
     // Check for empty required fields in details
     const invalidRows = state.createJODetails.filter(row => !row.FAC_NO);
     if (invalidRows.length > 0) {
@@ -462,52 +474,7 @@ export default function JOFormPage(useProps) {
     setLocalSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  // Determine button visibility and text based on document status
-  const getButtonConfig = () => {
-    // If creating new document
-    if (state.isCreating) {
-      return { showPost: false, showApprove: false, showReject: false };
-    }
-    
-    // If editing draft
-    if (state.isEditing && baseHeader?.xpost === 0) {
-      return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
-    }
-    
-    // For existing documents
-    if (baseHeader) {
-      // Draft - not posted yet
-      if (baseHeader.xpost === 0) {
-        return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
-      }
-      
-      // For approval status
-      if (baseHeader.xpost === 3) {
-        const approvalCheck = canApprove({ xpost: baseHeader.xpost, disapproved: baseHeader.disapproved });
-        return { 
-          showPost: false, 
-          showApprove: approvalCheck.canApprove, 
-          showReject: true,
-          approveText: 'Approve',
-          rejectText: 'Reject'
-        };
-      }
-      
-      // Fully approved
-      if (baseHeader.xpost === 1) {
-        return { showPost: false, showApprove: false, showReject: false };
-      }
-      
-      // Rejected
-      if (baseHeader.xpost === 4) {
-        return { showPost: false, showApprove: false, showReject: false };
-      }
-    }
-    
-    return { showPost: false, showApprove: false, showReject: false };
-  };
-
-  const buttonConfig = getButtonConfig();
+  const buttonConfig = getButtonConfig(state, baseHeader, canApprove);
 
   // warn users if they try to leave with unsaved changes
   useEffect(() => {
@@ -543,7 +510,7 @@ export default function JOFormPage(useProps) {
         />
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete JO line items Confirmation Dialog */}
       <Dialog open={state.deleteDialogOpen} onClose={closeDeleteDialog}>
         <CustomDialog
           title="Confirm Delete"
@@ -593,11 +560,11 @@ export default function JOFormPage(useProps) {
             </p>
             <div className="mb-4">
               <label className="block mb-2 text-sm font-medium text-gray-700">
-                Remarks {bulkActionType === 'reject' && <span className="text-red-500">*</span>}
+                Remarks {<span className="text-red-500">*</span>}
               </label>
               <TextareaAutosize
                 minRows={3}
-                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Enter approval remarks (optional)..."}
+                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Enter provide approval remarks"}
                 value={bulkRemarks}
                 onChange={(e) => setBulkRemarks(e.target.value)}
                 autoFocus
@@ -626,7 +593,7 @@ export default function JOFormPage(useProps) {
                   // Handle bulk action here if needed
                   showToast('Bulk action not yet implemented', 'info');
                 }}
-                disabled={bulkLoading || (bulkActionType === 'reject' && !bulkRemarks.trim())}
+                disabled={bulkLoading || (!bulkRemarks.trim())}
               >
                 {bulkLoading ? 'Processing...' : (bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection')}
               </CustomBtn>
@@ -739,7 +706,7 @@ export default function JOFormPage(useProps) {
             iconType='save'
             title='Approve this document'
             onClick={handleApproveClick}
-            disabled={approvalLoading || processingItem === copyDocNo}
+            disabled={state.isEditing ||approvalLoading || processingItem === copyDocNo}
           >
             {processingItem === copyDocNo ? 'Approving...' : (buttonConfig.approveText || 'Approve')}
           </CustomBtn>
@@ -814,7 +781,7 @@ export default function JOFormPage(useProps) {
               type='date' 
               value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10): ""} 
               disabled={isReadOnly}
-              onChange={(e) => {
+              onChange={(e) => {  
                 if (!isReadOnly) {
                   updateHeaderField('xDate', e.target.value);
                 }
@@ -856,11 +823,17 @@ export default function JOFormPage(useProps) {
                   )} 
                 />
                 <label className='text-base font-normal text-gray-500 w-28 '>Requested by : </label>
-                <label className='text-base font-semibold text-gray-500 '>{currentHeader?.requested_by || userName }</label>
+                  <input
+                    type="text"
+                    disabled
+                    className="text-base font-semibold text-gray-500"
+                    value={currentHeader?.requested_by || userName}
+                    onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
+                  />
               </div>
 
               <div className='flex items-start justify-start w-full gap-10 mt-4'>
-                <label className='pt-2 text-base text-gray-500 w-28 font-nornal '>Remarks : </label>
+                <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks : </label>
                 <textarea
                   id = "remarks"
                   disabled={!state.isEditing && !state.isCreating}
@@ -868,7 +841,7 @@ export default function JOFormPage(useProps) {
                   minRows={2}
                   value={currentHeader?.Remarks || ''}
                   onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                  className={`${!state.isEditing ? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 `}
+                  className={`${!state.isEditing && !state.isCreating? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 `}
                   style={{ 
                     width: '50rem',
                     resize: 'both',
@@ -884,13 +857,14 @@ export default function JOFormPage(useProps) {
       </div>    
       <ThemeProvider theme={customTheme}>
         <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
-          <DocumentTabs
+          <JobOrderTabs
             state={state}
             isCreating={state.isCreating}
             isEditing={state.isEditing}
             setIsEditing={state.setIsEditing}
             docStatus={docStatus}
             isReadOnly={isReadOnly}
+            copyDocNo={copyDocNo}
             currentHeader={currentHeader}
             currentJOItems={currentJOItems}
             updateDetailRow={updateDetailRow}

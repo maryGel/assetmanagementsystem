@@ -71,3 +71,48 @@ export const CustomBtn = ({
       </>
     )
 }
+
+
+export const getButtonConfig = (state, baseHeader, canApprove) => {
+  // If creating new document
+  if (state.isCreating) {
+    return { showPost: false, showApprove: false, showReject: false };
+  }
+  
+  // If editing draft
+  if (state.isEditing && baseHeader?.xpost === 0) {
+    return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
+  }
+  
+  // For existing documents
+  if (baseHeader) {
+    // Draft - not posted yet
+    if (baseHeader.xpost === 0) {
+      return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
+    }
+    
+    // For approval status
+    if (baseHeader.xpost === 3) {
+      const approvalCheck = canApprove({ xpost: baseHeader.xpost, disapproved: baseHeader.disapproved });
+      return { 
+        showPost: false, 
+        showApprove: approvalCheck.canApprove, 
+        showReject: true,
+        approveText: 'Approve',
+        rejectText: 'Reject'
+      };
+    }
+    
+    // Fully approved
+    if (baseHeader.xpost === 1) {
+      return { showPost: false, showApprove: false, showReject: false };
+    }
+    
+    // Rejected
+    if (baseHeader.xpost === 4) {
+      return { showPost: false, showApprove: false, showReject: false };
+    }
+  }
+  
+  return { showPost: false, showApprove: false, showReject: false };
+};
