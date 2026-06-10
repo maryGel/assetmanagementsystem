@@ -282,7 +282,7 @@ export default function SearchTransactionTable({
       case 'Job Order':
         return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
       case 'Transfer Order Form':
-        return window.open(`/assetMovement/pages/TOFormPage?docId=${transNo}`, '_blank');
+        return window.open(`/assetMovement/pages/TRFormPage?docId=${transNo}`, '_blank');
       case 'Disposal Form':
         return window.open(`/assetMovement/pages/DisposalFormPage?docId=${transNo}`, '_blank');
       case 'Asset Accountability Form':

@@ -116,8 +116,8 @@ function LoginPage({setHeaderTitle, setUsername}) {
     <>
       <div className={`flex h-screen `}>
         <section className={`grid w-full place-content-center bg-[url('/loginBg.png')] bg-cover`}>
-          <h1 className={`font-sans lg:p-4 lg:text-2xl tracking-wider text-center p-5`}>
-            The Asset Management System
+          <h1 className={`font-sans lg:p-4 lg:text-2xl tracking-wider text-center justify-center p-3`}>
+            Asset Management System
           </h1>
 
           {/* Debug info panel - TEMPORARY for testing */}

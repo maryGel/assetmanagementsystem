@@ -15,8 +15,8 @@ router.put('/approve/:TR_No', (req, res) => {
 
   // console.log('Approval request:', { TR_No, approved, remarks });
 
-  const decodedJONo = decodeURIComponent(TR_No);
-  const cleanDocNo = decodedJONo
+  const decodedTRNo = decodeURIComponent(TR_No);
+  const cleanDocNo = decodedTRNo
     .replace(/\u00A0/g, '')
     .replace(/\s/g, '')
     .toUpperCase();
@@ -212,8 +212,8 @@ router.put('/reject/:TR_No', (req, res) => {
 
   console.log('Rejection request:', { TR_No, approved, remarks });
 
-  const decodedJONo = decodeURIComponent(TR_No);
-  const cleanDocNo = decodedJONo
+  const decodedTRNo = decodeURIComponent(TR_No);
+  const cleanDocNo = decodedTRNo
     .replace(/\u00A0/g, '')
     .replace(/\s/g, '')
     .toUpperCase();
@@ -416,6 +416,143 @@ router.get('/total-levels', (req, res) => {
       success: true,
       totalLevels: totalLevels,
       module: module
+    });
+  });
+});
+
+
+/**
+ * Post a Transfer Form for approval - updates xpost to 3 only
+ * This is just to mark the TR as ready for approval, no approval action yet
+ */
+
+router.put('/post/:TR_No', (req, res) => {
+  const { TR_No } = req.params;
+
+  console.log('Post Transfer Form request:', { TR_No });
+
+  const decodedTRNo = decodeURIComponent(TR_No)
+    .replace(/\u00A0/g, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
+
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error('Database connection error:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Database connection error'
+      });
+    }
+
+    // Begin transaction
+    connection.beginTransaction(async (transactionErr) => {
+      if (transactionErr) {
+        connection.release();
+        console.error('Transaction begin error:', transactionErr);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to start transaction'
+        });
+      }
+
+      try {
+        // 1. Check current status of the TR
+        const checkSql = `
+          SELECT TR_No, xpost, disapproved 
+          FROM tr_h 
+          WHERE TR_No = ?
+        `;
+        
+        const currentDoc = await new Promise((resolve, reject) => {
+          connection.query(checkSql, [decodedTRNo], (error, results) => {
+            if (error) reject(error);
+            else resolve(results[0]);
+          });
+        });
+
+        if (!currentDoc) {
+          throw new Error(`Transfer Form ${decodedTRNo} not found`);
+        }
+
+        // 2. Validate if it can be posted
+        if (currentDoc.xpost === 3) {
+          throw new Error('Transfer Form is already posted for approval');
+        }
+        
+        if (currentDoc.xpost === 1) {
+          throw new Error('Transfer Form is already fully approved');
+        }
+        
+        if (currentDoc.disapproved === 1) {
+          throw new Error('Cannot post a disapproved Transfer Form');
+        }
+
+        // 3. Update tr_h table - set xpost = 3
+        const updateHeaderSql = `
+          UPDATE tr_h 
+          SET xpost = 3
+          WHERE TR_No = ?
+        `;
+        
+        const updateResult = await new Promise((resolve, reject) => {
+          connection.query(updateHeaderSql, [decodedTRNo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+        
+        if (updateResult.affectedRows === 0) {
+          throw new Error('Failed to update Transfer Form');
+        }
+
+        // 4. Update tr_d table - set xpost = 3 for all detail items
+        const updateDetailsSql = `UPDATE tr_d SET xpost = 3 WHERE TR_No = ?`;
+        const detailsResult = await new Promise((resolve, reject) => {
+          connection.query(updateDetailsSql, [decodedTRNo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+
+        // 5. Commit transaction
+        connection.commit((commitErr) => {
+          if (commitErr) {
+            console.error('Commit error:', commitErr);
+            return connection.rollback(() => {
+              connection.release();
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to commit transaction'
+              });
+            });
+          }
+          
+          connection.release();
+          
+          res.json({
+            success: true,
+            message: `Transfer Form ${TR_No} has been posted for approval`,
+            data: {
+              TR_No: decodedTRNo,
+              old_xpost: currentDoc.xpost,
+              new_xpost: 3,
+              details_updated: detailsResult.affectedRows,
+              status: 'Pending Approval'
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error('Error in post Transfer Form process:', error);
+        connection.rollback(() => {
+          connection.release();
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to post Transfer Form for approval'
+          });
+        });
+      }
     });
   });
 });

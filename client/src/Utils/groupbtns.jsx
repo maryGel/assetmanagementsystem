@@ -92,7 +92,7 @@ export const getButtonConfig = (state, baseHeader, canApprove) => {
     }
     
     // For approval status
-    if (baseHeader.xpost === 3) {
+    if (baseHeader.xpost === 3 || baseHeader.xpost === 2) {
       const approvalCheck = canApprove({ xpost: baseHeader.xpost, disapproved: baseHeader.disapproved });
       return { 
         showPost: false, 

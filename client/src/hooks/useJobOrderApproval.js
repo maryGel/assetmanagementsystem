@@ -144,6 +144,23 @@ const getTotalLevels = useCallback(async () => {
 }, []);
 
 /**
+   * Get the next approver level based on current appStat
+   * @param {string} appStat - Current appStat value (e.g., "1,2")
+   * @param {number} totalLevels - Total number of approval levels
+   * @returns {number|null} Next level or null if fully approved
+   */
+  const getNextApproverLevel = (appStat, totalLevels) => {
+    if (!appStat || appStat === '') {
+      return 1; // Start with level 1
+    }
+    
+    const approvedLevels = appStat.split(',').map(l => parseInt(l.trim())).filter(l => !isNaN(l));
+    const nextLevel = approvedLevels.length + 1;
+    
+    return nextLevel <= totalLevels ? nextLevel : null;
+  };
+
+/**
  * Post a Job Order for approval (update xpost to 3 only)
  * @param {string} JO_No - Job Order number
  * @returns {Promise} Post result
@@ -210,11 +227,9 @@ const canPost = (docStatus) => {
     rejectJobOrder,
     canApprove,
     getTotalLevels,
-    // getNextApproverLevel,
+    getNextApproverLevel,
     // State
 
-
-    // New functions
     postJobOrder,
     canPost,
 

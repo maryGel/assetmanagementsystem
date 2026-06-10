@@ -6,7 +6,7 @@ import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert, 
 
 
 // Components
-import JobOrderTabs from '../jobOrder/jobOrderTabs';
+import TransferTabs from '../transfer/transferTabs';
 
 // Custom Utils
 import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
@@ -17,23 +17,24 @@ import DateDisplay from '../../../Utils/formatDateForInput';
 
 
 // Custom Hooks
-import { useJO_h} from '../../../hooks/useJO_h';
+import { useTR_h} from '../../../hooks/useTR_h';
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
+import { userRefEmployee } from '../../../hooks/refEmployee'; 
+import { useRefLocation } from '../../../hooks/refLocation'; 
 import { useSections } from '../../../hooks/refSection';
-import { useJOData } from '../../../hooks/useJO_reducer';
+import { useTRData } from '../../../hooks/useTR_reducer';
 import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
-import { useJobOrderApproval } from '../../../hooks/useJobOrderApproval';
+import { useTRApproval  } from '../../../hooks/useTRApproval';
 import { useApprovalActions } from '../../../Utils/approvalActionHandler';
 import { useUsers } from '../../../hooks/useUsers';
 
-export default function JOFormPage(useProps) {
+export default function TRFormPage(useProps) {
 
   const { 
     selectedUser, 
     setSelectedUser, 
-    loading, 
   } = useUsers();
-  // In JOFormPage.jsx - modify the userInfo
+  // In TRFormPage.jsx - modify the userInfo
   const userName = localStorage.getItem('username') || 'User';
   const rawUserId = localStorage.getItem('userId') || userName;
 
@@ -58,8 +59,12 @@ export default function JOFormPage(useProps) {
   
   const {
     state,
-    getJOData,
-    forceRefreshJO,
+    dispatch,
+
+    trDetails,
+
+    getTRData,
+    forceRefreshTR,
 
     startCreate,
     startEdit,
@@ -67,32 +72,34 @@ export default function JOFormPage(useProps) {
 
     addDetailRow,
     updateHeaderField,
-    updateDetailRow,  
+    updateDetailRow,
     removeDetailRow,
 
+    // dialogs
     openSaveDialog,      
     closeSaveDialog,     
     openCancelDialog,    
-    closeCancelDialog,  
+    closeCancelDialog, 
     openDeleteDialog,
     closeDeleteDialog,
 
-    confirmSave,         
-    confirmCancel, 
-    confirmDelete,
- 
-    hideSnackbar,     
+    confirmSave,  
+    confirmDelete,   
+    confirmCancel,   
 
-  } = useJOData();
+    showSnackbar,
+    hideSnackbar,    
+
+  } = useTRData();
 
   const { 
-    postJobOrder, 
+    postTransfer, 
     canPost, 
-    approveJobOrder,
-    rejectJobOrder,
+    approveTR,
+    rejectTR,
     canApprove,
     loading: approvalLoading 
-  } = useJobOrderApproval();
+  } = useTRApproval ();
 
   // Add state for post dialog
   const [postDialogOpen, setPostDialogOpen] = useState(false);
@@ -107,13 +114,17 @@ export default function JOFormPage(useProps) {
   });
 
   // reference data for dropdowns
-  const {joHeaders} = useJO_h();
+  const { trHeaders } = useTR_h();
   const { refDeptData } = useRefDepartment();
+  const { refEmployeeData } = userRefEmployee();
+  const { refLocData } = useRefLocation();
   const { refSections } = useSections();
   const departments = refDeptData.map(item => item.Department);
+  const employees = refEmployeeData.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
+  const locations = refLocData.map(item => item.LocationName);
   const sections = refSections.map(item => item.xdesc);
 
-  // get JO data if copyDocNo exists in URL
+  // get TR data if copyDocNo exists in URL
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const copyDocNo = searchParams.get('docId');
@@ -132,13 +143,13 @@ export default function JOFormPage(useProps) {
   const refreshData = useCallback(async () => {
     if (!copyDocNo) return;
     
-    console.log('🔄 Refreshing data for JO:', copyDocNo);
+    console.log('🔄 Refreshing data for TR:', copyDocNo);
     try {
       // Force refresh using the hook's method
-      await forceRefreshJO(copyDocNo);
+      await forceRefreshTR(copyDocNo);
       
-      // Also call getJOData directly to ensure data is updated
-      await getJOData(copyDocNo);
+      // Also call getTRData directly to ensure data is updated
+      await getTRData(copyDocNo);
       
       // Increment refresh key to trigger any dependent effects
       setRefreshKey(prev => prev + 1);
@@ -147,7 +158,7 @@ export default function JOFormPage(useProps) {
     } catch (error) {
       console.error('❌ Error refreshing data:', error);
     }
-  }, [copyDocNo, forceRefreshJO, getJOData]);
+  }, [copyDocNo, forceRefreshTR, getTRData]);
 
   // Function to get item approval level (for multi-level approval)
   const getItemApprovalLevel = useCallback((itemData, isApprove) => {
@@ -176,8 +187,8 @@ export default function JOFormPage(useProps) {
     clearRemarks,
     setBulkRemarks
   } = useApprovalActions({
-    onApprove: approveJobOrder,
-    onReject: rejectJobOrder,
+    onApprove: approveTR,
+    onReject: rejectTR,
     getItemLevel: getItemApprovalLevel,
     onRefresh: refreshData,
     showToast,
@@ -189,17 +200,17 @@ export default function JOFormPage(useProps) {
     if (!copyDocNo) return;
     if (isCreatingRef.current) return;
     
-    console.log('📥 Loading initial data for JO:', copyDocNo);
-    getJOData(copyDocNo);    
-  }, [copyDocNo, getJOData]);
+    console.log('📥 Loading initial data for TR:', copyDocNo);
+    getTRData(copyDocNo);    
+  }, [copyDocNo, getTRData]);
 
   // Refresh data when refreshKey changes (after actions)
   useEffect(() => {
     if (refreshKey > 0 && copyDocNo) {
       console.log('🔄 Refresh triggered by key change');
-      getJOData(copyDocNo);
+      getTRData(copyDocNo);
     }
-  }, [refreshKey, copyDocNo, getJOData]);
+  }, [refreshKey, copyDocNo, getTRData]);
 
   // Add this in your parent component to debug
   useEffect(() => {
@@ -221,19 +232,19 @@ export default function JOFormPage(useProps) {
     }
   }
 
-  const baseHeader = state.selectedJO;
+  const baseHeader = state.selectedTR;
   const currentHeader = state.isCreating || state.isEditing
-          ? state.createJOHeader
-          : state.selectedJO;
+          ? state.createTRHeader
+          : state.selectedTR;
 
-  const currentJOItems = state.isCreating || state.isEditing
-          ? state.createJODetails
-          : state.joDetails;
+  const currentTRItems = state.isCreating || state.isEditing
+          ? state.createTRDetails
+          : state.trDetails;
 
   const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
   const isReadOnly = !canEditDocument;
 
-  // Generate Auto JO number based on the company config (db table: user0002inv)
+  // Generate Auto TR number based on the company config (db table: user0002inv)
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
   
   const handleHeaderChange = (field, value) => {
@@ -264,39 +275,35 @@ export default function JOFormPage(useProps) {
   
   const handleSave = async () => {
     // Validate header fields
-    if (!state.createJOHeader?.JO_No) {
-      alert('Job Order number is required');
+    if (!state.createTRHeader?.TR_No) {
+      alert('Transfer Form number is required');
       return;
     }
     
-    if (!state.createJOHeader?.Department && !state.createJOHeader?.Department_Code) {
-      alert('Please select a department');
+    if (!state.createTRHeader?.Department && !state.createTRHeader?.Department_Code) {
+      alert('Please select department where asset is transferred to.');
       return;
     }
     
-    if (!state.createJOHeader?.Sector_name) {
-      alert('Please select a maintenance service');
+    if (!state.createTRHeader?.Holder) {
+      alert('Please select new holder.');
+      return;
+    }
+
+    if (!state.createTRHeader?.Remarks) {
+      alert('Please enter remarks.');
       return;
     }
     
     // Validate details
-    if (!state.createJODetails || state.createJODetails.length === 0) {
+    if (!state.createTRDetails || state.createTRDetails.length === 0) {
       alert('Please add at least one item');
       return;
     }
     
-    if (!state.createJODetails?.find(item => item.TargetDate )) {
-      alert('Please provide Target Date for all items');
-      return;
-    }
-    
-    if (!state.createJODetails?.find(item => item.workDet )) {
-      alert('Please provide work details for all items');
-      return;
-    }
 
     // Check for empty required fields in details
-    const invalidRows = state.createJODetails.filter(row => !row.FAC_NO);
+    const invalidRows = state.createTRDetails.filter(row => !row.FAC_NO);
     if (invalidRows.length > 0) {
       alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
       return;
@@ -307,26 +314,26 @@ export default function JOFormPage(useProps) {
   };
 
   // function to handle successful creation
-  const handleSuccessfulCreate = useCallback(async (newJONo) => {
-    console.log('Successfully created JO:', newJONo);
+  const handleSuccessfulCreate = useCallback(async (newTRNo) => {
+    console.log('Successfully created TR:', newTRNo);
 
     await refreshCompanyConfig();
     
-    setSearchParams({ docId: newJONo });
+    setSearchParams({ docId: newTRNo });
     isCreatingRef.current = false; // Reset the creating flag
   }, [setSearchParams, refreshCompanyConfig]);
 
   const handleConfirmSave = async () => {
-    // Capture the JO number before saving
-    const newJONo = state.createJOHeader?.JO_No;
+    // Capture the TR number before saving
+    const newTRNo = state.createTRHeader?.TR_No;
     const wasCreating = state.isCreating;
     
     // Call the original confirmSave (which calls createJO)
     await confirmSave();
     
-    // If this was a creation and we have a JO number, update the URL
-    if (wasCreating && newJONo) {
-      handleSuccessfulCreate(newJONo);
+    // If this was a creation and we have a TR number, update the URL
+    if (wasCreating && newTRNo) {
+      handleSuccessfulCreate(newTRNo);
     }
   };
 
@@ -351,12 +358,12 @@ export default function JOFormPage(useProps) {
   const handleConfirmPost = async () => {
     closePostDialog();
     
-    if (!copyDocNo && !baseHeader?.JO_No) {
+    if (!copyDocNo && !baseHeader?.TR_No) {
       showToast('No document to post', 'error');
       return;
     }
 
-    const docNo = copyDocNo || baseHeader?.JO_No;
+    const docNo = copyDocNo || baseHeader?.TR_No;
     const postCheck = canPost({ xpost: baseHeader?.xpost, disapproved: baseHeader?.disapproved });
     
     if (!postCheck.canPost) {
@@ -364,7 +371,7 @@ export default function JOFormPage(useProps) {
       return;
     }
 
-    const result = await postJobOrder(docNo);
+    const result = await postTransfer(docNo);
       
     if (result.success) {
       showToast(result.message, 'success');
@@ -374,7 +381,7 @@ export default function JOFormPage(useProps) {
         // Force refresh the data
         await refreshData();
         
-        // Also refresh the JO headers list if needed
+        // Also refresh the TR headers list if needed
         if (window.refreshJOData) {
           await window.refreshJOData();
         }
@@ -385,14 +392,17 @@ export default function JOFormPage(useProps) {
     }
   };
 
+
+  console.log('Base Header:', baseHeader);
+  
   // Handle approval with dialog
   const handleApproveClick = () => {
-    if (!copyDocNo && !baseHeader?.JO_No) {
+    if (!copyDocNo && !baseHeader?.TR_No) {
       showToast('No document to approve', 'error');
       return;
     }
 
-    const docNo = copyDocNo || baseHeader?.JO_No;
+    const docNo = copyDocNo || baseHeader?.TR_No;
     const approvalCheck = canApprove({ 
       xpost: baseHeader?.xpost, 
       disapproved: baseHeader?.disapproved 
@@ -411,12 +421,12 @@ export default function JOFormPage(useProps) {
 
   // Handle rejection with dialog
   const handleRejectClick = () => {
-    if (!copyDocNo && !baseHeader?.JO_No) {
+    if (!copyDocNo && !baseHeader?.TR_No) {
       showToast('No document to reject', 'error');
       return;
     }
 
-    const docNo = copyDocNo || baseHeader?.JO_No;
+    const docNo = copyDocNo || baseHeader?.TR_No;
     
     // Open bulk dialog for single rejection
     openBulkDialog('reject');
@@ -445,7 +455,7 @@ export default function JOFormPage(useProps) {
   };
 
   const handleDeleteClick = (rowId) => {
-    if (currentJOItems.length === 1) {
+    if (currentTRItems.length === 1) {
       // Show snackbar or alert that at least one row is required
       showToast('At least one row is required', 'warning');
       return;
@@ -502,7 +512,7 @@ export default function JOFormPage(useProps) {
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
           title="Confirm Save"
-          text="Are you sure you want to save this Job Order? Please review all information before saving."
+          text="Are you sure you want to save this Transfer Form? Please review all information before saving."
           cancelText="Cancel"
           confirmText="Save"
           cancel={closeSaveDialog}
@@ -510,7 +520,7 @@ export default function JOFormPage(useProps) {
         />
       </Dialog>
 
-      {/* Delete JO line items Confirmation Dialog */}
+      {/* Delete TR line items Confirmation Dialog */}
       <Dialog open={state.deleteDialogOpen} onClose={closeDeleteDialog}>
         <CustomDialog
           title="Confirm Delete"
@@ -537,7 +547,7 @@ export default function JOFormPage(useProps) {
       <Dialog open={postDialogOpen} onClose={closePostDialog}>
         <CustomDialog
           title="Confirm Post"
-          text="Would you like to post this Job Order now? Once posted, it will be sent for approval."
+          text="Would you like to post this Transfer Form now? Once posted, it will be sent for approval."
           cancelText="Cancel"
           confirmText="Post"
           cancel={closePostDialog}
@@ -554,8 +564,8 @@ export default function JOFormPage(useProps) {
             </h2>
             <p className="mb-4 text-gray-600">
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve ${window.currentApprovalItem ? 'this Job Order' : 'the selected Job Orders'}?` 
-                : `Are you sure you want to reject ${window.currentApprovalItem ? 'this Job Order' : 'the selected Job Orders'}? This action cannot be undone.`
+                ? `Are you sure you want to approve ${window.currentApprovalItem ? 'this Transfer Form' : 'the selected Job Orders'}?` 
+                : `Are you sure you want to reject ${window.currentApprovalItem ? 'this Transfer Form' : 'the selected Job Orders'}? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
@@ -644,7 +654,7 @@ export default function JOFormPage(useProps) {
             variant='saveBtn'
             iconType='save'
             onClick={handleSave}
-            title='Save changes made in this Job Order'
+            title='Save changes made in this Transfer Form'
           >
             {state.saving ? 'Saving...' : 'Save'}
           </CustomBtn>
@@ -656,7 +666,7 @@ export default function JOFormPage(useProps) {
             variant='editBtn'
             iconType='edit'
             onClick={handleEdit}
-            title='Edit this Job Order'
+            title='Edit this Transfer Form'
           >
             Edit
           </CustomBtn>       
@@ -668,7 +678,7 @@ export default function JOFormPage(useProps) {
             variant='createBtn'
             iconType='add'
             onClick={handleCreate}
-            title='Create new Job Order'
+            title='Create new Transfer Form'
           >
             Create
           </CustomBtn>
@@ -740,29 +750,29 @@ export default function JOFormPage(useProps) {
       <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
         <Box className='flex justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800 '>{
-            state.isCreating ? 'Creating Job Order' : state.isEditing ? 'Editing Job Order' : 'Display Job Order'
+            state.isCreating ? 'Creating Transfer Form' : state.isEditing ? 'Editing Transfer Form' : 'Display Transfer Form'
           }
           </h1>
           <div className='flex gap-2'>
-            <text className='text-xs text-gray-500'>Last JO created :</text>
+            <text className='text-xs text-gray-500'>Last TR created :</text>
             <text className='text-xs text-gray-500'>
-                  {/* Get the latest JO from joHeaders */}
-                  {joHeaders && joHeaders.length > 0 
-                    ? [...joHeaders].sort((a, b) => {
-                        const numA = parseInt(String(a.JO_No).split('-').pop() || 0);
-                        const numB = parseInt(String(b.JO_No).split('-').pop() || 0);
+                  {/* Get the latest TR from trHeaders */}
+                  {trHeaders && trHeaders.length > 0 
+                    ? [...trHeaders].sort((a, b) => {
+                        const numA = parseInt(String(a.TR_No).split('-').pop() || 0);
+                        const numB = parseInt(String(b.TR_No).split('-').pop() || 0);
                         return numB - numA;
-                      })[0]?.JO_No 
+                      })[0]?.TR_No 
                     : '---'}
 
             </text>
             <text className='text-xs text-gray-500'>Created on:</text>
             <text className='text-xs text-gray-500'>
-                    {joHeaders && joHeaders.length > 0 
+                    {trHeaders && trHeaders.length > 0 
                     ? (() => {
-                        const latest = [...joHeaders].sort((a, b) => {
-                          const numA = parseInt(String(a.JO_No).split('-').pop() || 0);
-                          const numB = parseInt(String(b.JO_No).split('-').pop() || 0);
+                        const latest = [...trHeaders].sort((a, b) => {
+                          const numA = parseInt(String(a.TR_No).split('-').pop() || 0);
+                          const numB = parseInt(String(b.TR_No).split('-').pop() || 0);
                           return numB - numA;
                         })[0];
                         return latest?.xDate ? new Date(latest.xDate).toLocaleDateString() : '---';
@@ -773,8 +783,8 @@ export default function JOFormPage(useProps) {
           </div>
         </Box>
         <form className='mt-8'>
-            <label className='text-base font-normal text-gray-500 '>Job Order No : </label>
-            <label className='pl-3 text-base font-semibold text-gray-800 '>{currentHeader?.JO_No || ''}</label> 
+            <label className='text-base font-normal text-gray-500 '>Transfer Form No : </label>
+            <label className='pl-3 text-base font-semibold text-gray-800 '>{currentHeader?.TR_No || ''}</label> 
             <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
             <input 
               className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : ' bg-white'} border border-gray-300`}
@@ -793,47 +803,67 @@ export default function JOFormPage(useProps) {
             
             <Box className='mt-2 '>
               <div className='flex items-center justify-start w-full gap-10 mt-4'>
-                <label className='text-base font-normal text-gray-500 w-28 '>Department :</label>
+                <label className='text-base font-normal text-gray-500 w-28 '>Transfer to :</label>
                 <Autocomplete
                   variant='body2'
                   disabled={isReadOnly}
                   className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
                   size = 'small'
                   options= {departments} 
-                  value={currentHeader?.Department_Code || currentHeader?.Department  || '' }
-                  onChange={(e, newValue) => handleHeaderChange('Department_Code', newValue)}
+                  value={currentHeader?.Department  || '' }
+                  onChange={(e, newValue) => handleHeaderChange('Department', newValue)}
                   renderInput={(params) => (
                     <TextField {...params} 
                       sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      placeholder="Select Department" 
                     />              
                   )} 
                 />
-                <label className='text-base font-normal text-gray-500 w-38 '>Maintenance Service :</label>
+                <label className='text-base font-normal text-gray-500 w-38 '>New Holder:</label>
                 <Autocomplete 
                   disabled={isReadOnly}
                   className={`rounded-sm  ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
                   size = 'small'
-                  options= {sections} 
-                  value={currentHeader?.Sector_name || ''}
-                  onChange={(e, newValue) => handleHeaderChange('Sector_name', newValue)}
+                  options= {employees} 
+                  value={currentHeader?.Holder || ''}
+                  onChange={(e, newValue) => handleHeaderChange('Holder', newValue)}
                   renderInput={(params) => (
                     <TextField {...params} 
                       sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      placeholder="Select Holder" 
                     />              
                   )} 
                 />
-                <label className='text-base font-normal text-gray-500 w-28 '>Requested by : </label>
+                <label className='text-base font-normal text-gray-500 w-28 '>Custodian : </label>
                   <input
                     type="text"
                     disabled
                     className="text-base font-semibold text-gray-500"
-                    value={currentHeader?.requested_by || userName}
-                    onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
+                    value={currentHeader?.Custodian || userName}
+                    onChange={(e) => handleHeaderChange('Custodian', e.target.value)}
                   />
               </div>
 
+              <div className='flex items-center justify-start w-full gap-20 mt-4'>
+                <label className='text-base font-normal text-gray-500 w-38 '>Location :</label>
+                <Autocomplete 
+                  disabled={isReadOnly}
+                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
+                  size = 'small'
+                  options= {locations} 
+                  value={currentHeader?.Location|| ''}
+                  onChange={(e, newValue) => handleHeaderChange('Location', newValue)}
+                  renderInput={(params) => (
+                    <TextField {...params} 
+                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      placeholder="Select Location" 
+                    />              
+                  )} 
+                />
+              </div>
+
               <div className='flex items-start justify-start w-full gap-10 mt-4'>
-                <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks : </label>
+                <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks :</label>
                 <textarea
                   id = "remarks"
                   disabled={!state.isEditing && !state.isCreating}
@@ -857,7 +887,7 @@ export default function JOFormPage(useProps) {
       </div>    
       <ThemeProvider theme={customTheme}>
         <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
-          <JobOrderTabs
+          <TransferTabs
             state={state}
             isCreating={state.isCreating}
             isEditing={state.isEditing}
@@ -866,7 +896,7 @@ export default function JOFormPage(useProps) {
             isReadOnly={isReadOnly}
             copyDocNo={copyDocNo}
             currentHeader={currentHeader}
-            currentJOItems={currentJOItems}
+            currentTRItems={currentTRItems}
             updateDetailRow={updateDetailRow}
             addDetailRow={addDetailRow}
             removeDetailRow={removeDetailRow}

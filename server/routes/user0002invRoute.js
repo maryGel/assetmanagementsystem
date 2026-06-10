@@ -192,6 +192,86 @@ router.put('/xjo', (req, res) => {
     });
 });
 
+// ============================
+// UPDATE XTRNum ONLY (for incrementing after JO creation)
+router.put('/xtr', (req, res) => {
+    const { XTRNum } = req.body;
+
+    console.log('=== XTR UPDATE REQUEST ===');
+    console.log('Received XTRNum to update:', XTRNum);
+    console.log('Type of XTRNum:', typeof XTRNum);
+    console.log('Full request body:', req.body);
+
+    if (XTRNum === undefined || XTRNum === null) {
+        return res.status(400).json({ 
+            error: 'XTRNum is required',
+            message: 'Please provide XTRNum value to update'
+        });
+    }
+
+    // First check current value before update
+    const checkSql = 'SELECT XTRNum FROM user0002inv LIMIT 1';
+    
+    db.getConnection((err, connection) => {
+        if (err) return res.status(500).json({ error: 'DB connection error' });
+
+        connection.query(checkSql, (err, results) => {
+            if (err) {
+                console.error('Error checking current XTRNum:', err);
+            } else {
+                console.log('Current XTRNum in DB before update:', results[0]?.XTRNum);
+            }
+            
+            // Now update XTRNum
+            const sql = 'UPDATE user0002inv SET XTRNum = ?';
+            const values = [XTRNum];
+            
+            console.log('Executing SQL:', sql);
+            console.log('With values:', values);
+            
+            connection.query(sql, values, (err, result) => {
+                if (err) {
+                    connection.release();
+                    console.error('Error updating XTRNum:', err);
+                    return res.status(500).json({ 
+                        error: 'Error updating XTRNum', 
+                        details: err.message,
+                        sqlMessage: err.sqlMessage
+                    });
+                }
+
+                console.log('Update result:', result);
+                console.log('Affected rows:', result.affectedRows);
+
+                // Verify the update worked
+                connection.query('SELECT XTRNum FROM user0002inv LIMIT 1', (err, verifyResults) => {
+                    connection.release();
+                    
+                    if (!err) {
+                        console.log('XTRNum in DB AFTER update:', verifyResults[0]?.XTRNum);
+                    }
+                    
+                    if (result.affectedRows === 0) {
+                        return res.status(404).json({ 
+                            error: 'No record updated',
+                            message: 'Configuration record not found.'
+                        });
+                    }
+
+                    console.log('XTRNum updated successfully to:', XTRNum);
+                    res.status(200).json({ 
+                        success: true, 
+                        message: 'XTRNum updated successfully',
+                        oldValue: results[0]?.XTRNum,
+                        newValue: XTRNum,
+                        affectedRows: result.affectedRows
+                    });
+                });
+            });
+        });
+    });
+});
+
 
 // TEST endpoint - remove after testing
 router.post('/test-update', (req, res) => {

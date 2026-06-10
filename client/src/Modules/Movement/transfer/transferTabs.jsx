@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import {useState, useEffect} from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
@@ -10,7 +10,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 //import display tabs fields
-import JOLineItems from '../jobOrder/joLineItems';
+import TRLineItems from './trLineItems';
 import DisplayApprovalHistory from '../jobOrder/displayApprovalHistory';
 
 
@@ -48,7 +48,7 @@ function a11yProps(index) {
   };
 }
 
-export default function JobOrderTabs({
+export default function TransferTabs({
     useProps,
     isCreating,
     isEditing,
@@ -56,7 +56,7 @@ export default function JobOrderTabs({
     dispatch,
     isReadOnly,
     currentHeader,
-    currentJOItems,
+    currentTRItems,
     updateDetailRow,
     addDetailRow,
     removeDetailRow,
@@ -109,14 +109,14 @@ export default function JobOrderTabs({
         </Tabs> 
       </AppBar>
       <TabPanel value={value} index={0} dir={theme.direction} sx={{ width: '100%' }}>
-        <JOLineItems 
+        <TRLineItems 
           state={state}
           isEditing = {isEditing}
           rows={rows}
           dispatch={dispatch}
           isReadOnly={isReadOnly}
           currentHeader={currentHeader}
-          currentJOItems={currentJOItems}
+          currentTRItems={currentTRItems}
           updateDetailRow={updateDetailRow}
           addDetailRow={addDetailRow}
           removeDetailRow={removeDetailRow}
@@ -134,7 +134,7 @@ export default function JobOrderTabs({
             dispatch={dispatch}
             isReadOnly={isReadOnly}
             currentHeader={currentHeader}
-            currentJOItems={currentJOItems}
+            currentTRItems={currentTRItems}
             updateDetailRow={updateDetailRow}
             addDetailRow={addDetailRow}
             

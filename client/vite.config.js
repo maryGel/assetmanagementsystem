@@ -22,6 +22,7 @@ export default defineConfig({
       '/refItemClass': 'http://localhost:3000',
       '/refLocation': 'http://localhost:3000',
       '/refDepartment': 'http://localhost:3000',
+      '/refEmployee': 'http://localhost:3000',
       '/accessRights': 'http://localhost:3000',
       '/colorsRoute': 'http://localhost:3000',
       '/secRoutes': 'http://localhost:3000',

@@ -25,6 +25,7 @@
   import refItemClassRoute from './routes/refClassRoute.js';
   import refLocationRoute from './routes/refLocationRoute.js';
   import refDeptRoute from './routes/refDeptRoute.js';
+  import refEmpRoute from './routes/refEmpRoute.js';
   import authRoute from './routes/authRoute.js';
   import usersRoute from './routes/usersRoute.js';
   import accessRoute from './routes/accessRoute.js';
@@ -170,6 +171,7 @@
   app.use('/refItemClass', refItemClassRoute);
   app.use('/refLocation', refLocationRoute);
   app.use('/refDepartment', refDeptRoute);
+  app.use('/refEmployee', refEmpRoute);
   app.use('/accessRights', accessRoute);
   app.use('/colorsRoute', colorsRoute);
   app.use('/secRoutes', sectionsRoute);
