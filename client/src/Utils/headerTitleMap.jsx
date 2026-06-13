@@ -17,6 +17,7 @@ export const headerTitleMap = {
   "/assetMovement/searchTransactions": "Search Transactions",
   "/assetMovement/pages/JOFormPage": "Job Order Page",
   "/assetMovement/pages/TRFormPage": "Transfer Form Page",
+  "/assetMovement/pages/ADFormPage": "Disposal Form Page",
 
   // System Setup Pages
   "/systemSetup/user/userProfile": "Roles and Authorizations",
@@ -34,4 +35,5 @@ export const getBackPath = (currentPath) => {
   if (currentPath.startsWith('/assetMovement/searchTransactions')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/JOFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/TRFormPage')) return '/Home/Movement';
+  if (currentPath.startsWith('/assetMovement/pages/ADFormPage')) return '/Home/Movement';
 };

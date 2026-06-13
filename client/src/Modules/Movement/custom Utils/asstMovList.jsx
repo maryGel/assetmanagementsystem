@@ -30,7 +30,7 @@ export const assetMovList= [
   {
     id: 5,
     title: 'Disposal',
-    link: '/assetMovement/assetDisposal',
+    link: '/assetMovement/pages/ADFormPage',
     imgSrc: '/icons/menu_icons/disposal.png',
     headerTitle: 'Asset Disposal',
   },

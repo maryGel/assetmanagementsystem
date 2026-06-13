@@ -15,8 +15,8 @@ router.put('/approve/:AD_No', (req, res) => {
 
   // console.log('Approval request:', { AD_No, approved, remarks });
 
-  const decodedJONo = decodeURIComponent(AD_No);
-  const cleanDocNo = decodedJONo
+  const decodedADNo = decodeURIComponent(AD_No);
+  const cleanDocNo = decodedADNo
     .replace(/\u00A0/g, '')
     .replace(/\s/g, '')
     .toUpperCase();
@@ -212,8 +212,8 @@ router.put('/reject/:AD_No', (req, res) => {
 
   console.log('Rejection request:', { AD_No, approved_by, remarks });
 
-  const decodedJONo = decodeURIComponent(AD_No);
-  const cleanDocNo = decodedJONo
+  const decodedADNo = decodeURIComponent(AD_No);
+  const cleanDocNo = decodedADNo
     .replace(/\u00A0/g, '')
     .replace(/\s/g, '')
     .toUpperCase();
@@ -431,5 +431,141 @@ router.get('/test', (req, res) => {
   });
 });
 
+
+/**
+ * Post a Disposal for approval - updates xpost to 3 only
+ * This is just to mark the JO as ready for approval, no approval action yet
+ */
+
+router.put('/post/:AD_No', (req, res) => {
+  const { AD_No } = req.params;
+
+  console.log('Post Disposal request:', { AD_No });
+
+  const decodedADNo = decodeURIComponent(AD_No)
+    .replace(/\u00A0/g, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
+
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error('Database connection error:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Database connection error'
+      });
+    }
+
+    // Begin transaction
+    connection.beginTransaction(async (transactionErr) => {
+      if (transactionErr) {
+        connection.release();
+        console.error('Transaction begin error:', transactionErr);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to start transaction'
+        });
+      }
+
+      try {
+        // 1. Check current status of the JO
+        const checkSql = `
+          SELECT AD_No, xpost, disapproved 
+          FROM ad_h 
+          WHERE AD_No = ?
+        `;
+        
+        const currentDoc = await new Promise((resolve, reject) => {
+          connection.query(checkSql, [decodedADNo], (error, results) => {
+            if (error) reject(error);
+            else resolve(results[0]);
+          });
+        });
+
+        if (!currentDoc) {
+          throw new Error(`Disposal ${decodedADNo} not found`);
+        }
+
+        // 2. Validate if it can be posted
+        if (currentDoc.xpost === 3) {
+          throw new Error('Disposal is already posted for approval');
+        }
+        
+        if (currentDoc.xpost === 1) {
+          throw new Error('Disposal is already fully approved');
+        }
+        
+        if (currentDoc.disapproved === 1) {
+          throw new Error('Cannot post a disapproved Disposal');
+        }
+
+        // 3. Update ad_h table - set xpost = 3
+        const updateHeaderSql = `
+          UPDATE ad_h 
+          SET xpost = 3
+          WHERE AD_No = ?
+        `;
+        
+        const updateResult = await new Promise((resolve, reject) => {
+          connection.query(updateHeaderSql, [decodedADNo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+        
+        if (updateResult.affectedRows === 0) {
+          throw new Error('Failed to update Disposal');
+        }
+
+        // 4. Update ad_d table - set xpost = 3 for all detail items
+        const updateDetailsSql = `UPDATE ad_d SET xpost = 3 WHERE AD_No = ?`;
+        const detailsResult = await new Promise((resolve, reject) => {
+          connection.query(updateDetailsSql, [decodedADNo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+
+        // 5. Commit transaction
+        connection.commit((commitErr) => {
+          if (commitErr) {
+            console.error('Commit error:', commitErr);
+            return connection.rollback(() => {
+              connection.release();
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to commit transaction'
+              });
+            });
+          }
+          
+          connection.release();
+          
+          res.json({
+            success: true,
+            message: `Disposal ${AD_No} has been posted for approval`,
+            data: {
+              AD_No: decodedADNo,
+              old_xpost: currentDoc.xpost,
+              new_xpost: 3,
+              details_updated: detailsResult.affectedRows,
+              status: 'Pending Approval'
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error('Error in post Disposal process:', error);
+        connection.rollback(() => {
+          connection.release();
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to post Disposal for approval'
+          });
+        });
+      }
+    });
+  });
+});
 
 export default router;

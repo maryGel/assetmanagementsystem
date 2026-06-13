@@ -75,19 +75,6 @@
         return res.status(500).json({error: 'Database connection failed tr_d', details: err.message});
       }
       
-      // Helper function to format date
-      // const formatDate = (dateStr) => {
-      //   if (!dateStr) return null;
-      //   // If already in YYYY-MM-DD format
-      //   if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      //     return dateStr;
-      //   }
-      //   // Convert from other formats
-      //   const date = new Date(dateStr);
-      //   if (isNaN(date.getTime())) return null;
-      //   return date.toISOString().split('T')[0];
-      // };
-      
       // Process each item
       const sql = `INSERT INTO tr_d (
         TR_No, FAC_NO, FAC_name, qty, xpost, 
@@ -105,7 +92,7 @@
           brand,
           serial_no,
           Date_Aq,          
-          Amount_Aq,
+          Amount_aq,
           New_Department,
           Holder,
           location,
@@ -124,7 +111,7 @@
           brand || '',
           serial_no || '',
           Date_Aq || '',
-          Amount_Aq !== undefined ? Number(Amount_Aq) : 0,
+          Amount_aq !== undefined ? Number(Amount_aq) : 0,
           New_Department || '',
           Holder || '',
           location || '',
@@ -202,7 +189,7 @@
           detail.brand || '',
           detail.serial_no || '',
           detail.Date_Aq || '',
-          detail.Amount_Aq !== undefined ? Number(detail.Amount_Aq) : 0,
+          detail.Amount_aq !== undefined ? Number(detail.Amount_aq) : 0,
           detail.New_Department || '',
           detail.Holder || '',
           detail.location || '',

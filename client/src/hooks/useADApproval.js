@@ -155,10 +155,74 @@ export const useDisposalApproval = () => {
     return nextLevel <= totalLevels ? nextLevel : null;
   };
 
+   /**
+ * Post a Disposal Form for approval (update xpost to 3 only)
+ * @param {string} AD_No - Disposal Form number
+ * @returns {Promise} Post result
+ */
+const postDisposal = async (AD_No) => {
+  setLoading(true);
+  setError(null);
+  
+  try {
+    const response = await axios.put(`/adApproval/post/${encodeURIComponent(AD_No)}`);
+    
+    setLoading(false);
+
+    
+    return { 
+      success: true, 
+      data: response.data.data,
+      message: response.data.message
+    };
+    
+  } catch (err) {
+    console.error('Post Disposal Form error:', err);
+    const errorMessage = err.response?.data?.error || err.message || 'Failed to post Disposal Form for approval';
+    setError(errorMessage);
+    setLoading(false);
+    return { 
+      success: false, 
+      error: errorMessage
+    };
+  }
+};
+
+  /**
+   * Check if Disposal Form can be posted for approval
+   * @param {Object} docStatus - Document status object
+   * @returns {Object} Post availability
+   */
+  const canPost = (docStatus) => {
+    if (!docStatus) return { canPost: false, reason: 'No document status available' };
+    
+    if (docStatus.xpost === 4) {
+      return { canPost: false, reason: 'Document has been disapproved' };
+    }
+    
+    if (docStatus.xpost === 1) {
+      return { canPost: false, reason: 'Document is already fully approved' };
+    }
+    
+    if (docStatus.xpost === 3) {
+      return { canPost: false, reason: 'Document is already posted for approval' };
+    }
+    
+    if (docStatus.xpost === 0) {
+      return { canPost: true, reason: 'Ready to post for approval' };
+    }
+    
+    return { canPost: false, reason: 'Document cannot be posted for approval' };
+  };
+
+
   return {
     // Main functions
     approveDisposal,
     rejectDisposal,
+
+    postDisposal,
+    canPost,
     canApprove,
     getTotalLevels,
     getNextApproverLevel,
