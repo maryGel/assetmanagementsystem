@@ -59,7 +59,7 @@ function MvTRForm({
     const [selectedDetails, setSelectedDetails] = useState(null);
     const [openAppOptions, setOpenAppOptions] = useState({});
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
-    const [totalLevels, setTotalLevels] = useState(3);
+    const [totalLevels, setTotalLevels] = useState();
 
     const showToast = useCallback((message, type = 'success') => {
         setToast({ show: true, message, type });

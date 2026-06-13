@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom'; 
 
 // MUI Components
-import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert, TextareaAutosize } from '@mui/material';
-
+import { Box, Autocomplete, TextField, ThemeProvider, Dialog, Snackbar, Alert, TextareaAutosize } from '@mui/material';
 
 // Components
 import TransferTabs from '../transfer/transferTabs';
@@ -13,83 +12,60 @@ import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
-import DateDisplay from '../../../Utils/formatDateForInput';
-
 
 // Custom Hooks
-import { useTR_h} from '../../../hooks/useTR_h';
+import { useTR_h } from '../../../hooks/useTR_h';
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
 import { userRefEmployee } from '../../../hooks/refEmployee'; 
 import { useRefLocation } from '../../../hooks/refLocation'; 
 import { useSections } from '../../../hooks/refSection';
 import { useTRData } from '../../../hooks/useTR_reducer';
 import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
-import { useTRApproval  } from '../../../hooks/useTRApproval';
+import { useTRApproval } from '../../../hooks/useTRApproval';
 import { useApprovalActions } from '../../../Utils/approvalActionHandler';
 import { useUsers } from '../../../hooks/useUsers';
 
 export default function TRFormPage(useProps) {
-
-  const { 
-    selectedUser, 
-    setSelectedUser, 
-  } = useUsers();
-  // In TRFormPage.jsx - modify the userInfo
+  const { selectedUser, setSelectedUser } = useUsers();
   const userName = localStorage.getItem('username') || 'User';
   const rawUserId = localStorage.getItem('userId') || userName;
 
   useEffect(() => {
     if (userName && userName !== 'User') {
-        console.log('Setting selected user:', userName);
-        setSelectedUser(userName);
+      setSelectedUser(userName);
     }
   }, [userName, setSelectedUser]);
 
-  // Clean the userId
   const cleanUserId = String(rawUserId).replace(/\s*-\s*$/, '').trim();
-    const userInfo = {
-      // userId: cleanUserId,
-      user: cleanUserId,
-      fname: selectedUser?.fname || '',
-      lname: selectedUser?.lname || '',
-      multiApp: selectedUser?.multiApp || []
-    };
+  const userInfo = {
+    user: cleanUserId,
+    fname: selectedUser?.fname || '',
+    lname: selectedUser?.lname || '',
+    multiApp: selectedUser?.multiApp || []
+  };
 
-  console.log('User Info:', userInfo);
-  
   const {
     state,
-    dispatch,
-
     trDetails,
-
-    getTRData,
     forceRefreshTR,
-
+    getTRData,
     startCreate,
     startEdit,
     cancelEditCreate,
-
     addDetailRow,
     updateHeaderField,
     updateDetailRow,
     removeDetailRow,
-
-    // dialogs
     openSaveDialog,      
     closeSaveDialog,     
     openCancelDialog,    
     closeCancelDialog, 
     openDeleteDialog,
     closeDeleteDialog,
-
     confirmSave,  
     confirmDelete,   
     confirmCancel,   
-
-    showSnackbar,
     hideSnackbar,    
-
   } = useTRData();
 
   const { 
@@ -98,22 +74,20 @@ export default function TRFormPage(useProps) {
     approveTR,
     rejectTR,
     canApprove,
+    getTotalLevels,
     loading: approvalLoading 
-  } = useTRApproval ();
+  } = useTRApproval();
 
-  // Add state for post dialog
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [rowToDelete, setRowToDelete] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0); // Used to trigger refresh
-  
-  // Add this with your other state declarations
+  const [totalLevels, setTotalLevels] = useState(3);
   const [localSnackbar, setLocalSnackbar] = useState({
     open: false,
     message: '',
     severity: 'info'
   });
 
-  // reference data for dropdowns
+  // Reference data
   const { trHeaders } = useTR_h();
   const { refDeptData } = useRefDepartment();
   const { refEmployeeData } = userRefEmployee();
@@ -123,55 +97,75 @@ export default function TRFormPage(useProps) {
   const employees = refEmployeeData.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
   const locations = refLocData.map(item => item.LocationName);
   const sections = refSections.map(item => item.xdesc);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // get TR data if copyDocNo exists in URL
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const copyDocNo = searchParams.get('docId');
   const isCreatingRef = useRef(false);
 
-  // Function to show toast messages
+  // Fetch total levels
+  useEffect(() => {
+    let isMounted = true;
+    const fetchTotalLevels = async () => {
+      try {
+        const result = await getTotalLevels();
+        if (isMounted && result?.success) {
+          setTotalLevels(result.totalLevels);
+        }
+      } catch (err) {
+        console.error('Error fetching total levels:', err);
+        if (isMounted) setTotalLevels(3);
+      }
+    };
+    fetchTotalLevels();
+    return () => { isMounted = false; };
+  }, [getTotalLevels]);
+
   const showToast = useCallback((message, severity = 'info') => {
-    setLocalSnackbar({
-      open: true,
-      message,
-      severity
-    });
+    setLocalSnackbar({ open: true, message, severity });
   }, []);
 
-  // ===== REFRESH DATA - Define BEFORE useApprovalActions =====
-  const refreshData = useCallback(async () => {
-    if (!copyDocNo) return;
-    
-    console.log('🔄 Refreshing data for TR:', copyDocNo);
-    try {
-      // Force refresh using the hook's method
-      await forceRefreshTR(copyDocNo);
-      
-      // Also call getTRData directly to ensure data is updated
-      await getTRData(copyDocNo);
-      
-      // Increment refresh key to trigger any dependent effects
-      setRefreshKey(prev => prev + 1);
-      
-      console.log('✅ Data refresh completed');
-    } catch (error) {
-      console.error('❌ Error refreshing data:', error);
-    }
-  }, [copyDocNo, forceRefreshTR, getTRData]);
+  const loadTRData = useCallback(async () => {
+    if (!copyDocNo || isCreatingRef.current) return;
+    await getTRData(copyDocNo);
+  }, [copyDocNo, getTRData]);
 
-  // Function to get item approval level (for multi-level approval)
-  const getItemApprovalLevel = useCallback((itemData, isApprove) => {
-    if (!itemData) return null;
+  useEffect(() => {
+    loadTRData();
+  }, [copyDocNo, loadTRData]);
+
+const refreshData = useCallback(async () => {
+  if (!copyDocNo) return;
+   
+  // Reload the data
+  await forceRefreshTR(copyDocNo);
+  // Increment refresh trigger to force re-renders of child components if needed
+  setRefreshTrigger(prev => prev + 1);
+}, [copyDocNo, getTRData, forceRefreshTR]);
+
+  // Get approval level for the document (copied from mvTRForm)
+  const getApprovalLevel = useCallback((header, forApproval = true) => {
+    if (!header) return 1;
     
-    if (isApprove) {
-      return itemData.currentApprovalLevel || 1;
-    } else {
-      return itemData.currentApprovalLevel || 1;
+    if (header.xpost === 3) {
+      return 1; // First approval
+    } else if (header.xpost === 2 && header.appStat) {
+      // Parse appStat safely - handle both string and number
+      let approvedLevels = [];
+      const appStatStr = String(header.appStat);
+      if (appStatStr.includes(',')) {
+        approvedLevels = appStatStr.split(',').map(l => parseInt(l.trim()));
+      } else {
+        approvedLevels = [parseInt(appStatStr)];
+      }
+      const nextLevel = approvedLevels.length + 1;
+      return forApproval ? nextLevel : nextLevel;
     }
+    return 1;
   }, []);
 
-  // ===== APPROVAL ACTIONS HOOK - Define AFTER refreshData =====
+  // Use approval actions hook (simplified for single document)
   const {
     processingItem,
     remarks,
@@ -180,229 +174,157 @@ export default function TRFormPage(useProps) {
     bulkRemarks,
     bulkLoading,
     handleIndividualAction,
-    processBulkAction,
     openBulkDialog,
     closeBulkDialog,
     updateRemarks,
-    clearRemarks,
     setBulkRemarks
   } = useApprovalActions({
     onApprove: approveTR,
     onReject: rejectTR,
-    getItemLevel: getItemApprovalLevel,
     onRefresh: refreshData,
-    showToast,
-    getUserInfo: () => userInfo
+    showToast
   });
 
-  // Initial data load when copyDocNo changes
-  useEffect(() => {
-    if (!copyDocNo) return;
-    if (isCreatingRef.current) return;
-    
-    console.log('📥 Loading initial data for TR:', copyDocNo);
-    getTRData(copyDocNo);    
-  }, [copyDocNo, getTRData]);
-
-  // Refresh data when refreshKey changes (after actions)
-  useEffect(() => {
-    if (refreshKey > 0 && copyDocNo) {
-      console.log('🔄 Refresh triggered by key change');
-      getTRData(copyDocNo);
+  // Get next level for display
+  const getNextLevel = useCallback((header) => {
+    if (!header || !header.xpost) return null;
+    if (header.xpost === 3) return 1;
+    if (header.xpost === 2 && header.appStat) {
+      const appStatStr = String(header.appStat);
+      const approvedLevels = appStatStr.includes(',') 
+        ? appStatStr.split(',').length 
+        : 1;
+      return approvedLevels + 1;
     }
-  }, [refreshKey, copyDocNo, getTRData]);
-
-  // Add this in your parent component to debug
-  useEffect(() => {
-    console.log('Raw userId from localStorage:', localStorage.getItem('userId'));
-    console.log('Raw username from localStorage:', localStorage.getItem('username'));
-    console.log('Raw firstName:', localStorage.getItem('firstName'));
-    console.log('Raw lastName:', localStorage.getItem('lastName'));
+    return null;
   }, []);
-
-  // Status mapping function
-  const docStatus = (status) => {
-    switch (status) {
-      case 0: return 'Draft';
-      case 1: return 'Fully Approved';
-      case 2: return 'Partially Approved';
-      case 3: return 'For Approval';
-      case 4: return 'Rejected';
-      default: return 'Draft';
-    }
-  }
 
   const baseHeader = state.selectedTR;
   const currentHeader = state.isCreating || state.isEditing
-          ? state.createTRHeader
-          : state.selectedTR;
-
+    ? state.createTRHeader
+    : state.selectedTR;
   const currentTRItems = state.isCreating || state.isEditing
-          ? state.createTRDetails
-          : state.trDetails;
-
+    ? state.createTRDetails
+    : state.trDetails;
   const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
   const isReadOnly = !canEditDocument;
+  const nextLevel = getNextLevel(baseHeader);
 
-  // Generate Auto TR number based on the company config (db table: user0002inv)
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
-  
+
   const handleHeaderChange = (field, value) => {
-    updateHeaderField(field,value)
+    updateHeaderField(field, value);
   };
 
   const handleCreate = () => {
     isCreatingRef.current = true;
     const config = Array.isArray(companyConfig) ? companyConfig[0] : companyConfig;
-    console.log('Correct config:', config);
     startCreate(config, userName);
-    
   };
-  
+
   const handleEdit = () => {
     if (!copyDocNo) return;
     startEdit(copyDocNo);
   };
 
   const handleCancel = () => {
-    // Check if there are unsaved changes
     if (state.hasUnsavedChanges) {
-      openCancelDialog(); // Open confirmation dialog
+      openCancelDialog();
     } else {
-      cancelEditCreate(); // Cancel directly
+      cancelEditCreate();
     }
   };
-  
+
   const handleSave = async () => {
-    // Validate header fields
     if (!state.createTRHeader?.TR_No) {
       alert('Transfer Form number is required');
       return;
     }
-    
     if (!state.createTRHeader?.Department && !state.createTRHeader?.Department_Code) {
       alert('Please select department where asset is transferred to.');
       return;
     }
-    
     if (!state.createTRHeader?.Holder) {
       alert('Please select new holder.');
       return;
     }
-
+    if (!state.createTRHeader?.Location) {
+      alert('Please select location.');
+      return;
+    }
     if (!state.createTRHeader?.Remarks) {
       alert('Please enter remarks.');
       return;
     }
-    
-    // Validate details
     if (!state.createTRDetails || state.createTRDetails.length === 0) {
       alert('Please add at least one item');
       return;
     }
-    
-
-    // Check for empty required fields in details
     const invalidRows = state.createTRDetails.filter(row => !row.FAC_NO);
     if (invalidRows.length > 0) {
       alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
       return;
     }
-    
-    // If validation passes, open save confirmation dialog
     openSaveDialog();
   };
 
-  // function to handle successful creation
   const handleSuccessfulCreate = useCallback(async (newTRNo) => {
-    console.log('Successfully created TR:', newTRNo);
-
     await refreshCompanyConfig();
-    
     setSearchParams({ docId: newTRNo });
-    isCreatingRef.current = false; // Reset the creating flag
+    isCreatingRef.current = false;
   }, [setSearchParams, refreshCompanyConfig]);
 
   const handleConfirmSave = async () => {
-    // Capture the TR number before saving
     const newTRNo = state.createTRHeader?.TR_No;
     const wasCreating = state.isCreating;
-    
-    // Call the original confirmSave (which calls createJO)
     await confirmSave();
-    
-    // If this was a creation and we have a TR number, update the URL
     if (wasCreating && newTRNo) {
       handleSuccessfulCreate(newTRNo);
     }
   };
 
   const handleSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
+    if (reason === 'clickaway') return;
     hideSnackbar();
   };
 
-  // Open post confirmation dialog
-  const openPostDialog = () => {
-    setPostDialogOpen(true);
-  };
+  const openPostDialog = () => setPostDialogOpen(true);
+  const closePostDialog = () => setPostDialogOpen(false);
 
-  // Close post confirmation dialog
-  const closePostDialog = () => {
-    setPostDialogOpen(false);
-  };
-
-  // Handle the actual post action
   const handleConfirmPost = async () => {
     closePostDialog();
-    
-    if (!copyDocNo && !baseHeader?.TR_No) {
+    const docNo = copyDocNo || baseHeader?.TR_No;
+    if (!docNo) {
       showToast('No document to post', 'error');
       return;
     }
 
-    const docNo = copyDocNo || baseHeader?.TR_No;
     const postCheck = canPost({ xpost: baseHeader?.xpost, disapproved: baseHeader?.disapproved });
-    
     if (!postCheck.canPost) {
       showToast(postCheck.reason, 'error');
       return;
     }
 
     const result = await postTransfer(docNo);
-      
     if (result.success) {
       showToast(result.message, 'success');
-      
-      // Wait a moment for the database to update
       setTimeout(async () => {
-        // Force refresh the data
         await refreshData();
-        
-        // Also refresh the TR headers list if needed
-        if (window.refreshJOData) {
-          await window.refreshJOData();
-        }
+        if (window.refreshTRData) await window.refreshTRData();
       }, 500);
-      
     } else {
       showToast('Failed to post: ' + result.error, 'error');
     }
   };
 
-
-  console.log('Base Header:', baseHeader);
-  
-  // Handle approval with dialog
+  // Handle approval click
   const handleApproveClick = () => {
-    if (!copyDocNo && !baseHeader?.TR_No) {
+    const docNo = copyDocNo || baseHeader?.TR_No;
+    if (!docNo) {
       showToast('No document to approve', 'error');
       return;
     }
 
-    const docNo = copyDocNo || baseHeader?.TR_No;
     const approvalCheck = canApprove({ 
       xpost: baseHeader?.xpost, 
       disapproved: baseHeader?.disapproved 
@@ -413,50 +335,68 @@ export default function TRFormPage(useProps) {
       return;
     }
 
-    // Open bulk dialog for single approval
-    openBulkDialog('approve');
-    // Store the current item ID for the bulk action
     window.currentApprovalItem = docNo;
+    openBulkDialog('approve');
   };
 
-  // Handle rejection with dialog
+  // Handle rejection click
   const handleRejectClick = () => {
-    if (!copyDocNo && !baseHeader?.TR_No) {
+    const docNo = copyDocNo || baseHeader?.TR_No;
+    if (!docNo) {
       showToast('No document to reject', 'error');
       return;
     }
 
-    const docNo = copyDocNo || baseHeader?.TR_No;
-    
-    // Open bulk dialog for single rejection
-    openBulkDialog('reject');
-    // Store the current item ID for the bulk action
     window.currentApprovalItem = docNo;
+    openBulkDialog('reject');
   };
 
-  // Handle single item action from bulk dialog
+  // Handle single item action - FIXED to pass the correct level
   const handleSingleItemAction = async () => {
     if (!window.currentApprovalItem) return;
+    
+    const currentHeader = baseHeader;
+    const currentLevel = getApprovalLevel(currentHeader, bulkActionType === 'approve');
     
     const result = await handleIndividualAction(
       window.currentApprovalItem,
       bulkActionType,
       bulkRemarks,
-      baseHeader,
-      userInfo
+      currentHeader,
+      userInfo,
+      currentLevel // Pass the level explicitly
     );
     
     if (result?.success) {
       closeBulkDialog();
       setBulkRemarks('');
       window.currentApprovalItem = null;
-      setRefreshKey(prev => prev + 1);
+      
+      if (bulkActionType === 'approve') {
+        if (result.data?.isFinalApproval) {
+          showToast(`Transfer Form fully approved!`, 'success');
+        } else {
+          showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
+        }
+      } else {
+        showToast(`Transfer Form rejected successfully`, 'success');
+      }
+      
+    // Force refresh the data
+    await refreshData();
+    
+    // Also refresh the parent component's data if needed
+    setTimeout(async () => {
+      await refreshData(); // Double refresh to ensure data is updated
+    }, 500);
+
+    } else if (result?.error) {
+      showToast(`Action failed: ${result.error}`, 'error');
     }
   };
 
   const handleDeleteClick = (rowId) => {
     if (currentTRItems.length === 1) {
-      // Show snackbar or alert that at least one row is required
       showToast('At least one row is required', 'warning');
       return;
     }
@@ -476,17 +416,13 @@ export default function TRFormPage(useProps) {
     closeDeleteDialog();
   };
 
-  // Add local snackbar close handler
-  const handleLocalSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
+  const handleLocalSnackbarClose = () => {
     setLocalSnackbar(prev => ({ ...prev, open: false }));
   };
 
   const buttonConfig = getButtonConfig(state, baseHeader, canApprove);
 
-  // warn users if they try to leave with unsaved changes
+  // Warn about unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (state.hasUnsavedChanges && (state.isCreating || state.isEditing)) {
@@ -495,17 +431,21 @@ export default function TRFormPage(useProps) {
         return e.returnValue;
       }
     };
-    
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [state.hasUnsavedChanges, state.isCreating, state.isEditing]);
 
-  console.log('Current status:', baseHeader?.xpost);
-  console.log('Button config:', buttonConfig);
-    
+  const docStatus = (status) => {
+    switch (status) {
+      case 0: return 'Draft';
+      case 1: return 'Fully Approved';
+      case 2: return 'Partially Approved';
+      case 3: return 'For Approval';
+      case 4: return 'Rejected';
+      default: return 'Draft';
+    }
+  };
+
   return (
     <>
       {/* Save Confirmation Dialog */}
@@ -520,7 +460,7 @@ export default function TRFormPage(useProps) {
         />
       </Dialog>
 
-      {/* Delete TR line items Confirmation Dialog */}
+      {/* Delete Dialog */}
       <Dialog open={state.deleteDialogOpen} onClose={closeDeleteDialog}>
         <CustomDialog
           title="Confirm Delete"
@@ -532,6 +472,7 @@ export default function TRFormPage(useProps) {
         />
       </Dialog>
 
+      {/* Cancel Dialog */}
       <Dialog open={state.cancelDialogOpen} onClose={closeCancelDialog}>
         <CustomDialog
           title="Confirm Cancel"
@@ -543,7 +484,7 @@ export default function TRFormPage(useProps) {
         />
       </Dialog>
 
-      {/* Post Confirmation Dialog */}
+      {/* Post Dialog */}
       <Dialog open={postDialogOpen} onClose={closePostDialog}>
         <CustomDialog
           title="Confirm Post"
@@ -555,7 +496,7 @@ export default function TRFormPage(useProps) {
         />
       </Dialog>
 
-      {/* Bulk Action Dialog (used for both single and bulk approval/rejection) */}
+      {/* Approval/Rejection Dialog - Maintained your existing design */}
       {bulkDialogOpen && (
         <Dialog open={bulkDialogOpen} onClose={closeBulkDialog} maxWidth="sm" fullWidth>
           <Box sx={{ p: 3 }}>
@@ -563,18 +504,23 @@ export default function TRFormPage(useProps) {
               {bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
             </h2>
             <p className="mb-4 text-gray-600">
+              {nextLevel && (
+                <span className='block mt-1 text-xs text-blue-600'>
+                  Level {nextLevel} of {totalLevels} Approval
+                </span>
+              )}
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve ${window.currentApprovalItem ? 'this Transfer Form' : 'the selected Job Orders'}?` 
-                : `Are you sure you want to reject ${window.currentApprovalItem ? 'this Transfer Form' : 'the selected Job Orders'}? This action cannot be undone.`
+                ? `Are you sure you want to approve this Transfer Form?` 
+                : `Are you sure you want to reject this Transfer Form? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
               <label className="block mb-2 text-sm font-medium text-gray-700">
-                Remarks {<span className="text-red-500">*</span>}
+                Remarks <span className="text-red-500">*</span>
               </label>
               <TextareaAutosize
                 minRows={3}
-                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Enter provide approval remarks"}
+                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Please enter approval remarks..."}
                 value={bulkRemarks}
                 onChange={(e) => setBulkRemarks(e.target.value)}
                 autoFocus
@@ -599,10 +545,7 @@ export default function TRFormPage(useProps) {
               </CustomBtn>
               <CustomBtn
                 variant={bulkActionType === 'approve' ? 'saveBtn' : 'rejectBtn'}
-                onClick={window.currentApprovalItem ? handleSingleItemAction : () => {
-                  // Handle bulk action here if needed
-                  showToast('Bulk action not yet implemented', 'info');
-                }}
+                onClick={handleSingleItemAction}
                 disabled={bulkLoading || (!bulkRemarks.trim())}
               >
                 {bulkLoading ? 'Processing...' : (bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection')}
@@ -612,122 +555,76 @@ export default function TRFormPage(useProps) {
         </Dialog>
       )}
 
+      {/* Snackbars */}
       <Snackbar
         open={state.snackbar.open}
         autoHideDuration={4000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={state.snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
+        <Alert onClose={handleSnackbarClose} severity={state.snackbar.severity} variant="filled">
           {state.snackbar.message}
         </Alert>
       </Snackbar>
 
-      {/* Local Snackbar for post/approval/rejection operations */}
       <Snackbar
         open={localSnackbar.open}
         autoHideDuration={4000}
         onClose={handleLocalSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={handleLocalSnackbarClose}
-          severity={localSnackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
+        <Alert onClose={handleLocalSnackbarClose} severity={localSnackbar.severity} variant="filled">
           {localSnackbar.message}
         </Alert>
       </Snackbar>
 
       {/* Buttons Section */}
       <div className='flex justify-end gap-3 my-4 mx-14'>
-        
-        {/* Save Button */}
         {(state.isCreating || state.isEditing) && (
-          <CustomBtn
-            variant='saveBtn'
-            iconType='save'
-            onClick={handleSave}
-            title='Save changes made in this Transfer Form'
-          >
+          <CustomBtn variant='saveBtn' iconType='save' onClick={handleSave}>
             {state.saving ? 'Saving...' : 'Save'}
           </CustomBtn>
         )}
         
-        {/* Edit Button */}
         {!state.isEditing && !state.isCreating && copyDocNo && (
-          <CustomBtn
-            variant='editBtn'
-            iconType='edit'
-            onClick={handleEdit}
-            title='Edit this Transfer Form'
-          >
+          <CustomBtn variant='editBtn' iconType='edit' onClick={handleEdit}>
             Edit
           </CustomBtn>       
         )}
         
-        {/* Create Button */}
         {!state.isEditing && !state.isCreating && (
-          <CustomBtn
-            variant='createBtn'
-            iconType='add'
-            onClick={handleCreate}
-            title='Create new Transfer Form'
-          >
+          <CustomBtn variant='createBtn' iconType='add' onClick={handleCreate}>
             Create
           </CustomBtn>
         )}
         
-        {/* Cancel Button */}
         {(state.isEditing || state.isCreating) && (
-          <CustomBtn
-            variant='cancelBtn'
-            iconType='cancel'
-            onClick={handleCancel}
-            title='Cancel & Discard Changes'
-          >
+          <CustomBtn variant='cancelBtn' iconType='cancel' onClick={handleCancel}>
             Cancel
           </CustomBtn>
         )}
 
-        {/* Post Button - for draft documents */}
         {buttonConfig.showPost && (
-          <CustomBtn
-            variant='postBtn'
-            iconType='post'
-            title='Post this document for approval'
-            onClick={openPostDialog}
-            disabled={approvalLoading}
-          >
+          <CustomBtn variant='postBtn' iconType='post' onClick={openPostDialog} disabled={approvalLoading}>
             {buttonConfig.postText || 'Post'}
           </CustomBtn>
         )}
 
-        {/* Approve Button - for documents pending approval */}
         {buttonConfig.showApprove && (
           <CustomBtn
             variant='saveBtn'
             iconType='save'
-            title='Approve this document'
             onClick={handleApproveClick}
-            disabled={state.isEditing ||approvalLoading || processingItem === copyDocNo}
+            disabled={state.isEditing || approvalLoading || processingItem === copyDocNo}
           >
             {processingItem === copyDocNo ? 'Approving...' : (buttonConfig.approveText || 'Approve')}
           </CustomBtn>
         )}
 
-        {/* Reject Button - for documents pending approval */}
         {buttonConfig.showReject && (
           <CustomBtn
             variant='rejectBtn'
             iconType='reject'
-            title='Reject this document'
             onClick={handleRejectClick}
             disabled={approvalLoading || processingItem === copyDocNo}
           >
@@ -735,13 +632,8 @@ export default function TRFormPage(useProps) {
           </CustomBtn>
         )}
 
-        {/* Print Button - always show for existing documents */}
         {copyDocNo && (
-          <CustomBtn
-            variant='printBtn'
-            iconType='print'
-            title='Preview and Print'
-          >
+          <CustomBtn variant='printBtn' iconType='print'>
             Preview
           </CustomBtn>
         )}
@@ -749,142 +641,144 @@ export default function TRFormPage(useProps) {
           
       <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
         <Box className='flex justify-between w-full h-full gap-1'>
-          <h1 className='text-sm font-bold text-gray-800 '>{
-            state.isCreating ? 'Creating Transfer Form' : state.isEditing ? 'Editing Transfer Form' : 'Display Transfer Form'
-          }
+          <h1 className='text-sm font-bold text-gray-800'>
+            {state.isCreating ? 'Creating Transfer Form' : state.isEditing ? 'Editing Transfer Form' : 'Display Transfer Form'}
           </h1>
           <div className='flex gap-2'>
-            <text className='text-xs text-gray-500'>Last TR created :</text>
-            <text className='text-xs text-gray-500'>
-                  {/* Get the latest TR from trHeaders */}
-                  {trHeaders && trHeaders.length > 0 
-                    ? [...trHeaders].sort((a, b) => {
-                        const numA = parseInt(String(a.TR_No).split('-').pop() || 0);
-                        const numB = parseInt(String(b.TR_No).split('-').pop() || 0);
-                        return numB - numA;
-                      })[0]?.TR_No 
-                    : '---'}
-
-            </text>
-            <text className='text-xs text-gray-500'>Created on:</text>
-            <text className='text-xs text-gray-500'>
-                    {trHeaders && trHeaders.length > 0 
-                    ? (() => {
-                        const latest = [...trHeaders].sort((a, b) => {
-                          const numA = parseInt(String(a.TR_No).split('-').pop() || 0);
-                          const numB = parseInt(String(b.TR_No).split('-').pop() || 0);
-                          return numB - numA;
-                        })[0];
-                        return latest?.xDate ? new Date(latest.xDate).toLocaleDateString() : '---';
-                      })()
-                    : '---'}
-
-            </text>
+            <span className='text-xs text-gray-500'>Last TR created :</span>
+            <span className='text-xs text-gray-500'>
+              {trHeaders && trHeaders.length > 0 
+                ? [...trHeaders].sort((a, b) => {
+                    const numA = parseInt(String(a.TR_No).split('-').pop() || 0);
+                    const numB = parseInt(String(b.TR_No).split('-').pop() || 0);
+                    return numB - numA;
+                  })[0]?.TR_No 
+                : '---'}
+            </span>
+            <span className='text-xs text-gray-500'>Created on:</span>
+            <span className='text-xs text-gray-500'>
+              {trHeaders && trHeaders.length > 0 
+                ? (() => {
+                    const latest = [...trHeaders].sort((a, b) => {
+                      const numA = parseInt(String(a.TR_No).split('-').pop() || 0);
+                      const numB = parseInt(String(b.TR_No).split('-').pop() || 0);
+                      return numB - numA;
+                    })[0];
+                    return latest?.xDate ? new Date(latest.xDate).toLocaleDateString() : '---';
+                  })()
+                : '---'}
+            </span>
           </div>
         </Box>
+        
         <form className='mt-8'>
-            <label className='text-base font-normal text-gray-500 '>Transfer Form No : </label>
-            <label className='pl-3 text-base font-semibold text-gray-800 '>{currentHeader?.TR_No || ''}</label> 
-            <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
-            <input 
-              className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : ' bg-white'} border border-gray-300`}
-              type='date' 
-              value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10): ""} 
-              disabled={isReadOnly}
-              onChange={(e) => {  
-                if (!isReadOnly) {
-                  updateHeaderField('xDate', e.target.value);
-                }
-              }}
-            /> 
-            <br/>
-            <label className='text-base font-normal text-gray-500 '>Status : </label>
-            <label className='pl-3 text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
-            
-            <Box className='mt-2 '>
-              <div className='flex items-center justify-start w-full gap-10 mt-4'>
-                <label className='text-base font-normal text-gray-500 w-28 '>Transfer to :</label>
-                <Autocomplete
-                  variant='body2'
-                  disabled={isReadOnly}
-                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
-                  size = 'small'
-                  options= {departments} 
-                  value={currentHeader?.Department  || '' }
-                  onChange={(e, newValue) => handleHeaderChange('Department', newValue)}
-                  renderInput={(params) => (
-                    <TextField {...params} 
-                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                      placeholder="Select Department" 
-                    />              
-                  )} 
-                />
-                <label className='text-base font-normal text-gray-500 w-38 '>New Holder:</label>
-                <Autocomplete 
-                  disabled={isReadOnly}
-                  className={`rounded-sm  ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
-                  size = 'small'
-                  options= {employees} 
-                  value={currentHeader?.Holder || ''}
-                  onChange={(e, newValue) => handleHeaderChange('Holder', newValue)}
-                  renderInput={(params) => (
-                    <TextField {...params} 
-                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                      placeholder="Select Holder" 
-                    />              
-                  )} 
-                />
-                <label className='text-base font-normal text-gray-500 w-28 '>Custodian : </label>
-                  <input
-                    type="text"
-                    disabled
-                    className="text-base font-semibold text-gray-500"
-                    value={currentHeader?.Custodian || userName}
-                    onChange={(e) => handleHeaderChange('Custodian', e.target.value)}
-                  />
-              </div>
+          <label className='text-base font-normal text-gray-500'>Transfer Form No : </label>
+          <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.TR_No || ''}</label> 
+          <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
+          <input 
+            className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : 'bg-white'} border border-gray-300`}
+            type='date' 
+            value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10) : ""} 
+            disabled={isReadOnly}
+            onChange={(e) => {  
+              if (!isReadOnly) {
+                updateHeaderField('xDate', e.target.value);
+              }
+            }}
+          /> 
+          <br/>
+          <label className='text-base font-normal text-gray-500'>Status : </label>
+          <label className='pl-3 text-base font-semibold text-gray-800'>{docStatus(currentHeader?.xpost)}</label>
+          {nextLevel && currentHeader?.xpost === 2 && (
+            <label className='pl-3 text-sm text-orange-300'>
+              (Level {nextLevel} of {totalLevels} is still pending)
+            </label>
+          )}
+          
+          <Box className='mt-2'>
+            <div className='flex items-center justify-start w-full gap-10 mt-4'>
+              <label className='text-base font-normal text-gray-500 w-28'>Transfer to :</label>
+              <Autocomplete
+                variant='body2'
+                disabled={isReadOnly}
+                className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
+                size='small'
+                options={departments} 
+                value={currentHeader?.Department || ''}
+                onChange={(e, newValue) => handleHeaderChange('Department', newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} 
+                    sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                    placeholder="Select Department" 
+                  />              
+                )} 
+              />
+              <label className='text-base font-normal text-gray-500 w-38'>New Holder:</label>
+              <Autocomplete 
+                disabled={isReadOnly}
+                className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
+                size='small'
+                options={employees} 
+                value={currentHeader?.Holder || ''}
+                onChange={(e, newValue) => handleHeaderChange('Holder', newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} 
+                    sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                    placeholder="Select Holder" 
+                  />              
+                )} 
+              />
+              <label className='text-base font-normal text-gray-500 w-28'>Custodian : </label>
+              <input
+                type="text"
+                disabled
+                className="text-base font-semibold text-gray-500"
+                value={currentHeader?.Custodian || userName}
+                onChange={(e) => handleHeaderChange('Custodian', e.target.value)}
+              />
+            </div>
 
-              <div className='flex items-center justify-start w-full gap-20 mt-4'>
-                <label className='text-base font-normal text-gray-500 w-38 '>Location :</label>
-                <Autocomplete 
-                  disabled={isReadOnly}
-                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
-                  size = 'small'
-                  options= {locations} 
-                  value={currentHeader?.Location|| ''}
-                  onChange={(e, newValue) => handleHeaderChange('Location', newValue)}
-                  renderInput={(params) => (
-                    <TextField {...params} 
-                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                      placeholder="Select Location" 
-                    />              
-                  )} 
-                />
-              </div>
+            <div className='flex items-center justify-start w-full gap-20 mt-4'>
+              <label className='text-base font-normal text-gray-500 w-38'>Location :</label>
+              <Autocomplete 
+                disabled={isReadOnly}
+                className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
+                size='small'
+                options={locations} 
+                value={currentHeader?.Location || ''}
+                onChange={(e, newValue) => handleHeaderChange('Location', newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} 
+                    sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                    placeholder="Select Location" 
+                  />              
+                )} 
+              />
+            </div>
 
-              <div className='flex items-start justify-start w-full gap-10 mt-4'>
-                <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks :</label>
-                <textarea
-                  id = "remarks"
-                  disabled={!state.isEditing && !state.isCreating}
-                  aria-label = "minimum height"
-                  minRows={2}
-                  value={currentHeader?.Remarks || ''}
-                  onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                  className={`${!state.isEditing && !state.isCreating? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 `}
-                  style={{ 
-                    width: '50rem',
-                    resize: 'both',
-                    padding: '.5rem',
-                    border: '1px solid #ccc',
-                    marginTop: '.5rem'
-                  }}   
-                />
-              </div>
-              
-            </Box>
+            <div className='flex items-start justify-start w-full gap-10 mt-4'>
+              <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks :</label>
+              <textarea
+                id="remarks"
+                disabled={!state.isEditing && !state.isCreating}
+                aria-label="minimum height"
+                minRows={2}
+                value={currentHeader?.Remarks || ''}
+                onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
+                className={`${!state.isEditing && !state.isCreating ? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300`}
+                style={{ 
+                  width: '50rem',
+                  resize: 'both',
+                  padding: '.5rem',
+                  border: '1px solid #ccc',
+                  marginTop: '.5rem'
+                }}   
+              />
+            </div>
+          </Box>
         </form>
       </div>    
+      
       <ThemeProvider theme={customTheme}>
         <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
           <TransferTabs
@@ -906,7 +800,6 @@ export default function TRFormPage(useProps) {
           />
         </div>
       </ThemeProvider>
-
     </>
-  )
+  );
 }

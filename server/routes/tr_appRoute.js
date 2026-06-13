@@ -53,6 +53,7 @@ router.put('/approve/:TR_No', (req, res) => {
           SELECT TR_No, xpost, appStat, approved, disapproved
           FROM tr_h
           WHERE TR_No = ?
+          FOR UPDATE
         `;
 
         // 2. Get current document status

@@ -28,11 +28,7 @@ import { useUsers } from '../../../hooks/useUsers';
 
 export default function JOFormPage(useProps) {
 
-  const { 
-    selectedUser, 
-    setSelectedUser, 
-    loading, 
-  } = useUsers();
+  const { selectedUser, setSelectedUser } = useUsers();
   // In JOFormPage.jsx - modify the userInfo
   const userName = localStorage.getItem('username') || 'User';
   const rawUserId = localStorage.getItem('userId') || userName;
@@ -91,12 +87,14 @@ export default function JOFormPage(useProps) {
     approveJobOrder,
     rejectJobOrder,
     canApprove,
+    getTotalLevels,
     loading: approvalLoading 
   } = useJobOrderApproval();
 
   // Add state for post dialog
   const [postDialogOpen, setPostDialogOpen] = useState(false);
-  const [rowToDelete, setRowToDelete] = useState(null);
+  const [rowToDelete, setRowToDelete] = useState(null)
+  const [totalLevels, setTotalLevels] = useState(3);
   const [refreshKey, setRefreshKey] = useState(0); // Used to trigger refresh
   
   // Add this with your other state declarations
@@ -119,46 +117,68 @@ export default function JOFormPage(useProps) {
   const copyDocNo = searchParams.get('docId');
   const isCreatingRef = useRef(false);
 
-  // Function to show toast messages
+
+    // Fetch total levels
+  useEffect(() => {
+    let isMounted = true;
+    const fetchTotalLevels = async () => {
+      try {
+        const result = await getTotalLevels();
+        if (isMounted && result?.success) {
+          setTotalLevels(result.totalLevels);
+        }
+      } catch (err) {
+        console.error('Error fetching total levels:', err);
+        if (isMounted) setTotalLevels(3);
+      }
+    };
+    fetchTotalLevels();
+    return () => { isMounted = false; };
+  }, [getTotalLevels]);
+
   const showToast = useCallback((message, severity = 'info') => {
-    setLocalSnackbar({
-      open: true,
-      message,
-      severity
-    });
+    setLocalSnackbar({ open: true, message, severity });
   }, []);
 
-  // ===== REFRESH DATA - Define BEFORE useApprovalActions =====
-  const refreshData = useCallback(async () => {
-    if (!copyDocNo) return;
-    
-    console.log('🔄 Refreshing data for JO:', copyDocNo);
-    try {
-      // Force refresh using the hook's method
-      await forceRefreshJO(copyDocNo);
-      
-      // Also call getJOData directly to ensure data is updated
-      await getJOData(copyDocNo);
-      
-      // Increment refresh key to trigger any dependent effects
-      setRefreshKey(prev => prev + 1);
-      
-      console.log('✅ Data refresh completed');
-    } catch (error) {
-      console.error('❌ Error refreshing data:', error);
-    }
-  }, [copyDocNo, forceRefreshJO, getJOData]);
+  const loadTRData = useCallback(async () => {
+    if (!copyDocNo || isCreatingRef.current) return;
+    await getJOData(copyDocNo);
+  }, [copyDocNo, getJOData]);
 
-  // Function to get item approval level (for multi-level approval)
-  const getItemApprovalLevel = useCallback((itemData, isApprove) => {
-    if (!itemData) return null;
+  useEffect(() => {
+    loadTRData();
+  }, [copyDocNo, loadTRData]);
+
+const refreshData = useCallback(async () => {
+  if (!copyDocNo) return;
+   
+  // Reload the data
+  await forceRefreshJO(copyDocNo);
+  // Increment refresh trigger to force re-renders of child components if needed
+  setRefreshTrigger(prev => prev + 1);
+}, [copyDocNo, getJOData, forceRefreshJO]);
+
+  // Get approval level for the document
+  const getApprovalLevel = useCallback((header, forApproval = true) => {
+    if (!header) return 1;
     
-    if (isApprove) {
-      return itemData.currentApprovalLevel || 1;
-    } else {
-      return itemData.currentApprovalLevel || 1;
+    if (header.xpost === 3) {
+      return 1; // First approval
+    } else if (header.xpost === 2 && header.appStat) {
+      // Parse appStat safely - handle both string and number
+      let approvedLevels = [];
+      const appStatStr = String(header.appStat);
+      if (appStatStr.includes(',')) {
+        approvedLevels = appStatStr.split(',').map(l => parseInt(l.trim()));
+      } else {
+        approvedLevels = [parseInt(appStatStr)];
+      }
+      const nextLevel = approvedLevels.length + 1;
+      return forApproval ? nextLevel : nextLevel;
     }
+    return 1;
   }, []);
+
 
   // ===== APPROVAL ACTIONS HOOK - Define AFTER refreshData =====
   const {
@@ -178,36 +198,49 @@ export default function JOFormPage(useProps) {
   } = useApprovalActions({
     onApprove: approveJobOrder,
     onReject: rejectJobOrder,
-    getItemLevel: getItemApprovalLevel,
     onRefresh: refreshData,
     showToast,
     getUserInfo: () => userInfo
   });
 
-  // Initial data load when copyDocNo changes
-  useEffect(() => {
-    if (!copyDocNo) return;
-    if (isCreatingRef.current) return;
-    
-    console.log('📥 Loading initial data for JO:', copyDocNo);
-    getJOData(copyDocNo);    
-  }, [copyDocNo, getJOData]);
-
-  // Refresh data when refreshKey changes (after actions)
-  useEffect(() => {
-    if (refreshKey > 0 && copyDocNo) {
-      console.log('🔄 Refresh triggered by key change');
-      getJOData(copyDocNo);
+    // Get next level for display
+  const getNextLevel = useCallback((header) => {
+    if (!header || !header.xpost) return null;
+    if (header.xpost === 3) return 1;
+    if (header.xpost === 2 && header.appStat) {
+      const appStatStr = String(header.appStat);
+      const approvedLevels = appStatStr.includes(',') 
+        ? appStatStr.split(',').length 
+        : 1;
+      return approvedLevels + 1;
     }
-  }, [refreshKey, copyDocNo, getJOData]);
-
-  // Add this in your parent component to debug
-  useEffect(() => {
-    console.log('Raw userId from localStorage:', localStorage.getItem('userId'));
-    console.log('Raw username from localStorage:', localStorage.getItem('username'));
-    console.log('Raw firstName:', localStorage.getItem('firstName'));
-    console.log('Raw lastName:', localStorage.getItem('lastName'));
+    return null;
   }, []);
+
+  // // Initial data load when copyDocNo changes
+  // useEffect(() => {
+  //   if (!copyDocNo) return;
+  //   if (isCreatingRef.current) return;
+    
+  //   console.log('📥 Loading initial data for JO:', copyDocNo);
+  //   getJOData(copyDocNo);    
+  // }, [copyDocNo, getJOData]);
+
+  // // Refresh data when refreshKey changes (after actions)
+  // useEffect(() => {
+  //   if (refreshKey > 0 && copyDocNo) {
+  //     console.log('🔄 Refresh triggered by key change');
+  //     getJOData(copyDocNo);
+  //   }
+  // }, [refreshKey, copyDocNo, getJOData]);
+
+  // // Add this in your parent component to debug
+  // useEffect(() => {
+  //   console.log('Raw userId from localStorage:', localStorage.getItem('userId'));
+  //   console.log('Raw username from localStorage:', localStorage.getItem('username'));
+  //   console.log('Raw firstName:', localStorage.getItem('firstName'));
+  //   console.log('Raw lastName:', localStorage.getItem('lastName'));
+  // }, []);
 
   // Status mapping function
   const docStatus = (status) => {
@@ -232,6 +265,7 @@ export default function JOFormPage(useProps) {
 
   const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
   const isReadOnly = !canEditDocument;
+  const nextLevel = getNextLevel(baseHeader);
 
   // Generate Auto JO number based on the company config (db table: user0002inv)
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
@@ -315,6 +349,7 @@ export default function JOFormPage(useProps) {
     setSearchParams({ docId: newJONo });
     isCreatingRef.current = false; // Reset the creating flag
   }, [setSearchParams, refreshCompanyConfig]);
+
 
   const handleConfirmSave = async () => {
     // Capture the JO number before saving
@@ -424,23 +459,47 @@ export default function JOFormPage(useProps) {
     window.currentApprovalItem = docNo;
   };
 
-  // Handle single item action from bulk dialog
+  // Handle single item action - FIXED to pass the correct level
   const handleSingleItemAction = async () => {
     if (!window.currentApprovalItem) return;
+    
+    const currentHeader = baseHeader;
+    const currentLevel = getApprovalLevel(currentHeader, bulkActionType === 'approve');
     
     const result = await handleIndividualAction(
       window.currentApprovalItem,
       bulkActionType,
       bulkRemarks,
-      baseHeader,
-      userInfo
+      currentHeader,
+      userInfo,
+      currentLevel // Pass the level explicitly
     );
     
     if (result?.success) {
       closeBulkDialog();
       setBulkRemarks('');
       window.currentApprovalItem = null;
-      setRefreshKey(prev => prev + 1);
+      
+      if (bulkActionType === 'approve') {
+        if (result.data?.isFinalApproval) {
+          showToast(`Transfer Form fully approved!`, 'success');
+        } else {
+          showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
+        }
+      } else {
+        showToast(`Transfer Form rejected successfully`, 'success');
+      }
+      
+    // Force refresh the data
+    await refreshData();
+    
+    // Also refresh the parent component's data if needed
+    setTimeout(async () => {
+      await refreshData(); // Double refresh to ensure data is updated
+    }, 500);
+
+    } else if (result?.error) {
+      showToast(`Action failed: ${result.error}`, 'error');
     }
   };
 
@@ -553,18 +612,23 @@ export default function JOFormPage(useProps) {
               {bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
             </h2>
             <p className="mb-4 text-gray-600">
+              {nextLevel && (
+                <span className='block mt-1 text-xs text-blue-600'>
+                  Level {nextLevel} of {totalLevels} Approval
+                </span>
+              )}
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve ${window.currentApprovalItem ? 'this Job Order' : 'the selected Job Orders'}?` 
-                : `Are you sure you want to reject ${window.currentApprovalItem ? 'this Job Order' : 'the selected Job Orders'}? This action cannot be undone.`
+                ? `Are you sure you want to approve this Transfer Form?` 
+                : `Are you sure you want to reject this Transfer Form? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
               <label className="block mb-2 text-sm font-medium text-gray-700">
-                Remarks {<span className="text-red-500">*</span>}
+                Remarks <span className="text-red-500">*</span>
               </label>
               <TextareaAutosize
                 minRows={3}
-                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Enter provide approval remarks"}
+                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Please enter approval remarks..."}
                 value={bulkRemarks}
                 onChange={(e) => setBulkRemarks(e.target.value)}
                 autoFocus
@@ -589,10 +653,7 @@ export default function JOFormPage(useProps) {
               </CustomBtn>
               <CustomBtn
                 variant={bulkActionType === 'approve' ? 'saveBtn' : 'rejectBtn'}
-                onClick={window.currentApprovalItem ? handleSingleItemAction : () => {
-                  // Handle bulk action here if needed
-                  showToast('Bulk action not yet implemented', 'info');
-                }}
+                onClick={handleSingleItemAction}
                 disabled={bulkLoading || (!bulkRemarks.trim())}
               >
                 {bulkLoading ? 'Processing...' : (bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection')}
@@ -790,7 +851,11 @@ export default function JOFormPage(useProps) {
             <br/>
             <label className='text-base font-normal text-gray-500 '>Status : </label>
             <label className='pl-3 text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
-            
+              {nextLevel && currentHeader?.xpost === 2 && (
+                <label className='pl-3 text-sm text-blue-600'>
+                  (Level {nextLevel} of {totalLevels} is still pending)
+                </label>
+              )}
             <Box className='mt-2 '>
               <div className='flex items-center justify-start w-full gap-10 mt-4'>
                 <label className='text-base font-normal text-gray-500 w-28 '>Department :</label>

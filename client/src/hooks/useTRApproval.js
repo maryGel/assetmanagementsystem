@@ -144,7 +144,7 @@ export const useTRApproval = () => {
    * @param {number} totalLevels - Total number of approval levels
    * @returns {number|null} Next level or null if fully approved
    */
-  const getNextApproverLevel = (appStat, totalLevels) => {
+  const getNextApprovalLevel = (appStat, totalLevels) => {
     if (!appStat || appStat === '') {
       return 1; // Start with level 1
     }
@@ -221,7 +221,7 @@ const postTransfer = async (TR_No) => {
     rejectTR,
     canApprove,
     getTotalLevels,
-    getNextApproverLevel,
+    getNextApprovalLevel,
 
     postTransfer,
     canPost,
