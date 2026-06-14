@@ -56,19 +56,32 @@ function SearchTransactions(useProps) {
 
   // Combined Transaction Numbers for Autocomplete
   const transactionNumbers = useMemo(() => {
-    return [...docHeaders]
-      .sort((a,b) => {
-      return b.transNo.localeCompare(a.transNo, undefined, {
-        numeric: true,
-        sensitivity: 'base'
-      });
-    }) // Sort by date descending
-      
+    // Ensure docHeaders is an array and filter out invalid entries
+    if (!Array.isArray(docHeaders)) return [];
+    
+    const validDocs = docHeaders.filter(doc => 
+      doc && 
+      doc.transNo !== null && 
+      doc.transNo !== undefined && 
+      typeof doc.transNo === 'string'
+    );
+    
+    return [...validDocs]
+      .sort((a, b) => {
+        // Additional safety: ensure both are strings before comparing
+        const transNoA = a.transNo?.toString() || '';
+        const transNoB = b.transNo?.toString() || '';
+        
+        return transNoB.localeCompare(transNoA, undefined, {
+          numeric: true,
+          sensitivity: 'base'
+        });
+      })
       .map(doc => ({
-      transNo: doc.transNo,
-      type: doc.type,
-      fullLabel: `${doc.type} - ${doc.transNo}`
-    }));
+        transNo: doc.transNo,
+        type: doc.type || '',
+        fullLabel: `${doc.type || 'Unknown'} - ${doc.transNo}`
+      }));
   }, [docHeaders]);
 
   console.log(`transNo: ${draftTransNo ? draftTransNo.transNo : 'null'}, type: ${draftTransType}, location: ${draftSelectedLocation}, department: ${draftSelectedDepartment}, status: ${draftStatus}`);

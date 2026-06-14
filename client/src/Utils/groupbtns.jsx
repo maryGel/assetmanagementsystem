@@ -80,20 +80,32 @@ export const getButtonConfig = (state, baseHeader, canApprove) => {
   }
   
   // If editing draft
-  if (state.isEditing && baseHeader?.xpost === 0) {
+  if (state.isEditing && (baseHeader?.xpost === 0 || baseHeader?.xPosted === 0) ) {
     return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
   }
   
   // For existing documents
   if (baseHeader) {
     // Draft - not posted yet
-    if (baseHeader.xpost === 0) {
+    if (baseHeader.xpost === 0 || baseHeader.xPosted === 0) {
       return { showPost: true, showApprove: false, showReject: false, postText: 'Post' };
     }
     
     // For approval status
     if (baseHeader.xpost === 3 || baseHeader.xpost === 2) {
-      const approvalCheck = canApprove({ xpost: baseHeader.xpost, disapproved: baseHeader.disapproved });
+      const approvalCheck = canApprove({ xpost: baseHeader.xpost || baseHeader.xPosted, disapproved: baseHeader.disapproved });
+      return { 
+        showPost: false, 
+        showApprove: approvalCheck.canApprove, 
+        showReject: true,
+        approveText: 'Approve',
+        rejectText: 'Reject'
+      };
+    }
+
+        // For approval status
+    if  (baseHeader.xPosted === 3 || baseHeader.xPosted === 2) {
+      const approvalCheck = canApprove({ xPosted: baseHeader.xPosted, disapproved: baseHeader.disapproved });
       return { 
         showPost: false, 
         showApprove: approvalCheck.canApprove, 
@@ -104,12 +116,12 @@ export const getButtonConfig = (state, baseHeader, canApprove) => {
     }
     
     // Fully approved
-    if (baseHeader.xpost === 1) {
+    if (baseHeader.xpost === 1 || baseHeader.xPosted === 1) {
       return { showPost: false, showApprove: false, showReject: false };
     }
     
     // Rejected
-    if (baseHeader.xpost === 4) {
+    if (baseHeader.xpost === 4 || baseHeader.xPosted === 4) {
       return { showPost: false, showApprove: false, showReject: false };
     }
   }

@@ -29,7 +29,7 @@ function DisplayApprovalHistory({
 
   useEffect(() => {
     if (!approvalLogs) return;
-    const getApprovalLogs = approvalLogs.filter(log => log.TRNO === copyDocNo && (log.Module === 'Job Order' || log.Module === 'Transfer (Internal)' || log.Module === 'Disposal'));
+    const getApprovalLogs = approvalLogs.filter(log => log.TRNO === copyDocNo && (log.Module === 'Job Order' || log.Module === 'Transfer (Internal)' || log.Module === 'Disposal' || log.Module === 'Asset Accountability'));
     setViewApprovalLogs(getApprovalLogs)
   }, [approvalLogs, copyDocNo]);
   

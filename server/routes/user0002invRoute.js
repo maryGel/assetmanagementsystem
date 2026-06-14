@@ -193,7 +193,7 @@ router.put('/xjo', (req, res) => {
 });
 
 // ============================
-// UPDATE XTRNum ONLY (for incrementing after JO creation)
+// UPDATE XTRNum ONLY (for incrementing after TR creation)
 router.put('/xtr', (req, res) => {
     const { XTRNum } = req.body;
 
@@ -272,7 +272,7 @@ router.put('/xtr', (req, res) => {
     });
 });
 
-// UPDATE XADNum ONLY (for incrementing after JO creation)
+// UPDATE XADNum ONLY (for incrementing after AD creation)
 router.put('/xad', (req, res) => {
     const { XADNum } = req.body;
 
@@ -343,6 +343,85 @@ router.put('/xad', (req, res) => {
                         message: 'XADNum updated successfully',
                         oldValue: results[0]?.XADNum,
                         newValue: XADNum,
+                        affectedRows: result.affectedRows
+                    });
+                });
+            });
+        });
+    });
+});
+
+// UPDATE XAANum ONLY (for incrementing after AD creation)
+router.put('/xaa', (req, res) => {
+    const { XAANum } = req.body;
+
+    console.log('=== XTR UPDATE REQUEST ===');
+    console.log('Received XTRNum to update:', XAANum);
+    console.log('Type of XTRNum:', typeof XAANum);
+    console.log('Full request body:', req.body);
+
+    if (XAANum === undefined || XAANum === null) {
+        return res.status(400).json({ 
+            error: 'XAANum is required',
+            message: 'Please provide XTRNum value to update'
+        });
+    }
+
+    // First check current value before update
+    const checkSql = 'SELECT XAANum FROM user0002inv LIMIT 1';
+    
+    db.getConnection((err, connection) => {
+        if (err) return res.status(500).json({ error: 'DB connection error' });
+
+        connection.query(checkSql, (err, results) => {
+            if (err) {
+                console.error('Error checking current XAANum:', err);
+            } else {
+                console.log('Current XAANum in DB before update:', results[0]?.XAANum);
+            }
+            
+            // Now update XTRNum
+            const sql = 'UPDATE user0002inv SET XAANum = ?';
+            const values = [XAANum];
+            
+            console.log('Executing SQL:', sql);
+            console.log('With values:', values);
+            
+            connection.query(sql, values, (err, result) => {
+                if (err) {
+                    connection.release();
+                    console.error('Error updating XAANum:', err);
+                    return res.status(500).json({ 
+                        error: 'Error updating XAANum', 
+                        details: err.message,
+                        sqlMessage: err.sqlMessage
+                    });
+                }
+
+                console.log('Update result:', result);
+                console.log('Affected rows:', result.affectedRows);
+
+                // Verify the update worked
+                connection.query('SELECT XAANum FROM user0002inv LIMIT 1', (err, verifyResults) => {
+                    connection.release();
+                    
+                    if (!err) {
+                        console.log('XAANum in DB AFTER update:', verifyResults[0]?.XADNum);
+                    }
+                    
+                    if (result.affectedRows === 0) {
+                        return res.status(404).json({ 
+                            error: 'No record updated',
+                            message: 'Configuration record not found.'
+                        });
+                    }
+
+                    console.log('XAANum updated successfully to:', XAANum);
+                    res.status(200).json({ 
+                        success: true, 
+                        message: 'XAANum updated successfully',
+                        oldValue: results[0]?.XAANum,
+                        newValue: XAANum,
                         affectedRows: result.affectedRows
                     });
                 });

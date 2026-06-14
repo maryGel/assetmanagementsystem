@@ -1,27 +1,27 @@
 import { useReducer, useCallback } from 'react';
 
 // Hooks
-import { useAD_h } from './useAD_h';
-import { useAD_d } from './useAD_d';
+import { useAssetAccH } from './useAssetAccH';
+import { useAssetAccD } from './useAssetAccD';
 
 // Axios Instance
 import { api } from '../api/axios';
 
 const initialState = {
-  // Disposal Form View State
-  selectedAD: null,
-  adDetails: [],
-  adItemsLimit: 10,
-  adItemsTotal: 0,
-  adItemsPages: 1,
+  // Asset Accountability View State
+  selectedAA: null,
+  assetAccDetails: [],
+  aaItemsLimit: 10,
+  aaItemsTotal: 0,
+  aaItemsPages: 1,
   currentPage: 1,
   searchItems: '',
   isLoading: false,
   error: null,
 
-  // Selected AD State
-  createADHeader: null,
-  createADDetails: [],
+  // Selected AA State
+  createAAHeader: null,
+  createAADetails: [],
   isEditing: false,
   isCreating: false,
   hasUnsavedChanges: false,
@@ -65,7 +65,7 @@ const safeDate = (value) => {
 
 
 // ==================== REDUCER ====================
-function adReducer(state, action) {
+function aaReducer(state, action) {
   switch (action.type) {
 
     case 'LOADING':
@@ -83,27 +83,27 @@ function adReducer(state, action) {
         error: action.payload,
       };
 
-   case 'SET_ADFORM': {
-    const adItemsTotal = action.payload.details?.length || 0;
+   case 'SET_AAForm': {
+    const aaItemsTotal = action.payload.details?.length || 0;
 
     return {
       ...state,
 
-      selectedAD: action.payload.data,
-      adDetails: action.payload.details.map((row, index) => ({
+      selectedAA: action.payload.data,
+      assetAccDetails: action.payload.details.map((row, index) => ({
         ...row,
-        id: row.id || `detail_${row.AD_No}_${row.FAC_NO}_${Date.now()}_${index}`
+        id: row.id || `detail_${row.AAFNo}_${row.ItemNo}_${Date.now()}_${index}`
       })),
 
       // IMPORTANT: reset working buffer
-      createADHeader: null,
-      createADDetails: [],
+      createAAHeader: null,
+      createAADetails: [],
 
       isEditing: false,
       isCreating: false,
 
-      adItemsTotal,
-      adItemsPages: Math.max(1, Math.ceil(adItemsTotal / state.adItemsLimit)),
+      aaItemsTotal,
+      aaItemsPages: Math.max(1, Math.ceil(aaItemsTotal / state.aaItemsLimit)),
 
       isLoading: false,
       error: null,
@@ -118,19 +118,19 @@ function adReducer(state, action) {
         ...state,
         isEditing: true,
         isCreating: false,
-        createADHeader: {
+        createAAHeader: {
           ...action.payload.data,
         },
-        createADDetails: action.payload.details.map((row, index) => ({
+        createAADetails: action.payload.details.map((row, index) => ({
           ...row,
-          id: row.id || `detail_${row.AD_No}_${row.FAC_NO}_${Date.now()}_${index}`,
+          id: row.id || `detail_${row.AAFNo}_${row.ItemNo}_${Date.now()}_${index}`,
         })),
         hasUnsavedChanges: false,
       };
 
     case 'START_CREATE': {
-      // Use the pre-generated AD number if available
-      const newAD_No = action.payload?.generatedTR_No || '';
+      // Use the pre-generated AA number if available
+      const newAAFNo = action.payload?.generatedAA_No || '';
       const userName = action.payload?.userName || ''; 
       const todayObj = new Date();
 
@@ -139,37 +139,34 @@ function adReducer(state, action) {
       ).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
       // const today = new Date().toISOString().split('T')[0];
       
-      console.log('START_CREATE - Setting AD_No:', newAD_No);
+      console.log('START_CREATE - Setting AAFNo:', newAAFNo);
       return {
         ...state,
         isCreating: true,
         isEditing: false,
-        // selectedAD: null,
-        // adDetails: [],
 
-        createADHeader: {
-          AD_No: newAD_No,
-          Evaluated_By: userName,
-          xpost: '',
+        createAAHeader: {
+          AAFNo: newAAFNo,
+          Custodian: userName,
+          xPosted: '',
           xDate: today,
-          Department_Code: '',
-          Remarks: '',
+          Dep: '',
+          EmpID: '',
+          EmpName: ''
         },
-        createADDetails: [
+        createAADetails: [
           {
             id: Date.now(),
-            AD_No: newAD_No,
-            FAC_NO: '',
-            FAC_name: '',
-            qty: 1,
-            xDate: today,
-            xpost: 0,
-            UOM: '',
-            brand: '',
-            serialno: '',
-            workDet: '',
-            Disposal_Type: '',
-            salvage_amount: '',
+            AAFNo: newAAFNo,
+            ItemNo: '',
+            ItemName: '',
+            Qty: 1,
+            DteAqui: today,
+            xPosted: 0,
+            Units: '',
+            serial: '',
+            Supplier: '',
+            unitcost: '',
             },
         ],
         hasUnsavedChanges: false,
@@ -185,23 +182,21 @@ function adReducer(state, action) {
       ).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
       const newRow = action.payload || {
         id: Date.now(),
-        AD_No: '',
-        FAC_NO: '',
-        FAC_name: '',
-        qty: 1,
-        xDate: today,
-        xpost: 0,
-        UOM: '',
-        brand: '',
-        serialno: '',
-        workDet: '',
-        Disposal_Type: '',
-        salvage_amount: '',
+        AAFNo: '',
+        ItemNo: '',
+        ItemName: '',
+        Qty: 1,
+        DteAqui: '',
+        xPosted: 0,
+        Units: '',
+        serial: '',
+        Supplier: '',
+        unitcost: '',
       };
 
       return {
         ...state,
-        createADDetails: [...state.createADDetails, newRow],
+        createAADetails: [...state.createAADetails, newRow],
         hasUnsavedChanges: true,
       };
       
@@ -211,9 +206,9 @@ function adReducer(state, action) {
         const { id, field, value } = action;
         
         console.log('Reducer - Updating row with id:', id);
-        console.log('Reducer - Available row IDs:', state.createADDetails.map(r => String(r.id)));
+        console.log('Reducer - Available row IDs:', state.createAADetails.map(r => String(r.id)));
         
-        const updatedDetails = state.createADDetails.map((row) => {
+        const updatedDetails = state.createAADetails.map((row) => {
           const rowId = String(row.id);
           const actionId = String(id);
           
@@ -226,7 +221,7 @@ function adReducer(state, action) {
       
       return {
         ...state,
-        createADDetails: updatedDetails,
+        createAADetails: updatedDetails,
         hasUnsavedChanges: true,
       };
 
@@ -234,12 +229,12 @@ function adReducer(state, action) {
     case 'REMOVE_DETAIL_ROW':
 
       // For EDIT mode
-      if (state.createADDetails.length <= 1) {
+      if (state.createAADetails.length <= 1) {
         return state;
       }
       return {
         ...state,
-        createADDetails: state.createADDetails.filter(
+        createAADetails: state.createAADetails.filter(
           (row) => row.id !== action.id
         ),
         hasUnsavedChanges: true,
@@ -248,8 +243,8 @@ function adReducer(state, action) {
     case 'UPDATE_CREATE_HEADER':
       return {
         ...state,
-        createADHeader: {
-          ...state.createADHeader,
+        createAAHeader: {
+          ...state.createAAHeader,
           [action.field]: action.value,
         },
         hasUnsavedChanges: true,
@@ -261,8 +256,8 @@ function adReducer(state, action) {
         // isLoading : false,
         isEditing: false,
         isCreating: false,
-        createADHeader: null,
-        createADDetails: [],
+        createAAHeader: null,
+        createAADetails: [],
         hasUnsavedChanges: false,
       };
 
@@ -300,16 +295,16 @@ function adReducer(state, action) {
         saving: false,
         isEditing: false,
         isCreating: false,
-        createADHeader: null,
-        createADDetails: [],
+        createAAHeader: null,
+        createAADetails: [],
         hasUnsavedChanges: false,
         error: null,
-        // Keep the selectedAD as the newly created one
-        selectedAD: action.payload?.newADNo ? state.createADHeader : null,
-        adDetails: action.payload?.newADNo ? state.createADDetails: null,
+        // Keep the selectedAA as the newly created one
+        selectedAA: action.payload?.newAANo ? state.createAAHeader : null,
+        assetAccDetails: action.payload?.newAANo ? state.createAADetails: null,
         snackbar: {
           open: true,
-          message: action.payload?.message || 'Disposal Form saved successfully!',
+          message: action.payload?.message || 'Asset Accountability saved successfully!',
           severity: 'success',
         },
       };
@@ -368,32 +363,29 @@ function adReducer(state, action) {
   }
 }
 
-// ==================== AD HOOK ====================
-export const useADData = (onSaveSuccess) => {
+// ==================== AA HOOK ====================
+export const useAAData = (onSaveSuccess) => {
 
-  const [state, dispatch] = useReducer(adReducer, initialState);
+  const [state, dispatch] = useReducer(aaReducer, initialState);
 
-  const {
-    adHeaders,
-    adHRefresh,
-  } = useAD_h();
+  const { assetAccHeaders, accHRefresh } = useAssetAccH();
 
-  const { adDetails, adDRefresh } = useAD_d();
+  const { assetAccDetails, accDRefresh } = useAssetAccD();
 
   // =========================
-  // GET AD DATA
+  // GET AA DATA
   // =========================
 
-  const getADData = useCallback(async (AD_No) => {
-    if (!AD_No) return;
+  const getAAData = useCallback(async (AAFNo) => {
+    if (!AAFNo) return;
     dispatch({ type: 'LOADING' });
 
     try {
-      const header = adHeaders.find((ad) => ad.AD_No === AD_No);
-      const details = adDetails.filter((item) => item.AD_No === AD_No);
+      const header = assetAccHeaders.find((ad) => ad.AAFNo === AAFNo);
+      const details = assetAccDetails.filter((item) => item.AAFNo === AAFNo);
 
       dispatch({
-        type: 'SET_ADFORM',
+        type: 'SET_AAForm',
         payload: {
           data: header,
           details,
@@ -403,22 +395,22 @@ export const useADData = (onSaveSuccess) => {
       console.error(error);
       dispatch({
         type: 'ERROR',
-        payload: 'Failed to fetch AD data',
+        payload: 'Failed to fetch AA data',
       });
     }
 
-  }, [adHeaders, adDetails]);
+  }, [assetAccHeaders, assetAccDetails]);
 
   // =========================
-  // CREATE AD
+  // CREATE AA
   // =========================
 
-  const createAD = useCallback(async () => {
-    if (!state.createADHeader?.AD_No) {
-      console.error('AD_No is missing');
+  const createAA = useCallback(async () => {
+    if (!state.createAAHeader?.AAFNo) {
+      console.error('AAFNo is missing');
       dispatch({
         type: 'ERROR',
-        payload: 'Disposal Form number is required'
+        payload: 'Asset Accountability number is required'
       });
       return;
     }
@@ -427,7 +419,7 @@ export const useADData = (onSaveSuccess) => {
 
     try {
       
-      const { id, ...headerData } = state.createADHeader;
+      const { id, ...headerData } = state.createAAHeader;
       // IMPORTANT: Only format the date if it's a new creation
       // For editing, preserve the original date format
       if (state.isCreating) {
@@ -445,26 +437,26 @@ export const useADData = (onSaveSuccess) => {
       console.log('Is Editing Mode:', state.isEditing);
       
       // Create Header
-      const res = await api.post('/ad_hRoute', headerData);
+      const res = await api.post('/assetacchRoute', headerData);
       console.log('Header saved:', res.data);
       
-      const detailPayload = state.createADDetails.map((item) => {
+      const detailPayload = state.createAADetails.map((item) => {
         const { id, ...cleanItem } = item;
         return {
           ...cleanItem,
-          AD_No: state.createADHeader.AD_No,
+          AAFNo: state.createAAHeader.AAFNo,
           xDate: safeDate(cleanItem.xDate),
-          qty: Number(cleanItem.qty) || 1,
-          xpost: 0,
+          Qty: Number(cleanItem.Qty) || 1,
+          xPosted: 0,
         };
       });
       
       console.log('Details Payload:', detailPayload);
       
-      await api.post('/ad_dRoute', detailPayload);
+      await api.post('/assetaccdRoute', detailPayload);
       
-      // ========== INCREMENT XADNum AFTER SUCCESSFUL AD CREATION ==========
-      console.log('Starting XADNum increment process...');
+      // ========== INCREMENT XAANum AFTER SUCCESSFUL AA CREATION ==========
+      console.log('Starting XAANum increment process...');
       
       try {
         // Get current config
@@ -477,51 +469,51 @@ export const useADData = (onSaveSuccess) => {
         // Log all available fields to see what we have
         console.log('Available fields in config:', Object.keys(currentConfig));
         
-        // Get current XADNum
-        const currentXTRNum = Number(currentConfig?.XADNum || 0);
-        console.log('Current XADNum value:', currentXTRNum);
+        // Get current XAANum
+        const currentXTRNum = Number(currentConfig?.XAANum || 0);
+        console.log('Current XAANum value:', currentXTRNum);
         
         // Calculate next number
         const nextXTRNum = currentXTRNum + 1;
-        console.log('Next XADNum will be:', nextXTRNum);
+        console.log('Next XAANum will be:', nextXTRNum);
         
-        // Update the XADNum in the database
-        const updateResponse = await api.put('/companyConfig/xad', { XADNum: nextXTRNum });
+        // Update the XAANum in the database
+        const updateResponse = await api.put('/companyConfig/xaa', { XAANum: nextXTRNum });
         console.log('Update response:', updateResponse.data);
-        console.log('XADNum incremented successfully from', currentXTRNum, 'to', nextXTRNum);
+        console.log('XAANum incremented successfully from', currentXTRNum, 'to', nextXTRNum);
         
       } catch (incError) {
-        console.error('FAILED to increment XADNum - Full error:', incError);
+        console.error('FAILED to increment XAANum - Full error:', incError);
         console.error('Error response data:', incError.response?.data);
         console.error('Error status:', incError.response?.status);
-        // Don't fail the AD creation if increment fails, just log the error
+        // Don't fail the AA creation if increment fails, just log the error
       }
       // ========== END OF INCREMENT LOGIC ==========
       
-      await adHRefresh();
-      await adDRefresh();
+      await accHRefresh();
+      await accDRefresh();
       
-        // ========== DISPLAY THE NEWLY CREATED AD ==========
-      const newADNo = state.createADHeader.AD_No;
-      console.log('Newly created AD_No:', newADNo);
+        // ========== DISPLAY THE NEWLY CREATED AA ==========
+      const newAANo = state.createAAHeader.AAFNo;
+      console.log('Newly created AAFNo:', newAANo);
       
-      // Fetch and display the new AD
-      await getADData(newADNo);
+      // Fetch and display the new AA
+      await getAAData(newAANo);
       
       dispatch({ type: 'SAVE_SUCCESS' });
-      console.log('AD Created Successfully and loaded:', newADNo);
+      console.log('AA Created Successfully and loaded:', newAANo);
       
-      // Show success message with AD number
+      // Show success message with AA number
       dispatch({ 
         type: 'SAVE_SUCCESS',
         payload: {
-          newADNo: newADNo,
-          message: `Disposal Form ${newADNo} created successfully!`
+          newAANo: newAANo,
+          message: `Asset Accountability ${newAANo} created successfully!`
         }
       });
 
       if (onSuccess && typeof onSuccess === 'function') {
-        onSuccess(newADNo);
+        onSuccess(newAANo);
       }
       console.log('FETCHED HEADER:', header);
       console.log('FETCHED DETAILS:', details);
@@ -532,22 +524,22 @@ export const useADData = (onSaveSuccess) => {
       
       dispatch({
         type: 'ERROR',
-        payload: error.response?.data?.error || 'Failed to create AD'
+        payload: error.response?.data?.error || 'Failed to create AA'
       });
     }
-  }, [state.createADHeader, state.createADDetails, adHRefresh, adDRefresh, getADData]);
+  }, [state.createAAHeader, state.createAADetails, accHRefresh, accDRefresh, getAAData]);
 
   // =========================
-  // UPDATE AD
+  // UPDATE AA
   // =========================
 
-  // Update existing AD (not create)
-  const updateAD = useCallback(async () => {
-    if (!state.createADHeader?.AD_No) {
-      console.error('AD_No is missing');
+  // Update existing AA (not create)
+  const updateAA = useCallback(async () => {
+    if (!state.createAAHeader?.AAFNo) {
+      console.error('AAFNo is missing');
       dispatch({
         type: 'ERROR',
-        payload: 'Disposal Form number is required'
+        payload: 'Asset Accountability number is required'
       });
       return;
     }
@@ -556,7 +548,7 @@ export const useADData = (onSaveSuccess) => {
 
     try {
       // Format header data - preserve dates WITHOUT modification
-      const { id, ...headerData } = state.createADHeader;
+      const { id, ...headerData } = state.createAAHeader;
       
       // CRITICAL FIX: Don't transform xDate at all - send exactly as is
       // The date should already be in YYYY-MM-DD format from the database
@@ -565,36 +557,36 @@ export const useADData = (onSaveSuccess) => {
       console.log('Date type:', typeof headerData.xDate);
       
       // UPDATE Header using PUT
-      await api.put(`/ad_hRoute/${state.createADHeader.AD_No}`, headerData);
+      await api.put(`/assetacchRoute/${state.createAAHeader.AAFNo}`, headerData);
       
       // Format details - PRESERVE dates exactly as they are
-      const detailPayload = state.createADDetails.map((item) => {
+      const detailPayload = state.createAADetails.map((item) => {
         const { id, ...cleanItem } = item;
         return {
           ...cleanItem,
-          AD_No: state.createADHeader.AD_No,
-          // DON'T transform dates - they're already in correct format// Send exactly as is
-          qty: Number(cleanItem.qty) || 1,
-          xpost: cleanItem.xpost || 0,
+          AAFNo: state.createAAHeader.AAFNo,
+          xDate: safeDate(cleanItem.xDate),
+          Qty: Number(cleanItem.Qty) || 1,
+          xPosted: cleanItem.xPosted || 0,
         };
       });
       
       // console.log('Updating Details with preserved dates:', detailPayload.map(d => ({ xDate: d.xDate, TargetDate: d.TargetDate })));
       
-      // UPDATE Details - replace all details for this AD
-      await api.put(`/ad_dRoute/${state.createADHeader.AD_No}`, detailPayload);
+      // UPDATE Details - replace all details for this AA
+      await api.put(`/assetaccdRoute/${state.createAAHeader.AAFNo}`, detailPayload);
       
-      await adHRefresh();
-      await adDRefresh();
+      await accHRefresh();
+      await accDRefresh();
       
-      // Refresh the displayed AD
-      await getADData(state.createADHeader.AD_No);
+      // Refresh the displayed AA
+      await getAAData(state.createAAHeader.AAFNo);
       
       dispatch({ 
         type: 'SAVE_SUCCESS',
         payload: {
-          newADNo: state.createADHeader.AD_No,
-          message: `Disposal Form ${state.createADHeader.AD_No} updated successfully!`
+          newAANo: state.createAAHeader.AAFNo,
+          message: `Asset Accountability ${state.createAAHeader.AAFNo} updated successfully!`
         }
       });
       
@@ -602,10 +594,10 @@ export const useADData = (onSaveSuccess) => {
       console.error('Update Error:', error);
       dispatch({
         type: 'ERROR',
-        payload: error.response?.data?.error || 'Failed to update AD'
+        payload: error.response?.data?.error || 'Failed to update AA'
       });
     }
-  }, [state.createADHeader, state.createADDetails, adHRefresh, adDRefresh, getADData]);
+  }, [state.createAAHeader, state.createAADetails, accHRefresh, accDRefresh, getAAData]);
 
   // =========================
   // ACTION HELPERS
@@ -626,38 +618,38 @@ export const useADData = (onSaveSuccess) => {
 
   // Ensure we have valid companyConfig
   if (!companyConfig) {
-    console.error('Company config is required for creating AD');
+    console.error('Company config is required for creating AA');
     return;
   }
   
-  // Generate the AD number immediately
+  // Generate the AA number immediately
   const autoNumbering = Number(companyConfig?.xAutoJO ?? 0);
   const prefix = companyConfig?.CInitial || '';
-  const lastNumber = Number(companyConfig?.XADNum || 0);
+  const lastNumber = Number(companyConfig?.XAANum || 0);
   
-  let newAD_No = '';
+  let newAAFNo = '';
   
   if (autoNumbering === 1) {
-    newAD_No = `${prefix}-AD-${String(lastNumber + 1).padStart(7, '0')}`;
+    newAAFNo = `${prefix}-AA-${String(lastNumber + 1).padStart(7, '0')}`;
   }
   
   dispatch({ 
     type: 'START_CREATE', 
     payload: {
       ...companyConfig,
-      generatedTR_No: newAD_No,  // Pass the generated number
+      generatedAA_No: newAAFNo,  // Pass the generated number
       userName: userName,
     }
   });
 }, [dispatch]);
 
-  const startEdit = (AD_No) => {
-    const selectTR = adHeaders.find(ad => ad.AD_No === AD_No);
-    const selectedDetails = adDetails.filter(ad => ad.AD_No === AD_No);
+  const startEdit = (AAFNo) => {
+    const selectAA = assetAccHeaders.find(aa => aa.AAFNo === AAFNo);
+    const selectedDetails = assetAccDetails.filter(aa => aa.AAFNo === AAFNo);
     dispatch({ 
       type: 'START_EDIT',
       payload: {
-        data: selectTR,
+        data: selectAA,
         details: selectedDetails,
       }
     });
@@ -672,8 +664,8 @@ export const useADData = (onSaveSuccess) => {
   const cancelEditCreate = () => {
     dispatch({ type: 'CANCEL_EDIT_CREATE' });
 
-    if (state.selectedAD?.AD_No) {
-      getADData(state.selectedAD.AD_No);
+    if (state.selectedAA?.AAFNo) {
+      getAAData(state.selectedAA.AAFNo);
     }
   };
 
@@ -686,22 +678,20 @@ export const useADData = (onSaveSuccess) => {
 
     const newRow = {
       id: Date.now(),
-      AD_No: state.isCreating ? state.createADHeader?.AD_No || '' : state.selectedAD?.AD_No || '',
-      FAC_NO: '',
-      FAC_name: '',
-      qty: 1,
+      AAFNo: state.isCreating ? state.createAAHeader?.AAFNo || '' : state.selectedAA?.AAFNo || '',
+      ItemNo: '',
+      ItemName: '',
+      Qty: 1,
       xDate: today,
-      xpost: 0,
-      UOM: '',
-      brand: '',
-      serialno: '',
-      workDet: '',
-      Disposal_Type: '',
-      salvage_amount: '',
+      xPosted: 0,
+      Units: '',
+      serial: '',
+      Supplier: '',
+      unitcost: '',
     };
     
     // Use the same action type for both create and edit
-    // The reducer will handle it based on state.selectedAD
+    // The reducer will handle it based on state.selectedAA
     dispatch({ type: 'ADD_DETAIL_ROW', payload: newRow });
   };
 
@@ -758,27 +748,27 @@ export const useADData = (onSaveSuccess) => {
   };
 
 
-  // saving AD - used for both create and update
+  // saving AA - used for both create and update
   const confirmSave = async () => {
     closeSaveDialog();
     
     if (state.isCreating) {
-      await createAD();
+      await createAA();
       if (onSaveSuccess && typeof onSaveSuccess === 'function') {
-        const newADNo = state.createADHeader?.AD_No;
-        if (newADNo) {
-          onSaveSuccess(newADNo);
+        const newAANo = state.createAAHeader?.AAFNo;
+        if (newAANo) {
+          onSaveSuccess(newAANo);
         }
       }
     } else if (state.isEditing) {
-      await updateAD();
+      await updateAA();
     }
   };
 
-  // delete the AD row - used for both create and update (but only if it's not posted for approval)
+  // delete the AA row - used for both create and update (but only if it's not posted for approval)
   const confirmDelete = (rowId) => {
     // Perform the actual deletion
-    if (state.createADDetails.length <= 1) {
+    if (state.createAADetails.length <= 1) {
       closeDeleteDialog();
       showSnackbar('At least one row is required', 'warning');
       return;
@@ -794,24 +784,24 @@ export const useADData = (onSaveSuccess) => {
     cancelEditCreate();
   };
 
-  // Add this function to your useADData hook
-const forceRefreshAD = useCallback(async (AD_No) => {
-  if (!AD_No) return;
+  // Add this function to your useAAData hook
+const forceRefreshAA = useCallback(async (AAFNo) => {
+  if (!AAFNo) return;
   
   try {
     // Refresh the hooks first
-    await adHRefresh();
-    await adDRefresh();
+    await accHRefresh();
+    await accDRefresh();
     
     // Then fetch the updated data
-    await getADData(AD_No);
+    await getAAData(AAFNo);
     
     return true;
   } catch (error) {
     console.error('Force refresh failed:', error);
     return false;
   }
-}, [adHRefresh, adDRefresh, getADData]);
+}, [accHRefresh, accDRefresh, getAAData]);
 
 
 
@@ -823,11 +813,11 @@ const forceRefreshAD = useCallback(async (AD_No) => {
     state,
     dispatch,
 
-    adHeaders,
-    adDetails,
+    assetAccHeaders,
+    assetAccDetails,
 
-    getADData,
-    forceRefreshAD,
+    getAAData,
+    forceRefreshAA,
 
     startCreate,
     startEdit,

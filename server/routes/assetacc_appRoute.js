@@ -432,4 +432,141 @@ router.get('/test', (req, res) => {
 });
 
 
+/**
+ * Post a Asset Accountability for approval - updates xPosted to 3 only
+ * This is just to mark the JO as ready for approval, no approval action yet
+ */
+
+router.put('/post/:AAFNo', (req, res) => {
+  const { AAFNo } = req.params;
+
+  console.log('Post Asset Accountability request:', { AAFNo });
+
+  const decodedAANo = decodeURIComponent(AAFNo)
+    .replace(/\u00A0/g, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
+
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error('Database connection error:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Database connection error'
+      });
+    }
+
+    // Begin transaction
+    connection.beginTransaction(async (transactionErr) => {
+      if (transactionErr) {
+        connection.release();
+        console.error('Transaction begin error:', transactionErr);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to start transaction'
+        });
+      }
+
+      try {
+        // 1. Check current status of the JO
+        const checkSql = `
+          SELECT AAFNo, xPosted, disapproved 
+          FROM assestacch 
+          WHERE AAFNo = ?
+        `;
+        
+        const currentDoc = await new Promise((resolve, reject) => {
+          connection.query(checkSql, [decodedAANo], (error, results) => {
+            if (error) reject(error);
+            else resolve(results[0]);
+          });
+        });
+
+        if (!currentDoc) {
+          throw new Error(`Asset Accountability ${decodedAANo} not found`);
+        }
+
+        // 2. Validate if it can be posted
+        if (currentDoc.xPosted === 3) {
+          throw new Error('Asset Accountability is already posted for approval');
+        }
+        
+        if (currentDoc.xPosted === 1) {
+          throw new Error('Asset Accountability is already fully approved');
+        }
+        
+        if (currentDoc.disapproved === 1) {
+          throw new Error('Cannot post a disapproved Asset Accountability');
+        }
+
+        // 3. Update assestacch table - set xPosted = 3
+        const updateHeaderSql = `
+          UPDATE assestacch 
+          SET xPosted = 3
+          WHERE AAFNo = ?
+        `;
+        
+        const updateResult = await new Promise((resolve, reject) => {
+          connection.query(updateHeaderSql, [decodedAANo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+        
+        if (updateResult.affectedRows === 0) {
+          throw new Error('Failed to update Asset Accountability');
+        }
+
+        // // 4. Update assestaccd table - set xPosted = 3 for all detail items
+        // const updateDetailsSql = `UPDATE assestaccd SET xPosted = 3 WHERE AAFNo = ?`;
+        // const detailsResult = await new Promise((resolve, reject) => {
+        //   connection.query(updateDetailsSql, [decodedAANo], (error, result) => {
+        //     if (error) reject(error);
+        //     else resolve(result);
+        //   });
+        // });
+
+        // 5. Commit transaction
+        connection.commit((commitErr) => {
+          if (commitErr) {
+            console.error('Commit error:', commitErr);
+            return connection.rollback(() => {
+              connection.release();
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to commit transaction'
+              });
+            });
+          }
+          
+          connection.release();
+          
+          res.json({
+            success: true,
+            message: `Asset Accountability ${AAFNo} has been posted for approval`,
+            data: {
+              AAFNo: decodedAANo,
+              old_xpost: currentDoc.xPosted,
+              new_xpost: 3,
+              // details_updated: detailsResult.affectedRows,
+              status: 'Pending Approval'
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error('Error in post Asset Accountability process:', error);
+        connection.rollback(() => {
+          connection.release();
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to post Asset Accountability for approval'
+          });
+        });
+      }
+    });
+  });
+});
+
+
 export default router;

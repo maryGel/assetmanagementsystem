@@ -106,42 +106,102 @@ export const useAssetAccApproval = () => {
     return { canApprove: false, reason: 'Document not ready for approval' };
   };
   
-const getTotalLevels = useCallback(async () => {
-  try {
-    console.log('🔄 Fetching total levels from API...');
-    
-    const response = await axios.get(`/approval/total-levels?module=${encodeURIComponent('Asset Accountability')}`, {
-      timeout: 10000,
-      headers: {
-        'Content-Type': 'application/json'
+  const getTotalLevels = useCallback(async () => {
+    try {
+      console.log('🔄 Fetching total levels from API...');
+      
+      const response = await axios.get(`/approval/total-levels?module=${encodeURIComponent('Asset Accountability')}`, {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('📡 Full API Response:', response);
+      console.log('📡 Response data:', response.data);
+      
+      // The backend returns: { success: true, totalLevels: number, module: string }
+      if (response.data && response.data.success === true) {
+        const totalLevels = response.data.totalLevels || 3;
+        console.log('✅ Successfully fetched total levels:', totalLevels);
+        return { success: true, totalLevels: totalLevels };
+      } else {
+        console.warn('⚠️ API returned unexpected structure:', response.data);
+        return { success: true, totalLevels: 3 }; // Default fallback
       }
-    });
+      
+    } catch (err) {
+      console.error('❌ Error fetching total levels:', {
+        message: err.message,
+        code: err.code,
+        name: err.name,
+        response: err.response?.data
+      });
+      
+      // Return default value on error
+      return { success: true, totalLevels: 3 };
+    }
+  }, []);
+
+  /**
+   * Post a Asset Accountability Form for approval (update xPosted to 3 only)
+   * @param {string} AAFNo - Asset Accountability Form number
+   * @returns {Promise} Post result
+   */
+  const postAssetAcc = async (AAFNo) => {
+    setLoading(true);
+    setError(null);
     
-    console.log('📡 Full API Response:', response);
-    console.log('📡 Response data:', response.data);
+    try {
+      const response = await axios.put(`/accApproval/post/${encodeURIComponent(AAFNo)}`);
+      
+      setLoading(false);
+
+      
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message
+      };
+      
+    } catch (err) {
+      console.error('Post Asset Accountability Form error:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to post Asset Accountability Form for approval';
+      setError(errorMessage);
+      setLoading(false);
+      return { 
+        success: false, 
+        error: errorMessage
+      };
+    }
+  };
+
+  /**
+   * Check if Asset Accountability Form can be posted for approval
+   * @param {Object} docStatus - Document status object
+   * @returns {Object} Post availability
+   */
+  const canPost = (docStatus) => {
+    if (!docStatus) return { canPost: false, reason: 'No document status available' };
     
-    // The backend returns: { success: true, totalLevels: number, module: string }
-    if (response.data && response.data.success === true) {
-      const totalLevels = response.data.totalLevels || 3;
-      console.log('✅ Successfully fetched total levels:', totalLevels);
-      return { success: true, totalLevels: totalLevels };
-    } else {
-      console.warn('⚠️ API returned unexpected structure:', response.data);
-      return { success: true, totalLevels: 3 }; // Default fallback
+    if (docStatus.xPosted === 4) {
+      return { canPost: false, reason: 'Document has been disapproved' };
     }
     
-  } catch (err) {
-    console.error('❌ Error fetching total levels:', {
-      message: err.message,
-      code: err.code,
-      name: err.name,
-      response: err.response?.data
-    });
+    if (docStatus.xPosted === 1) {
+      return { canPost: false, reason: 'Document is already fully approved' };
+    }
     
-    // Return default value on error
-    return { success: true, totalLevels: 3 };
-  }
-}, []);
+    if (docStatus.xPosted === 3) {
+      return { canPost: false, reason: 'Document is already posted for approval' };
+    }
+    
+    if (docStatus.xPosted === 0) {
+      return { canPost: true, reason: 'Ready to post for approval' };
+    }
+    
+    return { canPost: false, reason: 'Document cannot be posted for approval' };
+  };
   
 
   return {
@@ -151,6 +211,8 @@ const getTotalLevels = useCallback(async () => {
     canApprove,
     getTotalLevels,
 
+    postAssetAcc,
+    canPost,
     // State
     loading,
     error

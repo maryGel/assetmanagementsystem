@@ -57,7 +57,7 @@
     });
   });
 
- //Create the AD header xpost
+  //Create the AD header xpost
   router.post('/', (req, res) => {
     const { 
       AD_No,
@@ -115,7 +115,6 @@
   });
 
   // Update AD header
-
   router.put('/:AD_No', (req, res) => {
     const AD_No = req.params.AD_No;
     const updateData = req.body;
