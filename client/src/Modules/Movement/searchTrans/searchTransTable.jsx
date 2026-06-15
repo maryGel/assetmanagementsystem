@@ -288,7 +288,7 @@ export default function SearchTransactionTable({
       case 'Asset Accountability Form':
         return window.open(`/assetMovement/pages/AAFormPage?docId=${transNo}`, '_blank');
       case 'Lost Asset Form':
-        return window.open(`/assetMovement/pages/LostAssetFormPage?docId=${transNo}`, '_blank');
+        return window.open(`/assetMovement/pages/ALFormPage?docId=${transNo}`, '_blank');
       default:
         return;
     }        

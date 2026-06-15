@@ -18,6 +18,7 @@ import JOFormPage from './Modules/Movement/pages/jobOrderPage.jsx';
 import TRFormPage from './Modules/Movement/pages/transferFormPage.jsx';
 import ADFormPage from './Modules/Movement/pages/disposalPage.jsx';
 import AAFormPage from './Modules/Movement/pages/assetAccPage.jsx';
+import ALFormPage from './Modules/Movement/pages/assetLostPage.jsx';
 
 import SearchTransactions from './Modules/Movement/pages/searchTransactionsPage.jsx';
 
@@ -148,6 +149,13 @@ function App() {
 
           <Route path="/assetMovement/pages/AAFormPage" element={
             <AAFormPage
+              setHeaderTitle={saveTitleUpdate}
+            />
+          } />
+
+
+          <Route path="/assetMovement/pages/ALFormPage" element={
+            <ALFormPage
               setHeaderTitle={saveTitleUpdate}
             />
           } />

@@ -19,6 +19,7 @@ export const headerTitleMap = {
   "/assetMovement/pages/TRFormPage": "Transfer Form Page",
   "/assetMovement/pages/ADFormPage": "Disposal Form Page",
   "/assetMovement/pages/AAFormPage": "Asset Accountability Form Page",
+  "/assetMovement/pages/ALFormPage": "Lost Asset Form Page",
 
   // System Setup Pages
   "/systemSetup/user/userProfile": "Roles and Authorizations",
@@ -38,5 +39,6 @@ export const getBackPath = (currentPath) => {
   if (currentPath.startsWith('/assetMovement/pages/TRFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/ADFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/AAFormPage')) return '/Home/Movement';
+  if (currentPath.startsWith('/assetMovement/pages/ALFormPage')) return '/Home/Movement';
 
 };

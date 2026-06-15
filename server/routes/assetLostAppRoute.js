@@ -274,16 +274,15 @@ router.put('/reject/:AAFNo', (req, res) => {
         const processedLevelsCount = newAppStat.split(',').filter(l => l.trim()).length;
         
         // 5. Calculate new xPosted - RESET TO 3 for rejection (but follow same calculation pattern)
-        const newXpost = 3; // Reset to 3 on rejection
+        const newXpost = 4; // Reset to 3 on rejection
         
         // 6. Determine the STAT value for the approval log - ALWAYS 'Disapproved' for rejection
-        const approvalStat = 'Disapproved';
+        const approvalStat = 'Rejected';
         
         // 7. Update assetlost table - Set DISAPPROVED to 1, keep appStat same as approve flow
         const updateHeaderSql = `
           UPDATE assetlost 
-          SET DISAPPROVED = 1,
-              xPosted = ?, 
+          SET xPosted = ?, 
               appStat = ?,
               approver = ?
           WHERE AAFNo = ?
@@ -410,6 +409,143 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+/**
+ * Post a Asset Lost for approval - updates xPosted to 3 only
+ * This is just to mark the JO as ready for approval, no approval action yet
+ */
+
+router.put('/post/:AAFNo', (req, res) => {
+  const { AAFNo } = req.params;
+
+  console.log('Post Asset Lost request:', { AAFNo });
+
+  const decodedALNo = decodeURIComponent(AAFNo)
+    .replace(/\u00A0/g, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
+
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error('Database connection error:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Database connection error'
+      });
+    }
+
+    // Begin transaction
+    connection.beginTransaction(async (transactionErr) => {
+      if (transactionErr) {
+        connection.release();
+        console.error('Transaction begin error:', transactionErr);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to start transaction'
+        });
+      }
+
+      try {
+        // 1. Check current status of the JO
+        const checkSql = `
+          SELECT AAFNo, xPosted, disapproved 
+          FROM assetlost 
+          WHERE AAFNo = ?
+        `;
+        
+        const currentDoc = await new Promise((resolve, reject) => {
+          connection.query(checkSql, [decodedALNo], (error, results) => {
+            if (error) reject(error);
+            else resolve(results[0]);
+          });
+        });
+
+        if (!currentDoc) {
+          throw new Error(`Asset Lost ${decodedALNo} not found`);
+        }
+
+        // 2. Validate if it can be posted
+        if (currentDoc.xPosted === 3) {
+          throw new Error('Asset Lost is already posted for approval');
+        }
+        
+        if (currentDoc.xPosted === 1) {
+          throw new Error('Asset Lost is already fully approved');
+        }
+        
+        if (currentDoc.disapproved === 1) {
+          throw new Error('Cannot post a disapproved Asset Lost');
+        }
+
+        // 3. Update assetlost table - set xPosted = 3
+        const updateHeaderSql = `
+          UPDATE assetlost 
+          SET xPosted = 3
+          WHERE AAFNo = ?
+        `;
+        
+        const updateResult = await new Promise((resolve, reject) => {
+          connection.query(updateHeaderSql, [decodedALNo], (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+        
+        if (updateResult.affectedRows === 0) {
+          throw new Error('Failed to update Asset Lost');
+        }
+
+        // // 4. Update assestaccd table - set xPosted = 3 for all detail items
+        // const updateDetailsSql = `UPDATE assestaccd SET xPosted = 3 WHERE AAFNo = ?`;
+        // const detailsResult = await new Promise((resolve, reject) => {
+        //   connection.query(updateDetailsSql, [decodedALNo], (error, result) => {
+        //     if (error) reject(error);
+        //     else resolve(result);
+        //   });
+        // });
+
+        // 5. Commit transaction
+        connection.commit((commitErr) => {
+          if (commitErr) {
+            console.error('Commit error:', commitErr);
+            return connection.rollback(() => {
+              connection.release();
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to commit transaction'
+              });
+            });
+          }
+          
+          connection.release();
+          
+          res.json({
+            success: true,
+            message: `Asset Lost ${AAFNo} has been posted for approval`,
+            data: {
+              AAFNo: decodedALNo,
+              old_xpost: currentDoc.xPosted,
+              new_xpost: 3,
+              // details_updated: detailsResult.affectedRows,
+              status: 'Pending Approval'
+            }
+          });
+        });
+        
+      } catch (error) {
+        console.error('Error in post Asset Lost process:', error);
+        connection.rollback(() => {
+          connection.release();
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to post Asset Lost for approval'
+          });
+        });
+      }
+    });
+  });
+});
+
 
 
 export default router;

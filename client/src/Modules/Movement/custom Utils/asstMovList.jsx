@@ -44,7 +44,7 @@ export const assetMovList= [
   {
     id: 7,
     title: 'Lost Asset',
-    link: '/assetMovement/retirementBySale',
+    link: '/assetMovement/pages/ALFormPage',
     imgSrc: '/icons/menu_icons/lostItems.png',
     headerTitle: 'Retiremnent by Sale',
   },

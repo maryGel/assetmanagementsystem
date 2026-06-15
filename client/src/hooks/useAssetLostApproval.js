@@ -142,6 +142,67 @@ const getTotalLevels = useCallback(async () => {
     return { success: true, totalLevels: 3 };
   }
 }, []);
+
+ /**
+   * Post a Asset Accountability Form for approval (update xPosted to 3 only)
+   * @param {string} AAFNo - Asset Accountability Form number
+   * @returns {Promise} Post result
+   */
+  const postAssetLost = async (AAFNo) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await axios.put(`/alostApproval/post/${encodeURIComponent(AAFNo)}`);
+      
+      setLoading(false);
+
+      
+      return { 
+        success: true, 
+        data: response.data.data,
+        message: response.data.message
+      };
+      
+    } catch (err) {
+      console.error('Post Asset Accountability Form error:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to post Asset Accountability Form for approval';
+      setError(errorMessage);
+      setLoading(false);
+      return { 
+        success: false, 
+        error: errorMessage
+      };
+    }
+  };
+
+  /**
+   * Check if Asset Accountability Form can be posted for approval
+   * @param {Object} docStatus - Document status object
+   * @returns {Object} Post availability
+   */
+  const canPost = (docStatus) => {
+    if (!docStatus) return { canPost: false, reason: 'No document status available' };
+    
+    if (docStatus.xPosted === 4) {
+      return { canPost: false, reason: 'Document has been disapproved' };
+    }
+    
+    if (docStatus.xPosted === 1) {
+      return { canPost: false, reason: 'Document is already fully approved' };
+    }
+    
+    if (docStatus.xPosted === 3) {
+      return { canPost: false, reason: 'Document is already posted for approval' };
+    }
+    
+    if (docStatus.xPosted === 0) {
+      return { canPost: true, reason: 'Ready to post for approval' };
+    }
+    
+    return { canPost: false, reason: 'Document cannot be posted for approval' };
+  };
+  
   
 
   return {
@@ -150,6 +211,9 @@ const getTotalLevels = useCallback(async () => {
     rejectAssetLost,
     canApprove,
     getTotalLevels,
+
+    postAssetLost,
+    canPost,
 
     // State
     loading,

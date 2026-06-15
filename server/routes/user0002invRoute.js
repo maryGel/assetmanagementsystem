@@ -430,6 +430,85 @@ router.put('/xaa', (req, res) => {
     });
 });
 
+// UPDATE XALNum ONLY (for incrementing after AD creation)
+router.put('/xal', (req, res) => {
+    const { XALNum } = req.body;
+
+    console.log('=== XTR UPDATE REQUEST ===');
+    console.log('Received XALNum to update:', XALNum);
+    console.log('Type of XALNum:', typeof XALNum);
+    console.log('Full request body:', req.body);
+
+    if (XALNum === undefined || XALNum === null) {
+        return res.status(400).json({ 
+            error: 'XALNum is required',
+            message: 'Please provide XALNum value to update'
+        });
+    }
+
+    // First check current value before update
+    const checkSql = 'SELECT XALNum FROM user0002inv LIMIT 1';
+    
+    db.getConnection((err, connection) => {
+        if (err) return res.status(500).json({ error: 'DB connection error' });
+
+        connection.query(checkSql, (err, results) => {
+            if (err) {
+                console.error('Error checking current XAANum:', err);
+            } else {
+                console.log('Current XALNum in DB before update:', results[0]?.XAANum);
+            }
+            
+            // Now update XTRNum
+            const sql = 'UPDATE user0002inv SET XALNum = ?';
+            const values = [XALNum];
+            
+            console.log('Executing SQL:', sql);
+            console.log('With values:', values);
+            
+            connection.query(sql, values, (err, result) => {
+                if (err) {
+                    connection.release();
+                    console.error('Error updating XALNum:', err);
+                    return res.status(500).json({ 
+                        error: 'Error updating XALNum', 
+                        details: err.message,
+                        sqlMessage: err.sqlMessage
+                    });
+                }
+
+                console.log('Update result:', result);
+                console.log('Affected rows:', result.affectedRows);
+
+                // Verify the update worked
+                connection.query('SELECT XALNum FROM user0002inv LIMIT 1', (err, verifyResults) => {
+                    connection.release();
+                    
+                    if (!err) {
+                        console.log('XALNum in DB AFTER update:', verifyResults[0]?.XALNum);
+                    }
+                    
+                    if (result.affectedRows === 0) {
+                        return res.status(404).json({ 
+                            error: 'No record updated',
+                            message: 'Configuration record not found.'
+                        });
+                    }
+
+                    console.log('XAANum updated successfully to:', XALNum);
+                    res.status(200).json({ 
+                        success: true, 
+                        message: 'XALNum updated successfully',
+                        oldValue: results[0]?.XAANum,
+                        newValue: XALNum,
+                        affectedRows: result.affectedRows
+                    });
+                });
+            });
+        });
+    });
+});
+
 
 // TEST endpoint - remove after testing
 router.post('/test-update', (req, res) => {
