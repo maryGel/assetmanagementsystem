@@ -114,37 +114,96 @@ export default function CreateAsset(setHeaderTitle) {
     } 
   }, [asset.CATEGORY, refCategoryData, assets]);
 
-  // Function to generate next asset number
-  const generateNextFacNO = useCallback(async (xCode) => {
-    if (!xCode) return '';     
+// Function to generate next asset number (fills gaps)
+const generateNextFacNO = useCallback(async (xCode) => {
+  if (!xCode) return '';     
 
-    try {
-      // Find the highest existing number for this xCode
-      const response = await api.get('/itemlist');
-      const allAssets = response.data || [];
-
-      const existingAssets = allAssets.filter(asset => 
-        asset.FacNO && asset.FacNO.startsWith(`${xCode}-`)
-      );
-      
-      let maxNumber = 0;
-      existingAssets.forEach(asset => {
-        const match = asset.FacNO.match(/-(\d+)$/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxNumber) maxNumber = num;
-        }
-      });
+  try {
+    // Fetch all assets
+    const response = await api.get('/itemlist');
     
-      // Increment and format with leading zeros
-      const nextNumber = maxNumber + 1;
-      const generated =  `${xCode}-${nextNumber.toString().padStart(7, '0')}`;
-      return generated;
-    } catch (error) {
-      console.error('Error generating FacN0:', error);
-      return '';
-    }    
-  }, []);
+    // Handle different possible data structures
+    let allAssets = [];
+    
+    // Check if response.data is an array
+    if (Array.isArray(response.data)) {
+      allAssets = response.data;
+    } 
+    // Check if response.data has a data property that's an array
+    else if (response.data && Array.isArray(response.data.data)) {
+      allAssets = response.data.data;
+    }
+    // Check if response.data has an items or assets property
+    else if (response.data && Array.isArray(response.data.items)) {
+      allAssets = response.data.items;
+    }
+    else if (response.data && Array.isArray(response.data.assets)) {
+      allAssets = response.data.assets;
+    }
+    // If response.data is an object, try to extract any array property
+    else if (response.data && typeof response.data === 'object') {
+      // Look for any property that is an array
+      const arrayProperty = Object.values(response.data).find(
+        value => Array.isArray(value)
+      );
+      if (arrayProperty) {
+        allAssets = arrayProperty;
+      } else {
+        console.error('No array found in response.data:', response.data);
+        return `${xCode}-${'1'.padStart(7, '0')}`;
+      }
+    }
+    
+    // Ensure allAssets is an array
+    if (!Array.isArray(allAssets)) {
+      console.error('allAssets is not an array:', allAssets);
+      return `${xCode}-${'1'.padStart(7, '0')}`;
+    }
+    
+    // Filter assets for this category
+    const existingAssets = allAssets.filter(asset => 
+      asset && asset.FacNO && asset.FacNO.startsWith(`${xCode}-`)
+    );
+    
+    // Extract numbers and sort them
+    const existingNumbers = [];
+    existingAssets.forEach(asset => {
+      const match = asset.FacNO.match(/-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num)) {
+          existingNumbers.push(num);
+        }
+      }
+    });
+    
+    // Sort numbers in ascending order
+    existingNumbers.sort((a, b) => a - b);
+    
+    // Find the first gap in the sequence starting from 1
+    let nextNumber = 1;
+    for (let i = 0; i < existingNumbers.length; i++) {
+      if (existingNumbers[i] > nextNumber) {
+        // Found a gap at nextNumber
+        break;
+      }
+      if (existingNumbers[i] === nextNumber) {
+        // Current number exists, move to next
+        nextNumber++;
+      }
+    }
+    
+    // Format with leading zeros (7 digits)
+    const generated = `${xCode}-${nextNumber.toString().padStart(7, '0')}`;
+    console.log('Generated FacNO:', generated); // Debug log
+    return generated;
+    
+  } catch (error) {
+    console.error('Error generating FacNO:', error);
+    // Return a temporary number as fallback
+    return `${xCode}-${'1'.padStart(7, '0')}`;
+  }    
+}, []);
 
   // .... H a n d l e r s ....
   

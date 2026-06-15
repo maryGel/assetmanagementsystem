@@ -115,7 +115,7 @@
   // --- DATABASE CONFIGURATION ---
   // Hardcoded to ensure Node always talks to the same DB as SQLyog
   const dbConfig = {
-    host: process.env.DB_HOST || '192.168.64.5',
+    host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'myuser101',
     password: process.env.DB_PASSWORD || 'MmFjbV69',
     database: process.env.DB_NAME || 'ams1',

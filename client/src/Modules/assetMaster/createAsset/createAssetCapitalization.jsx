@@ -146,7 +146,7 @@ export default function CreateAssetCapitalization({
           }}
           type="date"
           margin="normal" 
-          value={formatDateForInput(asset.Adate) || ''}  //TODO: update the dataformat
+          value={asset.Adate || ''}  //TODO: update the dataformat
           onChange={(e) => handleInputChange('Adate', e.target.value)}
           InputLabelProps={{ shrink: true }}   
           required         
