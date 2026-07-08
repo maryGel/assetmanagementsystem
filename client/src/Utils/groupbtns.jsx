@@ -8,6 +8,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import CloseIcon from '@mui/icons-material/Close';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 const btnStyles = "flex justify-center pt-1 pb-1 pl-2 pr-3 transition-transform duration-200 ease-in-out border rounded-full shadow-black border-spacing-1 active:scale-95"; 
 
@@ -22,7 +23,8 @@ const variantStyles = {
   deleteBtn: 'text-red-800 bg-slate-100 hover:text-red-700 hover:bg-slate-200',
   goBtn: 'text-white bg-green-500 shadow-black hover:text-gray-600',
   clearBtn: 'text-gray-600 hover:bg-gray-600 border-slate-300 hover:text-white',
-  rejectBtn: 'text-red-800 bg-slate-100 hover:text-red-700 hover:bg-slate-200'
+  rejectBtn: 'text-red-800 bg-slate-100 hover:text-red-700 hover:bg-slate-200',
+  refreshBtn: 'text-gray-600 bg-slate-200 hover:text-gray-800 hover:bg-slate-300',
 }
 
 const icons = {
@@ -36,7 +38,8 @@ const icons = {
   delete: DeleteIcon,
   go: CheckCircleIcon,
   clear: ClearAllIcon,
-  reject: CloseIcon
+  reject: CloseIcon,
+  refresh: RefreshIcon,
 }
 
 

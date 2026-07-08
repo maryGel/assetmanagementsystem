@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+// components/searchTrans/searchTransTable.jsx
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { alpha } from '@mui/material/styles';
 import {
@@ -19,25 +20,29 @@ import {
   Tooltip,
   FormControlLabel,
   Switch,
+  Button,
+  CircularProgress,
+  Backdrop
 } from '@mui/material';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import AddIcon from '@mui/icons-material/Add';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import { visuallyHidden } from '@mui/utils';
 // Custom Utils
 import DateDisplay from '../../../Utils/formatDateForInput';
+import { getNextLevel, isPendingApproval } from '../../../Utils/approvalLevelUtils';
+import { useAllApprovalLevels } from '../../../Utils/approvalHookFactory';
 
 function descendingComparator(a, b, orderBy) {
   const aValue = a[orderBy];
   const bValue = b[orderBy];
-
   if (aValue == null || bValue == null) return 0;
-
   if (typeof aValue === 'number' && typeof bValue === 'number') {
     return bValue - aValue;
   }
-
   return bValue.toString().localeCompare(aValue.toString(), undefined, {
     numeric: true,
     sensitivity: 'base',
@@ -53,12 +58,12 @@ function getComparator(order, orderBy) {
 const headCells = [
   { id: 'DocNo', numeric: false, disablePadding: true, label: 'Document No' },
   { id: 'DocType', numeric: true, disablePadding: false, label: 'Document Type'},
-  { id: 'Date', numeric: true, disablePadding: false, label: 'Date' },
-  { id: 'Status', numeric: true, disablePadding: false, label: 'Status'},
   { id: 'Remarks', numeric: true, disablePadding: false, label: 'Remarks'},
   { id: 'Department', numeric: true, disablePadding: false, label: 'Department'},
   { id: 'Location', numeric: true, disablePadding: false, label: 'Location'},
-  { id: 'Action', numeric: true, disablePadding: false, label: 'Action'},
+  { id: 'Date', numeric: true, disablePadding: false, label: 'Date' },
+  { id: 'Status', numeric: true, disablePadding: false, label: 'Status'},
+  { id: 'Action', numeric: true, disablePadding: false, label: 'Level'},
 ];
 
 function EnhancedTableHead(props) {
@@ -66,7 +71,6 @@ function EnhancedTableHead(props) {
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
   };
-
   return (
     <TableHead>
       <TableRow>
@@ -120,14 +124,51 @@ EnhancedTableHead.propTypes = {
 };
 
 function EnhancedTableToolbar(props) {
-  const { numSelected, selected, onCopyToNew, onExportCsv } = props;
+  const { 
+    numSelected, 
+    selected, 
+    onCopyToNew, 
+    onExportCsv,
+    onBulkApprove,
+    onBulkReject,
+    selectedDocuments = []
+  } = props;
+
+  // Check if selected documents can be approved/rejected
+  const getSelectedDocStatus = useMemo(() => {
+    if (selectedDocuments.length === 0) {
+      return { canApprove: false, canReject: false, approvableCount: 0, rejectableCount: 0 };
+    }
+    
+    const approvable = selectedDocuments.filter(doc => {
+      return doc.Status === 3 || doc.Status === 2;
+    });
+    
+    const rejectable = selectedDocuments.filter(doc => {
+      return doc.Status === 3 || doc.Status === 2;
+    });
+    
+    return { 
+      canApprove: approvable.length > 0, 
+      canReject: rejectable.length > 0,
+      approvableCount: approvable.length,
+      rejectableCount: rejectable.length
+    };
+  }, [selectedDocuments]);
+
+  const showBulkActions = numSelected > 0;
 
   return (
     <Toolbar
       sx={[
         {
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           pl: { sm: 2 },
-          pr: { xs: 1, sm: 1 },
+          pr: { xs: 3, sm: 3 },
+          gap: 2,
         },
         numSelected > 0 && {
           bgcolor: (theme) =>
@@ -154,35 +195,53 @@ function EnhancedTableToolbar(props) {
           Document List
         </Typography>
       )}
-
-      {numSelected > 1 ? 
-        <Tooltip title="Delete">
-          <IconButton>
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>      
-      :         
-        <Tooltip title="Copy to New">
-          <IconButton
-            disabled={numSelected !== 1}
-            onClick={(e) => onCopyToNew(selected[0])}
-          >
-            <FileCopyIcon />
-          </IconButton>
-        </Tooltip>
-      }
-
-      <Tooltip title="Create Document">
-        <IconButton
-          onClick={() => {
-            const path = '/assetMovement/pages/JOFormPage';
-            window.open(path, '_blank');
-          }}
-        >
-          <AddIcon />
-        </IconButton>
-      </Tooltip>
-
+      
+      {showBulkActions && (
+        <>
+          {getSelectedDocStatus.canApprove && onBulkApprove && (
+            <Tooltip title={`Bulk Approve (${getSelectedDocStatus.approvableCount} documents)`}>
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={<ThumbUpIcon />}
+                onClick={onBulkApprove}
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  minWidth: 'auto',
+                  px: 2
+                }}
+              >
+                Approve 
+              </Button>
+            </Tooltip>
+          )}
+          
+          {getSelectedDocStatus.canReject && onBulkReject && (
+            <Tooltip title={`Bulk Reject (${getSelectedDocStatus.rejectableCount} documents)`}>
+              <Button
+                variant="contained"
+                color="error"
+                size="small"
+                startIcon={<ThumbDownIcon />}
+                onClick={onBulkReject}
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  minWidth: 'auto',
+                  px: 2
+                }}
+              >
+                Reject 
+              </Button>
+            </Tooltip>
+          )}
+        </>
+      )}
+      
       <Tooltip title="Export CSV">
         <IconButton onClick={onExportCsv}>
           <DownloadIcon />
@@ -197,6 +256,9 @@ EnhancedTableToolbar.propTypes = {
   selected: PropTypes.array.isRequired,
   onCopyToNew: PropTypes.func.isRequired,
   onExportCsv: PropTypes.func.isRequired,
+  onBulkApprove: PropTypes.func,
+  onBulkReject: PropTypes.func,
+  selectedDocuments: PropTypes.array
 };
 
 export default function SearchTransactionTable({ 
@@ -209,61 +271,62 @@ export default function SearchTransactionTable({
   rowsPerPage,
   setRowsPerPage, 
   isTableActive,
-  setHeaderTitle,
   selected,
-  setSelected
+  setSelected,
+  onBulkApprove,
+  onBulkReject,
+  selectedDocuments = [],
+  isRefreshing = false,
+  dataVersion = 0
 }) {
-
+  // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('DocNo');  
   const [dense, setDense] = useState(false);
-
+  const [docTypeLevels, setDocTypeLevels] = useState({});
+  const [loadingLevels, setLoadingLevels] = useState(true);
+  const { getTotalLevelsForDocTypes } = useAllApprovalLevels();
   const rows = Array.isArray(displayedDocs) ? displayedDocs : [];
 
-  const handleDocStatus = (status, reject) => {
-    if (status === 0) return 'Draft';
-    if (status === 3) return 'For Approval';  
-    if (status === 2) return 'Partially Approved';
-    if (status === 1) return 'Fully Approved';
-    if (status === 4) return 'Rejected';
-    return '';
-  }
-
-  const handleRequestSort = (event, property) => {
+  // All hooks must be called before any conditional returns
+  const handleRequestSort = useCallback((event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
-  };
+  }, [order, orderBy]);
 
-  const isSelected = (id) => selected.indexOf(id) !== -1;
-  console.log(`Selected IDs: ${selected.join(', ')}`);
-  const handleSelectAllClick = (event) => {
+  const isSelected = useCallback((id) => {
+    return selected.indexOf(id) !== -1;
+  }, [selected]);
+
+  const handleSelectAllClick = useCallback((event) => {
     if (event.target.checked) {
       const newSelected = rows.map(row => row.DocNo);
       setSelected(newSelected);
     } else {
       setSelected([]);
     }
-  };
+  }, [rows, setSelected]);
 
-  const handleClick = (id) => {
-    const selectedIndex = selected.indexOf(id);
-    let newSelected = [];
-
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, id);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1),
-      );
-    }
-    setSelected(newSelected);
-  };
+  const handleClick = useCallback((id) => {
+    setSelected(prevSelected => {
+      const selectedIndex = prevSelected.indexOf(id);
+      let newSelected = [];
+      if (selectedIndex === -1) {
+        newSelected = [...prevSelected, id];
+      } else if (selectedIndex === 0) {
+        newSelected = prevSelected.slice(1);
+      } else if (selectedIndex === prevSelected.length - 1) {
+        newSelected = prevSelected.slice(0, -1);
+      } else if (selectedIndex > 0) {
+        newSelected = [
+          ...prevSelected.slice(0, selectedIndex),
+          ...prevSelected.slice(selectedIndex + 1),
+        ];
+      }
+      return newSelected;
+    });
+  }, [setSelected]);
 
   const handleChangeRowsPerPage = (event) => {
     const newSize = parseInt(event.target.value, 10);
@@ -277,7 +340,6 @@ export default function SearchTransactionTable({
 
   const handleSelectItem = (row) => {
     const transNo = row.DocNo;
-
     switch (row.DocType) {
       case 'Job Order':
         return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
@@ -292,7 +354,7 @@ export default function SearchTransactionTable({
       default:
         return;
     }        
-  }; 
+  };
 
   const handleClickCopytoNew = (transNo) => {
     if (!transNo) return;
@@ -300,12 +362,82 @@ export default function SearchTransactionTable({
     window.open(path, '_blank');
   };
 
+  const handleDocStatus = (status, reject) => {
+    if (status === 0) return 'Draft';
+    if (status === 3) return 'For Approval';  
+    if (status === 2) return 'Partially Approved';
+    if (status === 1) return 'Fully Approved';
+    if (status === 4) return 'Rejected';
+    return '';
+  }
+
+  // Fetch total levels for each document type
+  useEffect(() => {
+    const fetchAllDocTypeLevels = async () => {
+      setLoadingLevels(true);
+      try {
+        const uniqueDocTypes = [...new Set(rows.map(row => row.DocType).filter(Boolean))];
+        
+        console.log('📋 Fetching levels for doc types:', uniqueDocTypes);
+        
+        if (uniqueDocTypes.length === 0) {
+          setDocTypeLevels({});
+          setLoadingLevels(false);
+          return;
+        }
+        
+        const levelsMap = await getTotalLevelsForDocTypes(uniqueDocTypes);
+        console.log('📊 Levels map:', levelsMap);
+        setDocTypeLevels(levelsMap);
+      } catch (err) {
+        console.error('Error fetching document type levels:', err);
+        const uniqueDocTypes = [...new Set(rows.map(row => row.DocType).filter(Boolean))];
+        const levelsMap = {};
+        uniqueDocTypes.forEach(docType => {
+          levelsMap[docType] = 3;
+        });
+        setDocTypeLevels(levelsMap);
+      } finally {
+        setLoadingLevels(false);
+      }
+    };
+    
+    if (rows.length > 0) {
+      fetchAllDocTypeLevels();
+    } else {
+      setDocTypeLevels({});
+      setLoadingLevels(false);
+    }
+  }, [rows, dataVersion]);
+
   const visibleRows = useMemo(() => {
     if (!isTableActive) return [];
-    // Apply sorting and pagination
-    const sorted = [...rows].sort(getComparator(order, orderBy));
-    return sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  }, [rows, order, orderBy, page, rowsPerPage, isTableActive]);
+       
+    const rowsWithLevels = rows.map(row => {
+      const totalLevels = docTypeLevels[row.DocType] || 3;
+      
+      const header = {
+        xpost: row.Status,
+        appStat: row.appStat || ''
+      };
+      
+      const nextLevel = getNextLevel(header);
+      const isPending = isPendingApproval(header);
+      
+      return {
+        ...row,
+        nextLevel,
+        totalLevels,
+        levelShortDisplay: nextLevel ? `${nextLevel}/${totalLevels}` : '',
+        isPending
+      };
+    });
+    
+    const sorted = [...rowsWithLevels].sort(getComparator(order, orderBy));
+    const paginated = sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    
+    return paginated;
+  }, [rows, order, orderBy, page, rowsPerPage, isTableActive, docTypeLevels]);
 
   const handleExportCsv = () => {
     const header = headCells.map((c) => `"${c.label}"`).join(',');
@@ -319,7 +451,6 @@ export default function SearchTransactionTable({
           .join(',')
       )
       .join('\n');
-
     const csv = `${header}\n${body}`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -332,12 +463,30 @@ export default function SearchTransactionTable({
     URL.revokeObjectURL(url);
   };
 
-  if (loading) {
+  // NOW we can do conditional returns AFTER all hooks are called
+  if (loading || isRefreshing) {
     return (
-      <Box sx={{ width: '100%', padding: 2 }}>
-        <Typography variant="h6" align="center">
-          Loading Documents...
-        </Typography>
+      <Box sx={{ width: '100%', padding: 2, position: 'relative', minHeight: '200px' }}>
+        <Backdrop
+          open={true}
+          sx={{
+            position: 'absolute',
+            zIndex: 1,
+            color: '#fff',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: 1
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <CircularProgress size={40} />
+            <Typography variant="body2" sx={{ color: 'text.primary' }}>
+              {isRefreshing ? 'Refreshing data...' : 'Loading Documents...'}
+            </Typography>
+          </Box>
+        </Backdrop>
+        <Box sx={{ opacity: 0.3, pointerEvents: 'none' }}>
+          <Paper sx={{ width: '100%', mb: 2, minHeight: '300px' }} />
+        </Box>
       </Box>
     );
   }
@@ -358,6 +507,9 @@ export default function SearchTransactionTable({
           selected={selected}
           onCopyToNew={handleClickCopytoNew}
           onExportCsv={handleExportCsv}
+          onBulkApprove={onBulkApprove}
+          onBulkReject={onBulkReject}
+          selectedDocuments={selectedDocuments}
         />
         <TableContainer>
           <Table
@@ -377,7 +529,6 @@ export default function SearchTransactionTable({
               {visibleRows.map((row) => {
                 const labelId = `enhanced-table-checkbox-${row.DocNo}`;
                 const isItemSelected = isSelected(row.DocNo);
-
                 return (
                   <TableRow
                     key={row.DocNo}
@@ -429,15 +580,94 @@ export default function SearchTransactionTable({
                       {row.DocNo || ""}
                     </TableCell>
                     <TableCell align="left">{row.DocType}</TableCell>
-                    <TableCell align="center"><DateDisplay value={row.Date} format="short" /></TableCell>
-                    <TableCell align="left">{handleDocStatus(row.Status, row.Rejected)}</TableCell>
                     <TableCell align="left">{row.Remarks}</TableCell>
                     <TableCell align="left">{row.Department}</TableCell>
                     <TableCell align="left">{row.Location}</TableCell>
+                    <TableCell align="center"><DateDisplay value={row.Date} format="short" /></TableCell>
                     <TableCell align="left">
-                      <IconButton size="small" onClick={() => handleSelectItem(row)}>
-                        <FileCopyIcon fontSize="small" />
-                      </IconButton>
+                      {handleDocStatus(row.Status, row.Rejected)}
+                      {row.isPending && row.nextLevel && (
+                        <Typography 
+                          component="span" 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block',
+                            color: 'primary.main',
+                            fontSize: '0.7rem',
+                            mt: 0.5,
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {/* (Level {row.nextLevel} of {row.totalLevels} is still pending) */}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="left">
+                      {row.isPending && row.nextLevel ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: row.Status === 4 ? 'error.main' : 'primary.main',
+                              fontWeight: 'bold',
+                              fontSize: '0.875rem'
+                            }}
+                          >
+                            {row.levelShortDisplay}
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: 'text.secondary',
+                              fontSize: '0.65rem'
+                            }}
+                          >
+                            Pending Approval
+                          </Typography>
+                        </Box>
+                      ) : row.Status === 1 ? (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'success.main',
+                            fontWeight: 'bold',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          Complete
+                        </Typography>
+                      ) : row.Status === 0 ? (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          Draft
+                        </Typography>
+                      ) : row.Status === 4 ? (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'error.main',
+                            fontWeight: 'bold',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          Rejected
+                        </Typography>
+                      ) : (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          —
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -473,7 +703,11 @@ SearchTransactionTable.propTypes = {
   rowsPerPage: PropTypes.number.isRequired,
   setRowsPerPage: PropTypes.func.isRequired,
   isTableActive: PropTypes.bool,
-  setHeaderTitle: PropTypes.func,
   selected: PropTypes.array.isRequired,
   setSelected: PropTypes.func.isRequired,
+  onBulkApprove: PropTypes.func,
+  onBulkReject: PropTypes.func,
+  selectedDocuments: PropTypes.array,
+  isRefreshing: PropTypes.bool,
+  dataVersion: PropTypes.number
 };

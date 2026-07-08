@@ -690,8 +690,8 @@ const refreshData = useCallback(async () => {
           <label className='text-base font-normal text-gray-500'>Status : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{docStatus(currentHeader?.xpost)}</label>
           {nextLevel && currentHeader?.xpost === 2 && (
-            <label className='pl-3 text-sm text-orange-300'>
-              (Level {nextLevel} of {totalLevels} is still pending)
+            <label className='pl-3 text-sm text-orange-600'>
+              (Next approval level {nextLevel}/{totalLevels})
             </label>
           )}
           

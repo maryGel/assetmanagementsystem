@@ -217,31 +217,6 @@ const refreshData = useCallback(async () => {
     return null;
   }, []);
 
-  // // Initial data load when copyDocNo changes
-  // useEffect(() => {
-  //   if (!copyDocNo) return;
-  //   if (isCreatingRef.current) return;
-    
-  //   console.log('📥 Loading initial data for JO:', copyDocNo);
-  //   getJOData(copyDocNo);    
-  // }, [copyDocNo, getJOData]);
-
-  // // Refresh data when refreshKey changes (after actions)
-  // useEffect(() => {
-  //   if (refreshKey > 0 && copyDocNo) {
-  //     console.log('🔄 Refresh triggered by key change');
-  //     getJOData(copyDocNo);
-  //   }
-  // }, [refreshKey, copyDocNo, getJOData]);
-
-  // // Add this in your parent component to debug
-  // useEffect(() => {
-  //   console.log('Raw userId from localStorage:', localStorage.getItem('userId'));
-  //   console.log('Raw username from localStorage:', localStorage.getItem('username'));
-  //   console.log('Raw firstName:', localStorage.getItem('firstName'));
-  //   console.log('Raw lastName:', localStorage.getItem('lastName'));
-  // }, []);
-
   // Status mapping function
   const docStatus = (status) => {
     switch (status) {
@@ -853,7 +828,7 @@ const refreshData = useCallback(async () => {
             <label className='pl-3 text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
               {nextLevel && currentHeader?.xpost === 2 && (
                 <label className='pl-3 text-sm text-blue-600'>
-                  (Level {nextLevel} of {totalLevels} is still pending)
+                  (Next approval level {nextLevel}/{totalLevels})
                 </label>
               )}
             <Box className='mt-2 '>

@@ -157,7 +157,7 @@ function Header({ username, headerTitle, setHeaderTitle }) {
             >
               <AccountCircleIcon sx={{ fontSize: 30, marginRight: 1 }} />
             </button>
-            <span className='flex gap-1'>Hi <img className='w-5' src='/icons/actions/wavehand.png'/>, {firstName}!</span>
+            <span className='flex gap-1'>Hi, {firstName}!  <img className='w-5' src='/icons/actions/wavehand.png'/></span>
 
             <Menu
               id="account-menu"
