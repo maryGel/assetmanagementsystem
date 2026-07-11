@@ -1,13 +1,9 @@
-// services/evaluationService.js
 import axios from 'axios';
-
-
 
 export const evaluateJO = async (JO_No, selectedItems, eval_status, eval_remarks, userInfo) => {
   try {
-    // selectedItems already contains the simplified structure
     const response = await axios.put(`/jo_evalRoute/evaluate/${encodeURIComponent(JO_No)}`, {
-      selectedItems: selectedItems, // Already in correct format
+      selectedItems: selectedItems,
       eval_status,
       eval_remarks,
       userInfo
@@ -16,8 +12,22 @@ export const evaluateJO = async (JO_No, selectedItems, eval_status, eval_remarks
     return response.data;
   } catch (error) {
     console.error('Error evaluating JO:', error);
+    
+    // ✅ Better error handling
     if (error.response) {
-      throw new Error(error.response.data.error || 'Failed to evaluate JO');
+      const errorMessage = error.response.data?.error || 'Failed to evaluate JO';
+      const errorCode = error.response.status;
+      
+      // Handle specific error codes
+      if (errorCode === 400) {
+        throw new Error(`Validation Error: ${errorMessage}`);
+      } else if (errorCode === 404) {
+        throw new Error('JO not found. It may have been deleted.');
+      } else if (errorCode === 500) {
+        throw new Error('Server error. Please try again later.');
+      } else {
+        throw new Error(errorMessage);
+      }
     } else if (error.request) {
       throw new Error('No response from server. Please check your connection.');
     } else {

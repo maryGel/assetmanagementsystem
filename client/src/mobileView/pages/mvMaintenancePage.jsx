@@ -65,7 +65,7 @@ function MvMaintenancePage({
 
           {isOpenEvalJo && 
             <MvEvalJOForm
-              joHeaders = {joHeaders}
+              joHeaders = {joHeaders} 
               joDetails = {joDetails}
               joRefresh={joRefresh}        
               joDetailsRefresh={joDetailsRefresh}    

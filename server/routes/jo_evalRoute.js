@@ -1,4 +1,3 @@
-// routes/jo_evaluationRoute.js
 import express from 'express';
 import { db } from '../server.js';
 
@@ -6,7 +5,8 @@ const router = express.Router();
 
 /**
  * Evaluate a Job Order (JO)
- * Updates jo_h.eval_status to 'DONE' and jo_d.eval_status and eval_remarks for selected items
+ * Updates jo_d.eval_status and eval_remarks for selected items
+ * Allows partial evaluation - items can be evaluated one by one
  */
 router.put('/evaluate/:JO_No', (req, res) => {
   const { JO_No } = req.params;
@@ -88,9 +88,9 @@ router.put('/evaluate/:JO_No', (req, res) => {
       }
 
       try {
-        // 1. Check if JO header exists and get current status
+        // 1. Check if JO header exists
         const checkHeaderSql = `
-          SELECT JO_No, eval_status 
+          SELECT JO_No 
           FROM jo_h 
           WHERE JO_No = ?
         `;
@@ -108,43 +108,47 @@ router.put('/evaluate/:JO_No', (req, res) => {
           throw new Error('JO not found');
         }
 
-        if (headerResult[0].eval_status === 'DONE') {
-          throw new Error('JO has already been evaluated');
-        }
+        // ✅ REMOVED: The check that blocks evaluation if JO is already evaluated
+        // We want to allow partial evaluations
 
-        // 2. Update jo_h table - set eval_status to 'DONE'
-        const updateHeaderSql = `
-          UPDATE jo_h 
-          SET eval_status = 'DONE'
-          WHERE JO_No = ?
-        `;
-
-        const updateHeaderResult = await new Promise((resolve, reject) => {
-          connection.query(updateHeaderSql, [decodedJONo], (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          });
-        });
-
-        console.log('Header update result:', updateHeaderResult);
-
-        if (updateHeaderResult.affectedRows === 0) {
-          throw new Error('Failed to update JO header');
-        }
-
-        // 3. Update jo_d table for each selected item - WITHOUT workDet in WHERE clause
+        // 2. Update jo_d table for each selected item
         let updatedItemsCount = 0;
+        let alreadyEvaluatedCount = 0;
         const updateErrors = [];
+        const alreadyEvaluatedItems = [];
 
         for (const selectedItem of selectedItems) {
-          console.log('Updating item:', {
+          console.log('Processing item:', {
             JO_No: decodedJONo,
             FAC_NO: selectedItem.FAC_NO,
             eval_status: eval_status,
             eval_remarks: eval_remarks
           });
 
-          // Only use JO_No and FAC_NO in WHERE clause
+          // ✅ FIRST: Check if this specific item is already evaluated
+          const checkItemSql = `
+            SELECT eval_status 
+            FROM jo_d 
+            WHERE JO_No = ? 
+              AND FAC_NO = ?
+          `;
+
+          const checkItemResult = await new Promise((resolve, reject) => {
+            connection.query(checkItemSql, [decodedJONo, selectedItem.FAC_NO], (error, results) => {
+              if (error) reject(error);
+              else resolve(results);
+            });
+          });
+
+          // ✅ If item is already evaluated, skip it
+          if (checkItemResult.length > 0 && checkItemResult[0].eval_status !== null && checkItemResult[0].eval_status !== '') {
+            console.log(`Item ${selectedItem.FAC_NO} is already evaluated, skipping...`);
+            alreadyEvaluatedCount++;
+            alreadyEvaluatedItems.push(selectedItem.FAC_NO);
+            continue; // Skip this item
+          }
+
+          // ✅ Update the item
           const updateDetailSql = `
             UPDATE jo_d 
             SET eval_status = ?, 
@@ -173,6 +177,57 @@ router.put('/evaluate/:JO_No', (req, res) => {
           }
         }
 
+        // 3. Check if ALL items in the JO are now evaluated
+        // ✅ Only update header to 'DONE' if ALL items are evaluated
+        const checkAllItemsSql = `
+          SELECT 
+            COUNT(*) as total_items,
+            SUM(CASE WHEN eval_status IS NULL OR eval_status = '' THEN 1 ELSE 0 END) as unevaluated_count
+          FROM jo_d 
+          WHERE JO_No = ?
+        `;
+
+        const allItemsResult = await new Promise((resolve, reject) => {
+          connection.query(checkAllItemsSql, [decodedJONo], (error, results) => {
+            if (error) reject(error);
+            else resolve(results);
+          });
+        });
+
+        console.log('All items check result:', allItemsResult);
+
+        let headerUpdated = false;
+        let headerMessage = '';
+
+        // ✅ Only update header if ALL items are evaluated
+        if (allItemsResult.length > 0) {
+          const totalItems = allItemsResult[0].total_items;
+          const unevaluatedCount = allItemsResult[0].unevaluated_count;
+          
+          if (unevaluatedCount === 0 && totalItems > 0) {
+            // All items are evaluated - update header to 'DONE'
+            const updateHeaderSql = `
+              UPDATE jo_h 
+              SET eval_status = 'DONE'
+              WHERE JO_No = ?
+            `;
+
+            const updateHeaderResult = await new Promise((resolve, reject) => {
+              connection.query(updateHeaderSql, [decodedJONo], (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              });
+            });
+
+            headerUpdated = updateHeaderResult.affectedRows > 0;
+            headerMessage = 'All items evaluated. JO marked as DONE.';
+            console.log('Header updated to DONE:', headerUpdated);
+          } else {
+            headerMessage = `${unevaluatedCount} item(s) remaining to be evaluated.`;
+            console.log(`Header not updated. ${unevaluatedCount} items remaining.`);
+          }
+        }
+
         // Commit transaction
         connection.commit((commitErr) => {
           if (commitErr) {
@@ -188,22 +243,52 @@ router.put('/evaluate/:JO_No', (req, res) => {
           
           connection.release();
           
+          // ✅ Build response
+          let responseMessage = '';
+          const warnings = [];
+
+          if (updatedItemsCount > 0) {
+            responseMessage = `Successfully evaluated ${updatedItemsCount} item(s)`;
+          }
+
+          if (alreadyEvaluatedCount > 0) {
+            warnings.push(`${alreadyEvaluatedCount} item(s) were already evaluated and skipped`);
+          }
+
+          if (updateErrors.length > 0) {
+            warnings.push(...updateErrors);
+          }
+
+          if (headerUpdated) {
+            responseMessage += '. All items are now evaluated! JO marked as DONE.';
+          } else if (updatedItemsCount > 0 && !headerUpdated) {
+            responseMessage += `. ${headerMessage}`;
+          }
+
+          if (updatedItemsCount === 0 && alreadyEvaluatedCount > 0) {
+            responseMessage = `All selected items were already evaluated. No changes made.`;
+          }
+
+          if (updatedItemsCount === 0 && alreadyEvaluatedCount === 0) {
+            responseMessage = 'No items were updated.';
+          }
+
           const response = {
-            success: true,
-            message: 'JO evaluated successfully',
+            success: updatedItemsCount > 0 || alreadyEvaluatedCount > 0,
+            message: responseMessage || 'Evaluation processed',
             data: {
               JO_No: decodedJONo,
-              header_updated: updateHeaderResult.affectedRows,
               items_updated: updatedItemsCount,
+              items_already_evaluated: alreadyEvaluatedCount,
               total_items_selected: selectedItems.length,
+              header_updated: headerUpdated,
               eval_status: eval_status,
               eval_remarks: eval_remarks
             }
           };
 
-          if (updateErrors.length > 0) {
-            response.warnings = updateErrors;
-            response.message = `JO evaluated with ${updateErrors.length} warning(s)`;
+          if (warnings.length > 0) {
+            response.warnings = warnings;
           }
 
           console.log('Evaluation successful:', response);

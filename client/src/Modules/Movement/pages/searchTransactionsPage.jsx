@@ -140,7 +140,7 @@ function SearchTransactions(useProps) {
       // Show toast with new data count
       setTimeout(() => {
         console.log('📊 New docHeaders length after refresh:', docHeaders.length);
-        showToast(`Data refreshed successfully)`, 'success');
+        showToast(`Data refreshed successfully`, 'success');
       }, 300);
       
     } catch (err) {

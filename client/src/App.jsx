@@ -21,6 +21,7 @@ import AAFormPage from './Modules/Movement/pages/assetAccPage.jsx';
 import ALFormPage from './Modules/Movement/pages/assetLostPage.jsx';
 
 import SearchTransactions from './Modules/Movement/pages/searchTransactionsPage.jsx';
+import MaintenancePageDesktop from './Modules/Movement/pages/maintenancePage.jsx';
 
 // System Setup Pages
 import UserAccessPage from './Modules/SystemSetup/pages/userAccessPage.jsx';
@@ -131,6 +132,12 @@ function App() {
 
           <Route path="/assetMovement/pages/JOFormPage" element={
             <JOFormPage
+              setHeaderTitle={saveTitleUpdate}
+            />
+          } />
+
+          <Route path="/assetMovement/pages/maintenancePage" element={
+            <MaintenancePageDesktop
               setHeaderTitle={saveTitleUpdate}
             />
           } />

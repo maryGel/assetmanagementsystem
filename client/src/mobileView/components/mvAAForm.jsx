@@ -15,7 +15,7 @@ import { useAssetAccApproval } from '../../hooks/useAssetAccApproval';
 import { useApprovalActions } from '../../Utils/approvalActionHandler';
 // Components
 import BulkActionDialog from '../../Utils/bulkActionDialog';
-import Toast from '../../Utils/toast';
+import Toast from '../../Utils/Toast';
 import SelectionModeHeader from '../../Utils/selectionModeHeader';
 // Custom Utils
 import { getStatusBadge } from '../../Utils/filters';

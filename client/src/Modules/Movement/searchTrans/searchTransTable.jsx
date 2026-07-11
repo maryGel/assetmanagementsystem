@@ -634,7 +634,7 @@ export default function SearchTransactionTable({
                             fontSize: '0.875rem'
                           }}
                         >
-                          Complete
+                          Completed
                         </Typography>
                       ) : row.Status === 0 ? (
                         <Typography 
