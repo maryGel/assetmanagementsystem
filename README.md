@@ -47,7 +47,7 @@ making it suitable for organizations that require structured asset maintenance a
 
 ### Database
 
-* MySQL
+* MySQLyog
 * TiDB Cloud (MySQL Compatible)
 
 ### Deployment
@@ -60,7 +60,7 @@ making it suitable for organizations that require structured asset maintenance a
 * Git & GitHub
 * VS Code
 * npm
-* MySQL Workbench
+* MySQLyog
 * Postman
 
 ---
