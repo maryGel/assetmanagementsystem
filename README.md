@@ -48,7 +48,6 @@ making it suitable for organizations that require structured asset maintenance a
 ### Database
 
 * MySQLyog
-* TiDB Cloud (MySQL Compatible)
 
 ### Deployment
 
@@ -83,8 +82,6 @@ Rather than relying solely on tutorials, I learned by identifying problems, rese
 experimenting with different approaches, and continuously improving the application through practical implementation.
 
 ---
-
-## Purpose
 
 ## Purpose
 
