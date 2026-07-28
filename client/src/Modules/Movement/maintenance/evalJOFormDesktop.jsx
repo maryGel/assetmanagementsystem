@@ -179,8 +179,51 @@ function EvalJOFormDesktop({
     return filtered;
   }, [joHeaders, joDetails, filter]);
 
+  
+
+  // Search filtering
+  const searchedJO = useMemo(() => {
+  if (!searchQuery.trim()) {
+    return statusFilteredJO;
+  }
+
+  const query = searchQuery.toLowerCase().trim();
+
+  return statusFilteredJO.filter((jo) => {
+    return (
+      jo.JO_No?.toLowerCase().includes(query) ||
+      jo.Remarks?.toLowerCase().includes(query) ||
+      jo.Department_Code?.toLowerCase().includes(query) ||
+      jo.Description?.toLowerCase().includes(query)
+    );
+  });
+}, [statusFilteredJO, searchQuery]);
+
   const filteredJO = useMemo(() => {
-    if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
+    // If user is searching, ignore ALL filters (date, status) and search across everything
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      
+      // Search across ALL JOs (both pending and completed) without date or status filters
+      return joHeaders.filter((jo) => {
+        if (jo.xpost !== 1) return false;
+        
+        // Check if JO has items
+        const joItems = joDetails?.filter((detail) => detail.JO_No === jo.JO_No) || [];
+        if (joItems.length === 0) return false;
+        
+        // Search across JO fields
+        return (
+          jo.JO_No?.toLowerCase().includes(query) ||
+          jo.Remarks?.toLowerCase().includes(query) ||
+          jo.Department_Code?.toLowerCase().includes(query) ||
+          jo.Description?.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    // If not searching, apply date and status filters normally
+    if (!dateRange?.startDate || !dateRange?.endDate) {
       return statusFilteredJO;
     }
 
@@ -188,37 +231,15 @@ function EvalJOFormDesktop({
     const end = new Date(dateRange.endDate).setHours(23, 59, 59, 999);
 
     return statusFilteredJO.filter((jo) => {
-      const joDate = jo.xDate;
-      if (!joDate) return false;
-      const joDateTime = new Date(joDate).getTime();
-      return joDateTime >= start && joDateTime <= end;
+      const joDate = new Date(jo.xDate).getTime();
+      return joDate >= start && joDate <= end;
     });
-  }, [statusFilteredJO, dateRange]);
-
-  // Search filtering
-  const searchedJO = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return filteredJO;
-    }
-
-    const query = searchQuery.toLowerCase().trim();
-    return filteredJO.filter((jo) => {
-      // Search in JO_No
-      if (jo.JO_No?.toLowerCase().includes(query)) return true;
-      // Search in Remarks
-      if (jo.Remarks?.toLowerCase().includes(query)) return true;
-      // Search in Department_Code
-      if (jo.Department_Code?.toLowerCase().includes(query)) return true;
-      // Search in JO description if available
-      if (jo.Description?.toLowerCase().includes(query)) return true;
-      return false;
-    });
-  }, [filteredJO, searchQuery]);
+  }, [joHeaders, joDetails, statusFilteredJO, dateRange, searchQuery]);
 
   const sortedFilteredJo = useMemo(() => {
-    if (!searchedJO) return [];
-    return [...searchedJO].sort((a, b) => b.JO_No.localeCompare(a.JO_No));
-  }, [searchedJO]);
+    if (!filteredJO) return [];
+    return [...filteredJO].sort((a, b) => b.JO_No.localeCompare(a.JO_No));
+  }, [filteredJO]);
 
   // Pagination calculations
   const totalItems = sortedFilteredJo.length;
@@ -396,149 +417,149 @@ function EvalJOFormDesktop({
       </Snackbar>
 
       <div className="flex flex-col h-full">
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-200">
-          {/* Status Filters */}
-          <div className="flex flex-wrap gap-1 border rounded-full">
-            {evalStatus.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setFilter(item.status)}
-                className={`
-                  px-4 py-1.5 text-xs font-medium rounded-full transition-all
-                  ${
-                    filter === item.status
-                      ? 'text-white bg-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }
-                `}
-              >
-                <div className="flex items-center gap-1.5">
-                  {item.icon}
-                  <span>{item.status}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <div className="w-px h-6 bg-gray-300" />
-            <button
-              onClick={handleOptionsOpen}
-              className={`
-                flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors
-                ${
-                  isOptionsOpen
-                    ? 'bg-blue-100 text-blue-600'
-                    : 'hover:bg-gray-100 text-gray-600'
-                }
-              `}
-            >
-              <TuneIcon fontSize="small" />
-              <span>Filter</span>
-            </button>
-            <button
-              onClick={handleRefresh}
-              className="p-1.5 text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-              title="Refresh"
-            >
-              <RefreshIcon fontSize="small" />
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Panel */}
-        {isOptionsOpen && (
-          <div className="py-3 mt-2 border-b border-gray-200 rounded-lg bg-gray-50/80">
-            <HistoryDatePicker onDateRangeChange={handleDateRangeChange} />
-          </div>
-        )}
-
-        {/* Filter Summary */}
-        {(filter !== 'All' || dateRange || searchQuery) && (
-          <div className="px-4 py-2 mt-3 text-xs text-gray-600 border border-blue-100 rounded-lg bg-blue-50">
-            <div className="flex flex-wrap items-center gap-3">
-              {dateRange?.startDate && dateRange?.endDate && (
-                <span>
-                  Date: <strong>
-                    {dateRange.startDate.toLocaleDateString()} - {dateRange.endDate.toLocaleDateString()}
-                  </strong>
-                </span>
-              )}
-              {searchQuery && (
-                <>
-                  <span>|</span>
-                  <span>
-                    Search: <strong>"{searchQuery}"</strong>
-                  </span>
-                </>
-              )}
-              <span>|</span>
-              <span>
-                Results: <strong>{totalItems}</strong>
-              </span>
-              <span>|</span>
-              <span>
-                Showing: <strong>{currentItems.length}</strong> of <strong>{totalItems}</strong>
-              </span>
+      
+      {/* Toolbar */}
+  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-200">
+    {/* Left side: Status Filters */}
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap gap-1 border rounded-full">
+        {evalStatus.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setFilter(item.status)}
+            className={`
+              px-4 py-1.5 text-xs font-medium rounded-full transition-all
+              ${
+                filter === item.status
+                  ? 'text-white bg-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }
+            `}
+          >
+            <div className="flex items-center gap-1.5">
+              {item.icon}
+              <span>{item.status}</span>
             </div>
-          </div>
-        )}
+          </button>
+        ))}
+      </div>
+    </div>
 
-        {/* Refresh Error Display */}
-        {refreshError && (
-          <div className="px-4 py-2 mt-2 text-sm text-red-600 border border-red-200 rounded-lg bg-red-50">
-            <span className="font-medium">⚠️ Error: </span>
-            {refreshError}
-            <button
-              onClick={() => setRefreshError(null)}
-              className="ml-4 text-red-600 hover:text-red-800"
-            >
-              Dismiss
-            </button>
-          </div>
+  {/* Right side: Search + Actions */}
+    <div className="flex items-center gap-2">
+      {/* Search Field */}
+      <div className="relative flex items-center">
+        <div className="absolute text-gray-400 left-3">
+          <SearchIcon fontSize="small" />
+        </div>
+        <input
+          id="search-input"
+          type="text"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          placeholder="Search here"
+          className="w-48 py-1.5 pl-9 pr-8 text-sm transition-colors border border-gray-300 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          autoComplete="off"
+        />
+        {searchQuery && (
+          <button
+            onClick={handleClearSearch}
+            className="absolute text-gray-400 transition-colors right-2 hover:text-gray-600"
+            aria-label="Clear search"
+          >
+            <CloseIcon fontSize="small" />
+          </button>
         )}
+      </div>
+
+      <div className="w-px h-6 bg-gray-300" />
+      
+      <button
+        onClick={handleOptionsOpen}
+        className={`
+          flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors
+          ${
+            isOptionsOpen
+              ? 'bg-blue-100 text-blue-600'
+              : 'hover:bg-gray-100 text-gray-600'
+          }
+        `}
+      >
+        <TuneIcon fontSize="small" />
+        <span>Filter</span>
+      </button>
+      
+      <button
+        onClick={handleRefresh}
+        className="p-1.5 text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+        title="Refresh"
+      >
+        <RefreshIcon fontSize="small" />
+      </button>
+    </div>
+  </div>
+
+  {/* Filter Panel */}
+  {isOptionsOpen && (
+    <div className="py-3 mt-2 border-b border-gray-200 rounded-lg bg-gray-50/80">
+      <HistoryDatePicker onDateRangeChange={handleDateRangeChange} />
+    </div>
+  )}
+
+  {/* Filter Summary */}
+  {(filter !== 'All' || dateRange || searchQuery) && (
+    <div className="px-4 py-2 mt-3 text-xs text-gray-600 border border-blue-100 rounded-lg bg-blue-50">
+      <div className="flex flex-wrap items-center gap-3">
+        {searchQuery ? (
+          // When searching, show that date filter is ignored
+          <span>
+            Search: <strong>"{searchQuery}"</strong> 
+          </span>
+        ) : (
+          // Normal filter display
+          <>
+            {dateRange?.startDate && dateRange?.endDate && (
+              <span>
+                Date: <strong>
+                  {dateRange.startDate.toLocaleDateString()} - {dateRange.endDate.toLocaleDateString()}
+                </strong>
+              </span>
+            )}
+            <span>|</span>
+            <span>
+              Filter: <strong>{filter}</strong>
+            </span>
+          </>
+        )}
+        <span>|</span>
+        <span>
+          Results: <strong>{totalItems}</strong>
+        </span>
+        <span>|</span>
+        <span>
+          Showing: <strong>{currentItems.length}</strong> of <strong>{totalItems}</strong>
+        </span>
+      </div>
+    </div>
+  )}
+
+  {/* Refresh Error Display */}
+  {refreshError && (
+    <div className="px-4 py-2 mt-2 text-sm text-red-600 border border-red-200 rounded-lg bg-red-50">
+      <span className="font-medium">⚠️ Error: </span>
+      {refreshError}
+      <button
+        onClick={() => setRefreshError(null)}
+        className="ml-4 text-red-600 hover:text-red-800"
+      >
+        Dismiss
+      </button>
+    </div>
+  )}
 
         {/* Job Orders List - Half Width */}
         <div className='grid grid-cols-[40rem_1fr] gap-2'>
           <div className="w-full p-2 mt-8 overflow-y-auto" id="jo-list-container">
-            {/* Search Bar - Added at top of list */}
-            <div className="mb-4">
-              <div className={`
-                relative flex items-center w-full transition-all duration-200
-              `}>
-                <div className="absolute text-gray-400 left-3">
-                  <SearchIcon fontSize="small" />
-                </div>
-                <input
-                  id="search-input"
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  placeholder="Search by JO #, Remarks, Department..."
-                  className="w-full py-2 pr-10 text-sm transition-colors border border-gray-300 rounded-lg outline-none pl-9 focus:border-blue-500"
-                  autoComplete="off"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={handleClearSearch}
-                    className="absolute text-gray-400 transition-colors right-3 hover:text-gray-600"
-                    aria-label="Clear search"
-                  >
-                    <CloseIcon fontSize="small" />
-                  </button>
-                )}
-              </div>
-              {searchQuery && totalItems === 0 && (
-                <div className="mt-2 text-sm text-amber-600">
-                  No results found for "{searchQuery}"
-                </div>
-              )}
-            </div>
-
             {currentItems.length === 0 ? (
               <div className="flex justify-center h-full">
                 <div className="text-center text-gray-500">

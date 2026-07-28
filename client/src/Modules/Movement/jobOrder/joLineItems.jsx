@@ -1,5 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
+import { Link as RouterLink } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -17,7 +18,8 @@ import {
   Typography,
   Snackbar,
   Autocomplete,
-  Popper
+  Popper,
+  Link
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -96,18 +98,11 @@ const JOLineItems = ({
     // updateDetailRow(rowId, field, value);
   };
 
-  // REMOVE ROW
-  // const handleDeleteRow = (rowId) => {
-  //   if (currentJOItems.length === 1) {
-  //     setSnackbar({
-  //       open: true,
-  //       message: 'At least one row is required',
-  //       severity: 'warning'
-  //     });
-  //     return;
-  //   }
-  //   removeDetailRow(rowId);
-  // };
+  const handleSelectItem = (facNo) => {
+    const path = `/assetFolder/assetMasterDisplay?copyFrom=${facNo}`;
+
+    window.open(path, "_blank");
+  };
 
   // UPDATE FIELD
   const handleRowFieldChange = (
@@ -231,65 +226,93 @@ const JOLineItems = ({
                 </TableCell>
                 {/* ASSET NO */}
                 <TableCell sx={{ minWidth: 300 }}>
-                  <Autocomplete
-                    options={assetOptions}
-                    loading={!assetsLoaded && isLoading}
-                    filterOptions={filterOptions}
-                    value={
-                      // FIX: Find the full asset object from options
-                      // assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
-                      row.FAC_NO
-                    }
-                    onChange={(event, newValue) => {
-                      handleAssetSelect(row.id, newValue);
-                    }}
-                    getOptionLabel={(option) => {
-                      if (!option) return '';
-                      if (typeof option === 'string') return option;
-                      return `${option.FacNO} - ${option.FacName}`;
-                    }}
-                    isOptionEqualToValue={(option, value) => {
-                      // FIX: Properly compare both cases
-                      if (!value) return false;
-                      const optionFacNO = String(option?.FacNO || '');
-                      const valueFacNO = String(value?.FacNO || value || '');
-                      return optionFacNO === valueFacNO;
-                    }}
-                    renderOption={(props, option) => (
-                      <li {...props}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                          <Typography variant="body2">
-                            <strong>{option.FacName}</strong>
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {option.FacNO}
-                          </Typography>
-                        </Box>
-                      </li>
-                    )}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        size="small"
-                        placeholder="Search Asset..."
+                  {(isReadOnly) ? (
+                    <Box
+                      sx={{
+                        border: '1px solid rgba(0, 0, 0, 0.23)',
+                        borderRadius: '4px',
+                        padding: '8.5px 14px',
+                        backgroundColor: '#f5f5f5',
+                        minHeight: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          borderColor: 'rgba(0, 0, 0, 0.23)',
+                        },
+                      }}
+                    >
+                      <Link       
+                        component="button"
+                        underline="hover"
+                        onClick={() => handleSelectItem(row.FAC_NO)}
                         sx={{
-                          '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
+                          textAlign: "left",
+                          fontWeight: 500,
+                          width: '100%',
                         }}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {!assetsLoaded && isLoading && (
-                                <CircularProgress size={16} />
-                              )}
-                              {params.InputProps.endAdornment}
-                            </>
-                          )
-                        }}
-                      />
-                    )}
-                    disabled={isReadOnly}
-                  />
+                      >
+                        {row.FAC_NO}
+                      </Link>
+                    </Box>
+                  ) : (
+                    <Autocomplete
+                      options={assetOptions}
+                      loading={!assetsLoaded && isLoading}
+                      filterOptions={filterOptions}
+                      value={
+                        assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
+                      }
+                      onChange={(event, newValue) => {
+                        handleAssetSelect(row.id, newValue);
+                      }}
+                      getOptionLabel={(option) => {
+                        if (!option) return '';
+                        if (typeof option === 'string') return option;
+                        return `${option.FacNO} - ${option.FacName}`;
+                      }}
+                      isOptionEqualToValue={(option, value) => {
+                        if (!value) return false;
+                        const optionFacNO = String(option?.FacNO || '');
+                        const valueFacNO = String(value?.FacNO || value || '');
+                        return optionFacNO === valueFacNO;
+                      }}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="body2">
+                              <strong>{option.FacName}</strong>
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {option.FacNO}
+                            </Typography>
+                          </Box>
+                        </li>
+                      )}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          size="small"
+                          placeholder="Search Asset..."
+                          sx={{
+                            '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
+                          }}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {!assetsLoaded && isLoading && (
+                                  <CircularProgress size={16} />
+                                )}
+                                {params.InputProps.endAdornment}
+                              </>
+                            )
+                          }}
+                        />
+                      )}
+                      disabled={isReadOnly}
+                    />
+                  )}
                 </TableCell>
                 {/* ASSET NAME */}
                 <TableCell>

@@ -10,8 +10,8 @@ import MaintenanceFormDesktop from '../maintenance/maintenanceFormDesktop';
 
 function MaintenancePageDesktop() {    
   // reference data
-  const {joHeaders = [], joRefresh} = useJO_h();
-  const {joDetails = [], joDetailsRefresh} = useJO_d();
+  const {joHeaders = [], joRefresh,  updateJOHeader, createJOHeader, } = useJO_h();
+  const {joDetails = [], joDetailsRefresh, updateJODetails, createJODetails, getJODetailsByJO} = useJO_d();
   const [isOpenEvalJo, setIsOpenEvalJo] = useState(true);
   const [isOpenMainForm, setIsOpenMainForm] = useState(false);
   
@@ -122,6 +122,8 @@ function MaintenancePageDesktop() {
                   joDetails={joDetails}
                   joRefresh={handleJoRefresh}
                   joDetailsRefresh={handleJoDetailsRefresh}
+                  updateJOHeader={updateJOHeader}
+                  updateJODetails={updateJODetails}
                 />
               </div>
             )}

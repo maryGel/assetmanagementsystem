@@ -1,6 +1,8 @@
-import * as React from 'react';
+// import  {useRef} from 'react';
 import { TextareaAutosize as BaseTextareaAutosize } from '@mui/base/TextareaAutosize';
-import { styled } from '@mui/system';
+import { minWidth, styled } from '@mui/system';
+import { TextField } from '@mui/material';
+import { useRef, useEffect } from 'react';
 
 export default function TextareaResizable() {
   const blue = {
@@ -60,7 +62,63 @@ export default function TextareaResizable() {
   return <Textarea aria-label="empty textarea" />;
 }
 
+// Auto-resize TextField component
+export const AutoResizeTextField = ({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+  ...props
+}) => {
+  const textareaRef = useRef(null); 
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height =
+        textareaRef.current.scrollHeight + "px";
+    }
+  }, [value]);
 
+  return (
+    <TextField
+      {...props}
+      value={value || ""}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder={placeholder}
+      multiline
+      minRows={2}
+      maxRows={4}
+      inputRef={textareaRef}
+      sx={{
+        "& .MuiOutlinedInput-root": {
+          backgroundColor: disabled ? "#f5f5f5" : "#fff",
+
+          "& fieldset": {
+            borderColor: disabled ? "#d0d0d0" : "#78909c",
+            // borderWidth: disabled ? 1 : 2,
+          },
+
+          "&:hover fieldset": {
+            borderColor: disabled ? "#d0d0d0" : "#78909c",
+          },
+
+          "&.Mui-focused fieldset": {
+            borderColor: "#1976d2",
+            borderWidth: 2,
+          },
+        },
+
+        "& textarea": {
+          resize: "none",
+          minWidth: "10rem",
+          overflow: "auto",
+          fontSize: "0.85rem",
+        },
+      }}
+    />
+  );
+};
 
 

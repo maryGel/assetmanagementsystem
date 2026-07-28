@@ -152,7 +152,7 @@ router.post('/', (req, res) => {
   });
 });
 
-// Update JO details (if needed)
+// Update JO details 
 router.put('/:joNo', (req, res) => {
   const joNo = req.params.joNo;
   const details = req.body;
@@ -178,8 +178,12 @@ router.put('/:joNo', (req, res) => {
         return res.json({ success: true, message: 'All details removed', deletedCount: deleteResult.affectedRows });
       }
       
-      // Insert new details
-      const insertSql = 'INSERT INTO jo_d (JO_No, FAC_NO, FAC_name, qty, UOM, workDet, TargetDate, Status, brand, serialNo, ItemLocation, xDate, xpost) VALUES ?';
+      // Insert new details - INCLUDE ALL FIELDS
+      const insertSql = `INSERT INTO jo_d (
+        JO_No, FAC_NO, FAC_name, qty, UOM, workDet, TargetDate, Status, 
+        brand, serialNo, ItemLocation, xDate, xpost, 
+        eval_status, eval_remarks, disposal_reason, Main_Status, Main_Remarks
+      ) VALUES ?`;
       
       const values = details.map(detail => [
         joNo,
@@ -194,7 +198,12 @@ router.put('/:joNo', (req, res) => {
         detail.serialNo || '',
         detail.ItemLocation || '',
         detail.xDate || null,
-        detail.xpost || 0
+        detail.xpost || 0,
+        detail.eval_status || '',          // Added - preserve eval_status
+        detail.eval_remarks || '',         // Added - preserve eval_remarks
+        detail.disposal_reason || '',      // Added - preserve disposal_reason
+        detail.Main_Status || 'OPEN',      // Added - preserve Main_Status
+        detail.Main_Remarks || ''
       ]);
       
       connection.query(insertSql, [values], (err, insertResult) => {
