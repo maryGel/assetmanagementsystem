@@ -6,7 +6,7 @@ import { assetTileList } from './assetTilelist';
 function AssetMasterTile({setHeaderTitle}) {
 
   return (
-    <div className='grid items-start w-full h-full grid-cols-10 gap-1'>
+    <div className='grid items-start w-full h-full grid-cols-[repeat(auto-fit,minmax(8.5rem,8.5rem))] gap-2 md:gap-3 lg:gap-2'>
       {assetTileList.map((asset) => (
         <div key= {asset.id} className='flex flex-col items-center justify-center w-full h-full'>
           <NavLink  to = {asset.link} >

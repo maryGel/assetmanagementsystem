@@ -91,7 +91,7 @@ function EnhancedTableHead(props) {
             align='left'
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
-            sx ={{ fontWeight: 'bold' }}
+            sx ={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}
           >
             <TableSortLabel
               active={orderBy === headCell.id}
@@ -130,6 +130,9 @@ function EnhancedTableToolbar(props) {
         {
           pl: { sm: 2 },
           pr: { xs: 1, sm: 1 },
+          flexWrap: 'wrap',
+          rowGap: 1,
+          justifyContent: 'end',
         },
         numSelected > 0 && {
           bgcolor: (theme) =>
@@ -186,7 +189,8 @@ function EnhancedTableToolbar(props) {
       </Tooltip>
 
       <Tooltip title="Export CSV">
-        <IconButton onClick={onExportCsv}>
+        <IconButton 
+          onClick={onExportCsv}>
           <DownloadIcon />
         </IconButton>
       </Tooltip>
@@ -221,14 +225,6 @@ export default function AssetMasterTable({
     selected,
     setSelected
   }) {
-
-  // Add debug at top of component
-  // console.log('=== TABLE DEBUG ===');
-  // console.log('displayedAssets prop:', displayedAssets);
-  // console.log('displayedAssets isArray?', Array.isArray(displayedAssets));
-  // console.log('displayedAssets length:', displayedAssets?.length);
-  // console.log('total:', total);
-  // console.log('isTableActive:', isTableActive);
 
   // MUI States
   const [order, setOrder] = useState('asc');
@@ -315,19 +311,6 @@ export default function AssetMasterTable({
   // Avoid a layout jump when reaching the last page with empty rows.
   const emptyRows = 0;
 
-
-  // const visibleRows = useMemo(() => {
-  //   if (!isTableActive) return [];
-
-  //   return rows
-  //     .slice() 
-  //     .sort(getComparator(order, orderBy))
-  //     .slice(
-  //       page * rowsPerPage,
-  //       page * rowsPerPage + rowsPerPage
-  //     );
-  // }, [rows, order, orderBy, page, rowsPerPage]);
-
   const visibleRows = useMemo(() => {
     if (!isTableActive) return [];
     // Apply sorting to the current page's data (client-side sort is fine)
@@ -381,7 +364,7 @@ export default function AssetMasterTable({
   
   
   return (
-    <Box sx={{ width: '100%',  padding: 2}}>
+    <Box sx={{ width: '100%', padding: 2 }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
         <EnhancedTableToolbar 
           numSelected={selected.length} 
@@ -389,9 +372,15 @@ export default function AssetMasterTable({
           onCopyToNew = {handleClickCopytoNew}
           onExportCsv={handleExportCsv}
         />
-        <TableContainer>
+        {/*
+          TableContainer scrolls horizontally on its own when the sum of
+          column widths exceeds the available space, instead of squeezing
+          every column down. minWidth on the Table guarantees columns keep
+          a readable width; the container's overflow-x handles the rest.
+        */}
+        <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
           <Table
-            sx={{ minWidth: 750  }}
+            sx={{ minWidth: 900, width: '100%' }}
             aria-labelledby="tableTitle"
             size={dense ? 'small' : 'medium'}
           >
@@ -449,6 +438,7 @@ export default function AssetMasterTable({
                       padding="none"
                       sx={{ 
                         fontWeight: 'bold', color: 'primary.main', textDecoration: 'underline',                      
+                        whiteSpace: 'nowrap',
                         '&:Hover': {fontSize: '1rem', color: '#43a047'}
                       }}
                       onClick={(e) => {

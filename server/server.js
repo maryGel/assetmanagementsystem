@@ -115,11 +115,11 @@
   // --- DATABASE CONFIGURATION ---
   // Hardcoded to ensure Node always talks to the same DB as SQLyog
   const dbConfig = {
-    host: process.env.DB_HOST || '192.168.64.5',
+    host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'myuser101',
     password: process.env.DB_PASSWORD || 'MmFjbV69',
     database: process.env.DB_NAME || 'ams1',
-    port: 3306,
+    port: 33060,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -136,7 +136,7 @@
       console.error('❌ VM Database connection failed:', err.message);
       console.log('🔧 Attempting to connect to:', dbConfig.host);
     } else {
-      console.log('✅ Successfully connected to VM Database at 192.168.64.5');
+      console.log('✅ Successfully connected to VM Database at 127.0.0.1:33060');
       console.log('📊 Database Name:', dbConfig.database);
       connection.release();
     }
@@ -213,6 +213,7 @@
 
   // --- SERVER START ---
   const PORT = process.env.PORT || 3000;
+  
   app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));
     console.log(`🚀 Local Server running on http://localhost:${PORT}`);

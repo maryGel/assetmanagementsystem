@@ -71,23 +71,25 @@ export default function AssetDisplayDepTabs(){
 
   return(
     <>
-    <div>
+    {/* Full-width wrapper so the accordion (and its inner tables) can use
+        all the space its parent gives it, rather than shrink-wrapping. */}
+    <div className='w-full min-w-0'>
       <Accordion expanded={expanded.includes('panel1')} onChange={handleChange('panel1')}>
         <AccordionSummary aria-controls="panel1d-content" id="panel1d-header">
-          <Typography component="span">Depreciation Schedule</Typography>
+          <Typography component="span" sx={{ fontSize: 'clamp(0.78rem, 0.65rem + 0.45vw, 0.95rem)' }}>Depreciation Schedule</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <Typography>
+          <Typography component="div">
             <AssetDisplayDepSched/>
           </Typography>
         </AccordionDetails>
       </Accordion>
       <Accordion expanded={expanded.includes('panel2')}onChange={handleChange('panel2')}>
         <AccordionSummary aria-controls="panel2d-content" id="panel2d-header">
-          <Typography component="span">Depreciation Documents</Typography>
+          <Typography component="span" sx={{ fontSize: 'clamp(0.78rem, 0.65rem + 0.45vw, 0.95rem)' }}>Depreciation Documents</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <Typography>
+          <Typography component="div">
             <AssetDisplayDepDocs/>
           </Typography>
         </AccordionDetails>

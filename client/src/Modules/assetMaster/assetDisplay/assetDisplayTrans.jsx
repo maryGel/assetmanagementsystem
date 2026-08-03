@@ -23,10 +23,25 @@ const rows = [
 
 export default function AssetDisplayTrans(){  
   return(
-    <div className='px-10'>
-      <div className='pt-5 pb-5 text-base shadow-sm shadow-slate-200'>
-        <TableContainer component={Paper}>
-          <Table sx={{ minWidth: 300, width: '40rem' }} aria-label="simple table">
+    <div className='w-full min-w-0 px-10'>
+      <div className='pt-5 pb-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] shadow-sm shadow-slate-200 min-w-0'>
+        {/*
+          Fill available width with a minWidth floor instead of a fixed
+          rem width, matching the other display tables. minWidth: 0 on the
+          TableContainer lets it actually shrink and trigger its own
+          horizontal scroll instead of pushing an ancestor wider.
+        */}
+        <TableContainer component={Paper} sx={{ width: '100%', minWidth: 0 }}>
+          <Table
+            sx={{
+              minWidth: 500,
+              width: '100%',
+              '& .MuiTableCell-root': {
+                fontSize: 'clamp(0.72rem, 0.6rem + 0.45vw, 0.875rem)',
+              },
+            }}
+            aria-label="simple table"
+          >
             <TableHead>
               <TableRow sx={{ color: 'text.primary' }}>
                 <TableCell>Doc. Date</TableCell>

@@ -14,8 +14,8 @@ import { useAssetLostH } from '../../hooks/useAssetLostH';
 import { useAssetLostD } from '../../hooks/useAssetLostD';
 
 
-const numStyles = 'p-3 text-2xl font-semibold cursor-pointer hover:underline hover:text-gray-900 hover:drop-shadow-[0_0_1rem_black] transition-transform duration-150 active:translate-y-0.5 hover:scale-x-95';
-const boxStyles = 'flex items-end justify-between shadow-md rounded-lg border border-spacing-2 w-full h-28 gap-3 px-3 cursor-pointer hover:text-gray-800 transition-transform duration-150  hover:border hover:border-gray-200';
+const numStyles = 'p-3 text-xl md:text-xl cursor-pointer hover:underline hover:text-gray-900 hover:drop-shadow-[0_0_1rem_black] transition-transform duration-150 active:translate-y-0.5 hover:scale-x-95';
+const boxStyles = 'flex items-end justify-between shadow-md rounded-lg border border-spacing-2 w-full h-24 md:h-28 gap-2 md:gap-3 cursor-pointer hover:text-gray-800 transition-transform duration-150  hover:border hover:border-gray-200';
 
 
 function DashboardPage(useProps) {
@@ -51,43 +51,12 @@ function DashboardPage(useProps) {
     const items = dashItems({
       joCount, maintCount, trCount, adCount, aAcctCount, aLostCount
     });
-
-
-     // Render the active page
-    // const renderActivePage = () => {
-    //     const pageProps = {
-    //         onClose: handleClosePage,
-    //         isClosing: isClosing,
-    //         onAnimationEnd: handleAnimationEnd,
-    //         joHeaders, joDetails, isLoading, error, joRefresh, joDetailsRefresh,
-    //         trHeaders, trDetails, trHRefresh, trDRefresh,
-    //         adHeaders, adDetails, adHRefresh, adDRefresh,
-    //         assetAccHeaders, assetAccDetails, accHRefresh, accDRefresh,
-    //         assetLostHeaders, assetLostDetails, aLostHRefresh, aLostDRefresh,
-    //         selectedUser, useProps
-    //     };
-
-    //     switch(activePage) {
-    //         case 1:
-    //             return <MvJobOrderPage {...pageProps} />;
-    //         case 2:
-    //             return <MvMaintenancePage {...pageProps} />;
-    //         case 3:
-    //             return <MvTransferPage {...pageProps} />;
-    //         case 4:
-    //             return <MvAssetAccPage {...pageProps} />;
-    //         case 5:
-    //             return <MvDisposalPage {...pageProps} />;
-    //         case 6:
-    //             return <MvAssetLostPage {...pageProps} />;
-    //         default:
-    //             return null;
-    //     }
-    // };
     
     return (
       <div className='gap-4'>
-          <div className='flex gap-4 p-4 rounded-lg '>
+          {/* grid instead of flex: cards wrap into 2/3/6 columns instead of
+              squeezing horizontally as the viewport narrows toward tablet */}
+            <div className='grid grid-cols-2 gap-3 p-3 rounded-lg sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 md:gap-4 md:p-4'>
             {items.map(item => (
             <button 
               key={item.id}
@@ -95,15 +64,15 @@ function DashboardPage(useProps) {
               className={`bg-white ${boxStyles} ${activePage ? 'pointer-events-none' : ''}`}
               disabled={!!activePage}
             >
-              <div className='flex flex-col gap-2 p-3 '>
+              <div className='flex flex-col gap-2 p-2 md:p-3 '>
                   <img
-                      className='w-10 h-10 bg-white'
+                      className='w-8 h-8 bg-white md:w-10 md:h-10'
                       src={item.imgSrc}
                       alt={item.title}
                   />
-                  <span className='mt-2 font-semibold tracking-wide hover:text-gray-800'>{item.title}</span>
+                  <span className='mt-2 text-sm font-semibold tracking-wide md:text-base hover:text-gray-800'>{item.title}</span>
               </div>
-              <span className={`p-3 text-2xl font-semibold ${numStyles}`}>{item.num}</span> 
+              <span className={` ${numStyles}`}>{item.num}</span> 
             </button>
           ))}
           </div>

@@ -22,7 +22,7 @@ function HomePage({
   return (
     <>
       {!isMobile && 
-        <div className='md:flex'>
+        <div className='w-full px-2 md:flex md:flex-col md:px-4 lg:px-0'>
           <FullWidthTabs 
             setHeaderTitle={setHeaderTitle}
             tabPaths={tabPaths}

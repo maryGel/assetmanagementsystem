@@ -24,8 +24,23 @@ const rows = [
 export default function AssetDisplayDepDocs(){  
   return(
     <>
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 300, width: '40rem' }} aria-label="simple table">
+      {/*
+        TableContainer already scrolls horizontally on its own (MUI default),
+        so instead of a fixed width we let the table fill available space
+        with a minWidth floor. That keeps columns readable on narrow panes
+        and lets the table breathe on wider ones.
+      */}
+      <TableContainer component={Paper} sx={{ width: '100%', minWidth: 0 }}>
+        <Table
+          sx={{
+            minWidth: 500,
+            width: '100%',
+            '& .MuiTableCell-root': {
+              fontSize: 'clamp(0.72rem, 0.6rem + 0.45vw, 0.875rem)',
+            },
+          }}
+          aria-label="simple table"
+        >
           <TableHead>
             <TableRow sx={{ color: 'text.primary' }}>
               <TableCell>Doc. Date</TableCell>

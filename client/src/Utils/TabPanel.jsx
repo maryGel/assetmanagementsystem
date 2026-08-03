@@ -29,7 +29,7 @@ function TabPanel(props) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 2, md: 3 } }}>
           <Typography>{children}</Typography>
         </Box>
       )}
@@ -88,19 +88,30 @@ export default function FullWidthTabs({
         <Tabs
           value={value}
           onChange={handleChange}
-          sx={{ bgcolor: 'white', color: '#263238', fontFamily: 'Roboto', letterSpacing: "0.2em" }}
+          sx={{
+            bgcolor: 'white',
+            color: '#263238',
+            fontFamily: 'Roboto',
+            letterSpacing: { xs: '0.05em', md: '0.2em' },
+            '& .MuiTab-root': {
+              minWidth: { xs: 'auto', md: 90 },
+              px: { xs: 1.25, md: 2 },
+            },
+          }}
           indicatorColor="secondary"
           textColor="inherit"
-          variant="fullWidth"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           aria-label="full width tabs example"
         >
-          <Tab label="DASHBOARD" sx={{ letterSpacing: "0.1em" }} {...a11yProps(0)} />
-          <Tab label="ASSET MASTER" sx={{ letterSpacing: "0.1em" }} {...a11yProps(1)} />
-          <Tab label="MOVEMENT" sx={{ letterSpacing: "0.1em" }} {...a11yProps(2)} />
-          <Tab label="DEPRECIATION" sx={{ letterSpacing: "0.1em" }} {...a11yProps(3)} />
-          <Tab label="REPORTS" sx={{ letterSpacing: "0.1em" }} {...a11yProps(4)} />
-          <Tab label="PHYSICAL COUNT" sx={{ letterSpacing: "0.1em" }} {...a11yProps(5)} />
-          <Tab label="SYSTEM SETUP" sx={{ letterSpacing: "0.1em" }} {...a11yProps(6)} />
+          <Tab label="DASHBOARD" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(0)} />
+          <Tab label="ASSET MASTER" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(1)} />
+          <Tab label="MOVEMENT" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(2)} />
+          <Tab label="DEPRECIATION" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(3)} />
+          <Tab label="REPORTS" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(4)} />
+          <Tab label="PHYSICAL COUNT" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(5)} />
+          <Tab label="SYSTEM SETUP" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(6)} />
         </Tabs>
       </AppBar>
       <TabPanel value={value} index={0} dir={theme.direction}>

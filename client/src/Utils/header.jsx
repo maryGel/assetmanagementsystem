@@ -95,22 +95,22 @@ function Header({ username, headerTitle, setHeaderTitle }) {
         </Box>
       </Backdrop>
 
-      <header className="items-center p-2 pl-6 tracking-wider text-black bg-blue-100 md:flex">
+      <header className="flex-wrap items-center p-2 pl-3 tracking-wider text-black bg-blue-100 md:pl-6 md:flex">
         <button className="transition-transform duration-150 active:translate-y-0.5 hover:scale-x-95 mr-1">
           {isHomeTab 
             ? ( <Button onClick={() => { navigate('/Home')}} className='rounded-full'>
-                  <HomeIcon sx={{ fontSize: 30, color: 'Black' }} />
+                  <HomeIcon sx={{ fontSize: { xs: 26, md: 30 }, color: 'Black' }} />
                 </Button>) 
             : ( <Button onClick= {handleBackChange}>
-                  <ChevronLeftIcon sx={{ fontSize: 30, color: 'Black'  }} />
+                  <ChevronLeftIcon sx={{ fontSize: { xs: 26, md: 30 }, color: 'Black'  }} />
                 </Button>)
           }
         </button>
 
-        <h1>{headerTitle}</h1>
+        <h1 className='truncate max-w-[40vw] md:max-w-none'>{headerTitle}</h1>
 
-        <div className="flex ml-auto mr-6 space-x-6 place-items-center">
-          <Box
+        <div className="flex ml-auto mr-2 space-x-2 md:mr-6 md:space-x-6 place-items-center">
+          {/* <Box
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             sx={{
@@ -119,7 +119,10 @@ function Header({ username, headerTitle, setHeaderTitle }) {
               backgroundColor: 'white',
               padding: '0.1rem 0.5rem',
               borderRadius: '10rem',
-              width: isHovered ? '30rem' : '5rem',
+              width: isHovered
+                ? { xs: '12rem', sm: '16rem', md: '20rem', lg: '30rem' }
+                : '3rem',
+              minWidth: isHovered ? 0 : { xs: '3rem', md: '5rem' },
               transition: 'width 0.4s ease-in-out',
               overflow: 'hidden',
               cursor: 'pointer',
@@ -127,7 +130,7 @@ function Header({ username, headerTitle, setHeaderTitle }) {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <SearchIcon sx={{ fontSize: 28, color: 'black' }} />
+              <SearchIcon sx={{ fontSize: { xs: 24, md: 28 }, color: 'black' }} />
             </Box>
             <InputBase
               placeholder="Search..."
@@ -139,25 +142,25 @@ function Header({ username, headerTitle, setHeaderTitle }) {
                 visibility: isHovered ? 'visible' : 'hidden',
               }}
             />
-          </Box>
+          </Box> */}
 
           <button disabled={isLoggingOut}>
-            <HistoryIcon sx={{ fontSize: 30, marginRight: 1 }} />
+            <HistoryIcon sx={{ fontSize: { xs: 24, md: 30 }, marginRight: 1 }} />
           </button>
           <button disabled={isLoggingOut}>
-            <NotificationsIcon sx={{ fontSize: 30, marginRight: 1 }} />
+            <NotificationsIcon sx={{ fontSize: { xs: 24, md: 30 }, marginRight: 1 }} />
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <button
               onClick={handleMenuOpen}
               aria-controls={isMenuOpen ? 'account-menu' : undefined}
               aria-haspopup="true"
               disabled={isLoggingOut}
             >
-              <AccountCircleIcon sx={{ fontSize: 30, marginRight: 1 }} />
+              <AccountCircleIcon sx={{ fontSize: { xs: 24, md: 30 }, marginRight: 1 }} />
             </button>
-            <span className='flex gap-1'>Hi, {firstName}!  <img className='w-5' src='/icons/actions/wavehand.png'/></span>
+            <span className='items-center hidden gap-1 text-sm sm:flex whitespace-nowrap md:text-base'>Hi, {firstName}!  <img className='w-4 md:w-5' src='/icons/actions/wavehand.png'/></span>
 
             <Menu
               id="account-menu"

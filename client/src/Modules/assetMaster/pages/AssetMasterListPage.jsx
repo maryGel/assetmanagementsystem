@@ -121,8 +121,14 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
   const displayTotal = hasActiveFilters ? total : 0;
 
   return (
-    <div>
-      <form className="flex w-full h-auto p-5">
+    <div className="w-full">
+      {/*
+        Filter bar: flex-wrap lets the fields reflow onto new lines as the
+        container narrows (split view, smaller desktop windows, etc.)
+        instead of squeezing or overflowing. Each field grows/shrinks within
+        a min/max range rather than using a hard fixed pixel width.
+      */}
+      <form className="flex flex-wrap items-start w-full gap-4 p-5">
         <Autocomplete
           key={`asset-search-${filterKey}`}
           multiple
@@ -151,7 +157,7 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
           renderInput={(params) => (
             <TextField {...params} label="Search Assets" placeholder="Search" />
           )}
-          sx={{ width: 500, marginRight: '1rem' }}
+          sx={{ flex: '2 1 320px', minWidth: 260, maxWidth: 560 }}
         />
 
         <Autocomplete
@@ -166,7 +172,7 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
           renderInput={(params) => (
             <TextField {...params} label="Category" placeholder="Category" />
           )}
-          sx={{ width: '15rem', marginRight: '1rem' }}
+          sx={{ flex: '1 1 200px', minWidth: 180, maxWidth: 280 }}
         />
 
         <Autocomplete
@@ -181,7 +187,7 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
           renderInput={(params) => (
             <TextField {...params} label="Asset Class" placeholder="Asset Class" />
           )}
-          sx={{ width: '15rem', marginRight: '1rem' }}
+          sx={{ flex: '1 1 200px', minWidth: 180, maxWidth: 280 }}
         />
 
         <Autocomplete
@@ -196,7 +202,7 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
           renderInput={(params) => (
             <TextField {...params} label="Location" placeholder="Location" />
           )}
-          sx={{ width: '15rem', marginRight: '1rem' }}
+          sx={{ flex: '1 1 200px', minWidth: 180, maxWidth: 280 }}
         />
 
         <Autocomplete
@@ -211,7 +217,7 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
           renderInput={(params) => (
             <TextField {...params} label="Department" placeholder="Department" />
           )}
-          sx={{ width: '15rem', marginRight: '1rem' }}
+          sx={{ flex: '1 1 200px', minWidth: 180, maxWidth: 280 }}
         />   
         
         <TextField
@@ -219,10 +225,11 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
           id="outlined-size-small"
           defaultValue=""
           size="small"
+          sx={{ flex: '1 1 160px', minWidth: 160, maxWidth: 220 }}
         />     
       </form>
       
-      <div className='flex w-full h-auto gap-2 p-2 pr-5 ml-auto bg-gray-100 place-content-end'>
+      <div className="flex flex-wrap w-full h-auto gap-2 p-2 pr-5 ml-auto bg-gray-100 place-content-end">
         <CustomBtn variant='goBtn' iconType='go' onClick={handleGoClick}>
           Go  
         </CustomBtn>
@@ -231,7 +238,7 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
         </CustomBtn>
       </div>
 
-      <div>
+      <div className="w-full">
         <AssetMasterTable 
           loading={isLoading}
           error={error}

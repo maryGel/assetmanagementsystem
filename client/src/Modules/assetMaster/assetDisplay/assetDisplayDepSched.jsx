@@ -23,8 +23,22 @@ const rows = [
 export default function AssetDisplayDepSched(){
   return(
     <>
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 300, width: '50rem' }} aria-label="simple table">
+    {/*
+      Same approach as the other display tables: fill available width with a
+      minWidth floor instead of a fixed rem width, relying on TableContainer's
+      built-in horizontal scroll when space is tight.
+    */}
+    <TableContainer component={Paper} sx={{ width: '100%', minWidth: 0 }}>
+      <Table
+        sx={{
+          minWidth: 600,
+          width: '100%',
+          '& .MuiTableCell-root': {
+            fontSize: 'clamp(0.72rem, 0.6rem + 0.45vw, 0.875rem)',
+          },
+        }}
+        aria-label="simple table"
+      >
         <TableHead>
           <TableRow sx={{ color: 'text.primary' }}>
             <TableCell>Year</TableCell>

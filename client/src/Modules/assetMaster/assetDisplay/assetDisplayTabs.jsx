@@ -23,11 +23,12 @@ function TabPanel(props) {
       hidden={value !== index}
       id={`full-width-tabpanel-${index}`}
       aria-labelledby={`full-width-tab-${index}`}
+      style={{ minWidth: 0 }}
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
-          <Typography>{children}</Typography>
+        <Box sx={{ p: 3, minWidth: 0 }}>
+          <Typography component="div" sx={{ minWidth: 0 }}>{children}</Typography>
         </Box>
       )}
     </div>
@@ -57,7 +58,7 @@ export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFiel
   }; 
 
   return (
-    <Box sx={{ bgcolor: 'background.paper', width: '100%', marginTop: 2, borderRadius: 1, boxShadow: 3 }}>
+    <Box sx={{ bgcolor: 'background.paper', width: '100%', minWidth: 0, marginTop: 2, borderRadius: 1, boxShadow: 3 }}>
       <AppBar position="static" sx ={{  borderRadius: 2, boxShadow: 3 }}>
         <Tabs
           value={value}
@@ -66,10 +67,13 @@ export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFiel
           indicatorColor="secondary"
           textColor="inherit"
           aria-label="full width tabs example"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
         >
-          <Tab label="General Info" {...a11yProps(0)} sx={{ letterSpacing: '0.10em' }}/>
-          <Tab label="Finance" {...a11yProps(1)} sx={{ letterSpacing: '0.10em' }}/>
-          <Tab label="Transaction" {...a11yProps(2)} sx={{ letterSpacing: '0.10em' }}/>
+          <Tab label="General Info" {...a11yProps(0)} sx={{ letterSpacing: '0.10em', fontSize: 'clamp(0.72rem, 0.6rem + 0.4vw, 0.875rem)' }}/>
+          <Tab label="Finance" {...a11yProps(1)} sx={{ letterSpacing: '0.10em', fontSize: 'clamp(0.72rem, 0.6rem + 0.4vw, 0.875rem)' }}/>
+          <Tab label="Transaction" {...a11yProps(2)} sx={{ letterSpacing: '0.10em', fontSize: 'clamp(0.72rem, 0.6rem + 0.4vw, 0.875rem)' }}/>
         </Tabs>
       </AppBar>
       <TabPanel value={value} index={0} dir={theme.direction} sx={{ width: '100%' }}>

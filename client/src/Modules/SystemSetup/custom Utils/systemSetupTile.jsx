@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 
 function SystemSetup() {
   return (
-    <div className='grid items-start w-full h-full grid-cols-10 gap-1'>
+    <div className='grid items-start w-full h-full grid-cols-[repeat(auto-fit,minmax(8.5rem,8.5rem))] gap-2 md:gap-3 lg:gap-2'>
 
       {/* Asset Acquisition Tile */}
       {assetUtilList.map((item) => (
