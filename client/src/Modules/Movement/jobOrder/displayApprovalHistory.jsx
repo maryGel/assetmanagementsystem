@@ -9,9 +9,6 @@ import { useApprovalLogs } from '../../../hooks/useApprovalLogs';
 import DateDisplay from '../../../Utils/formatDateForInput';
 
 
-
-
-
 function createData(id, docDate, postingDate, docNum, docType) {
   return { id, docDate, postingDate, docNum, docType };
 }
@@ -40,10 +37,10 @@ function DisplayApprovalHistory({
 
   return (
 
-      <div className='px-10'>
-        <div className='pt-5 pb-5 text-base shadow-sm shadow-slate-200'>
-          <TableContainer component={Paper}>
-            <Table sx={{ minWidth: 300, width: '80rem' }} aria-label="simple table">
+      <div className='w-full px-4 lg:px-10'>
+        <div className='w-full pt-5 pb-5 text-base shadow-sm shadow-slate-200'>
+          <TableContainer component={Paper} sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 700, width: '100%' }} aria-label="simple table">
               <TableHead>
                 <TableRow sx={{ color: 'text.primary' }}>
                   <TableCell>Date</TableCell>

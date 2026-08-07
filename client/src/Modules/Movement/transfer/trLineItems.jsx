@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import {
   Table,
@@ -147,7 +146,7 @@ const TRLineItems = ({
   return (
 
     
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, width: '100%' }}>
       {!assetsLoaded && isLoading && (
         <Box
           sx={{
@@ -165,17 +164,19 @@ const TRLineItems = ({
       <TableContainer
         component={Paper}
         sx={{
+          width: '100%',
           maxHeight: '72vh',
           overflowX: 'auto',
           overflowY: 'auto',
           '& .MuiTable-root': {
-            minWidth: 1800
+            minWidth: { xs: 1800, xl: '100%' }
           }
         }}
       >
         <Table
           stickyHeader
           sx={{
+            width: '100%',
             minWidth: 1600,
             '& .MuiTableCell-root': {
               padding: '4px 8px',
@@ -436,7 +437,9 @@ const TRLineItems = ({
       <Box
         sx={{
           mt: 2,
+          width: '100%',
           display: 'flex',
+          flexWrap: 'wrap',
           justifyContent: 'space-between'
         }}
       >

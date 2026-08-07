@@ -672,7 +672,7 @@ const refreshData = useCallback(async () => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex justify-end gap-3 my-4 mx-14'>
+      <div className='flex flex-wrap justify-end w-full max-w-[1800px] gap-3 mx-auto my-4 px-4 lg:px-10'>
         
         {/* Save Button */}
         {(state.isCreating || state.isEditing) && (
@@ -773,13 +773,13 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
-        <Box className='flex justify-between w-full h-full gap-1'>
+      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+        <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
           <h1 className='text-sm font-bold text-gray-800 '>{
             state.isCreating ? 'Creating Job Order' : state.isEditing ? 'Editing Job Order' : 'Display Job Order'
           }
           </h1>
-          <div className='flex gap-2'>
+          <div className='flex flex-wrap gap-2'>
             <text className='text-xs text-gray-500'>Last JO created :</text>
             <text className='text-xs text-gray-500'>
                   {/* Get the latest JO from joHeaders */}
@@ -832,44 +832,50 @@ const refreshData = useCallback(async () => {
                 </label>
               )}
             <Box className='mt-2 '>
-              <div className='flex items-center justify-start w-full gap-10 mt-4'>
-                <label className='text-base font-normal text-gray-500 w-28 '>Department :</label>
-                <Autocomplete
-                  variant='body2'
-                  disabled={isReadOnly}
-                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
-                  size = 'small'
-                  options= {departments} 
-                  value={currentHeader?.Department_Code || currentHeader?.Department  || '' }
-                  onChange={(e, newValue) => handleHeaderChange('Department_Code', newValue)}
-                  renderInput={(params) => (
-                    <TextField {...params} 
-                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                    />              
-                  )} 
-                />
-                <label className='text-base font-normal text-gray-500 w-38 '>Maintenance Service :</label>
-                <Autocomplete 
-                  disabled={isReadOnly}
-                  className={`rounded-sm  ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
-                  size = 'small'
-                  options= {sections} 
-                  value={currentHeader?.Sector_name || ''}
-                  onChange={(e, newValue) => handleHeaderChange('Sector_name', newValue)}
-                  renderInput={(params) => (
-                    <TextField {...params} 
-                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                    />              
-                  )} 
-                />
-                <label className='text-base font-normal text-gray-500 w-28 '>Requested by : </label>
+              <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
+                <div className='flex items-center min-w-[280px] gap-3'>
+                  <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Department :</label>
+                  <Autocomplete
+                    variant='body2'
+                    disabled={isReadOnly}
+                    className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                    size = 'small'
+                    options= {departments} 
+                    value={currentHeader?.Department_Code || currentHeader?.Department  || '' }
+                    onChange={(e, newValue) => handleHeaderChange('Department_Code', newValue)}
+                    renderInput={(params) => (
+                      <TextField {...params} 
+                        sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      />              
+                    )} 
+                  />
+                </div>
+                <div className='flex items-center flex-1 min-w-[300px] gap-3'>
+                  <label className='flex-shrink-0 w-40 text-base font-normal text-gray-500'>Maintenance Service :</label>
+                  <Autocomplete 
+                    disabled={isReadOnly}
+                    className={`rounded-sm  ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                    size = 'small'
+                    options= {sections} 
+                    value={currentHeader?.Sector_name || ''}
+                    onChange={(e, newValue) => handleHeaderChange('Sector_name', newValue)}
+                    renderInput={(params) => (
+                      <TextField {...params} 
+                        sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      />              
+                    )} 
+                  />
+                </div>
+                <div className='flex items-center  min-w-[240px] gap-3'>
+                  <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Requested by : </label>
                   <input
                     type="text"
                     disabled
-                    className="text-base font-semibold text-gray-500"
+                    className="flex-1 min-w-[120px] text-base font-semibold text-gray-500"
                     value={currentHeader?.requested_by || userName}
                     onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
                   />
+                </div>
               </div>
 
               <div className='flex items-start justify-start w-full gap-10 mt-4'>
@@ -881,9 +887,8 @@ const refreshData = useCallback(async () => {
                   minRows={2}
                   value={currentHeader?.Remarks || ''}
                   onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                  className={`${!state.isEditing && !state.isCreating? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 `}
+                  className={`${!state.isEditing && !state.isCreating? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 w-full max-w-4xl`}
                   style={{ 
-                    width: '50rem',
                     resize: 'both',
                     padding: '.5rem',
                     border: '1px solid #ccc',
@@ -896,7 +901,7 @@ const refreshData = useCallback(async () => {
         </form>
       </div>    
       <ThemeProvider theme={customTheme}>
-        <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
+        <div className='w-full max-w-[1800px] m-auto lg:px-10 rounded-lg'>
           <JobOrderTabs
             state={state}
             isCreating={state.isCreating}

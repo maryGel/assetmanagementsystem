@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink } from "react-router-dom";
 import {
@@ -151,7 +150,7 @@ const JOLineItems = ({
   return (
 
     
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, width: '100%' }}>
       {!assetsLoaded && isLoading && (
         <Box
           sx={{
@@ -169,17 +168,19 @@ const JOLineItems = ({
       <TableContainer
         component={Paper}
         sx={{
+          width: '100%',
           maxHeight: '72vh',
           overflowX: 'auto',
           overflowY: 'auto',
           '& .MuiTable-root': {
-            minWidth: 1800
+            minWidth: { xs: 1800, xl: '100%' }
           }
         }}
       >
         <Table
           stickyHeader
           sx={{
+            width: '100%',
             minWidth: 1600,
             '& .MuiTableCell-root': {
               padding: '4px 8px',
@@ -478,7 +479,9 @@ const JOLineItems = ({
       <Box
         sx={{
           mt: 2,
+          width: '100%',
           display: 'flex',
+          flexWrap: 'wrap',
           justifyContent: 'space-between'
         }}
       >

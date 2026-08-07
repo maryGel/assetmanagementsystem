@@ -329,11 +329,6 @@ function SearchTransactions(useProps) {
     };
     setFilters(newFilters);
     setHasSearched(true);
-    // Show count after filters apply
-    // setTimeout(() => {
-    //   const count = filteredDocuments.length;
-    //   showToast(`Found ${count} document${count !== 1 ? 's' : ''}`, 'info');
-    // }, 100);
   };
 
   const handleClearClick = () => {
@@ -350,9 +345,7 @@ function SearchTransactions(useProps) {
   };
 
   // Transform documents to match table expected format - NOW WITH DATA VERSION DEPENDENCY
-  const tableData = useMemo(() => {
-    console.log('🔄 Transforming table data, filteredDocuments length:', filteredDocuments.length);
-    
+  const tableData = useMemo(() => {    
     const transformedDocuments = filteredDocuments.map(doc => ({
       DocNo: doc.transNo,
       DocType: doc.type,
@@ -410,7 +403,7 @@ function SearchTransactions(useProps) {
   }, [openBulkDialog, selectedDocuments, showToast]);
 
   return (
-    <div>
+    <div className="flex flex-wrap w-full h-auto gap-2 p-2">
       {/* Toast Snackbar - Same as JOFormPage */}
       <Snackbar
         open={localSnackbar.open}
@@ -428,7 +421,7 @@ function SearchTransactions(useProps) {
         </Alert>
       </Snackbar>
 
-      <form className="flex w-full h-auto p-5">
+      <form className="flex flex-wrap w-full h-auto gap-2 p-5">
         <Autocomplete
           size="small"  
           options={transactionNumbers}
@@ -452,7 +445,7 @@ function SearchTransactions(useProps) {
           renderInput={(params) => (
             <TextField {...params} label="Document Type" placeholder="DocumentType" />
           )}
-          sx={{ width: '20rem', marginRight: '1rem' }}
+          sx={{ width: '20rem', marginRight: '1rem', flex: '1 1 200px', minWidth: 180, maxWidth: 280  }}
         />
         <Autocomplete
           multiple
@@ -465,7 +458,7 @@ function SearchTransactions(useProps) {
           renderInput={(params) => (
             <TextField {...params} label="Location" placeholder="Location" />
           )}
-          sx={{ width: '15rem', marginRight: '1rem' }}
+          sx={{ width: '15rem', marginRight: '1rem', flex: '1 1 200px', minWidth: 180, maxWidth: 280  }}
         />
         <Autocomplete
           multiple
@@ -478,7 +471,7 @@ function SearchTransactions(useProps) {
           renderInput={(params) => (
             <TextField {...params} label="Department" placeholder="Department" />
           )}
-          sx={{ width: '15rem', marginRight: '1rem' }}
+          sx={{ width: '15rem', marginRight: '1rem', flex: '1 1 200px', minWidth: 180, maxWidth: 280  }}
         />
         <Autocomplete
           multiple
@@ -492,7 +485,7 @@ function SearchTransactions(useProps) {
           renderInput={(params) => (
             <TextField {...params} label="Status" placeholder="Status" />
           )}
-          sx={{ width: '15rem', marginRight: '1rem' }}
+          sx={{ width: '15rem', marginRight: '1rem', flex: '1 1 200px', minWidth: 180, maxWidth: 280  }}
         />   
         
         <TextField

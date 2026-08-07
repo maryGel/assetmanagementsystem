@@ -27,8 +27,8 @@ function TabPanel(props) {
       {...other}
     >
       {value === index && (
-        <Box className="pt-2">
-          <Typography>{children}</Typography>
+        <Box className="w-full px-2 pt-2 lg:px-4">
+          <Typography component="div" className="w-full">{children}</Typography>
         </Box>
       )}
     </div>
@@ -97,7 +97,10 @@ export default function TransferTabs({
         <Tabs
           value={value}
           onChange={handleChange}
-          sx={{ bgcolor: '#01579b', color: 'white', fontFamily: 'Roboto'}}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile={false}
+          sx={{ bgcolor: '#01579b', color: 'white', fontFamily: 'Roboto', width: '100%' }}
           indicatorColor="secondary"
           textColor="inherit"
           aria-label="full width tabs example"

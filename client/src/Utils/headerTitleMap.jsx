@@ -22,6 +22,15 @@ export const headerTitleMap = {
   "/assetMovement/pages/ALFormPage": "Lost Asset Form Page",
   "/assetMovement/pages/maintenancePage": "Maintenance Page",
 
+  // Asset Physical Count Pages
+  "/assetPhysical/assetPrintQr": "Print QRcode",
+  "/assetPhysical/countSheets": "Count Sheet Generator",
+  "/assetPhysical/assetScanner": "Asset Identification",
+  "/Physical/physicalCountPlanning": "Asset Count",
+
+  // Physical Count Session Pages
+  "/physicalCount/session": "Session Details",
+  
   // System Setup Pages
   "/systemSetup/user/userProfile": "Roles and Authorizations",
 };
@@ -42,5 +51,14 @@ export const getBackPath = (currentPath) => {
   if (currentPath.startsWith('/assetMovement/pages/AAFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/ALFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/maintenancePage')) return '/Home/Movement';
+
+  // Physical Count Pages
+  if (currentPath.startsWith('/assetPhysical/assetPrintQr')) return '/Home/PhysicalCount';
+  if (currentPath.startsWith('/assetPhysical/countSheets')) return '/Home/PhysicalCount';
+  if (currentPath.startsWith('/assetPhysical/assetScanner')) return '/Home/PhysicalCount';
+  if (currentPath.startsWith('/Physical/physicalCountPlanning')) return '/Home/PhysicalCount';
+
+  // Physical Count Session Pages
+  if (currentPath.startsWith('/physicalCount/session/:id')) return '/Home/PhysicalCount';
 
 };

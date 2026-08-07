@@ -579,7 +579,7 @@ const refreshData = useCallback(async () => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex justify-end gap-3 my-4 mx-14'>
+      <div className='flex flex-wrap justify-end w-full max-w-[1800px] gap-3 mx-auto my-4 px-4 lg:px-10'>
         {(state.isCreating || state.isEditing) && (
           <CustomBtn variant='saveBtn' iconType='save' onClick={handleSave}>
             {state.saving ? 'Saving...' : 'Save'}
@@ -639,12 +639,12 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
-        <Box className='flex justify-between w-full h-full gap-1'>
+      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+        <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
           <h1 className='text-sm font-bold text-gray-800'>
             {state.isCreating ? 'Creating Transfer Form' : state.isEditing ? 'Editing Transfer Form' : 'Display Transfer Form'}
           </h1>
-          <div className='flex gap-2'>
+          <div className='flex flex-wrap gap-2'>
             <span className='text-xs text-gray-500'>Last TR created :</span>
             <span className='text-xs text-gray-500'>
               {trHeaders && trHeaders.length > 0 
@@ -696,64 +696,72 @@ const refreshData = useCallback(async () => {
           )}
           
           <Box className='mt-2'>
-            <div className='flex items-center justify-start w-full gap-10 mt-4'>
-              <label className='text-base font-normal text-gray-500 w-28'>Transfer to :</label>
-              <Autocomplete
-                variant='body2'
-                disabled={isReadOnly}
-                className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
-                size='small'
-                options={departments} 
-                value={currentHeader?.Department || ''}
-                onChange={(e, newValue) => handleHeaderChange('Department', newValue)}
-                renderInput={(params) => (
-                  <TextField {...params} 
-                    sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                    placeholder="Select Department" 
-                  />              
-                )} 
-              />
-              <label className='text-base font-normal text-gray-500 w-38'>New Holder:</label>
-              <Autocomplete 
-                disabled={isReadOnly}
-                className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
-                size='small'
-                options={employees} 
-                value={currentHeader?.Holder || ''}
-                onChange={(e, newValue) => handleHeaderChange('Holder', newValue)}
-                renderInput={(params) => (
-                  <TextField {...params} 
-                    sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                    placeholder="Select Holder" 
-                  />              
-                )} 
-              />
-              <label className='text-base font-normal text-gray-500 w-28'>Custodian : </label>
-              <input
-                type="text"
-                disabled
-                className="text-base font-semibold text-gray-500"
-                value={currentHeader?.Custodian || userName}
-                onChange={(e) => handleHeaderChange('Custodian', e.target.value)}
-              />
+            <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
+              <div className='flex items-center flex-1 min-w-[280px] gap-3'>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Transfer to :</label>
+                <Autocomplete
+                  variant='body2'
+                  disabled={isReadOnly}
+                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                  size='small'
+                  options={departments} 
+                  value={currentHeader?.Department || ''}
+                  onChange={(e, newValue) => handleHeaderChange('Department', newValue)}
+                  renderInput={(params) => (
+                    <TextField {...params} 
+                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      placeholder="Select Department" 
+                    />              
+                  )} 
+                />
+              </div>
+              <div className='flex pl-2 items-center flex-1 min-w-[300px] gap-3'>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>New Holder:</label>
+                <Autocomplete 
+                  disabled={isReadOnly}
+                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                  size='small'
+                  options={employees} 
+                  value={currentHeader?.Holder || ''}
+                  onChange={(e, newValue) => handleHeaderChange('Holder', newValue)}
+                  renderInput={(params) => (
+                    <TextField {...params} 
+                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      placeholder="Select Holder" 
+                    />              
+                  )} 
+                />
+              </div>
+              <div className='flex items-center flex-1 min-w-[240px] gap-3'>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Custodian : </label>
+                <input
+                  type="text"
+                  disabled
+                  className="flex-1 min-w-[120px] text-base font-semibold text-gray-500"
+                  value={currentHeader?.Custodian || userName}
+                  onChange={(e) => handleHeaderChange('Custodian', e.target.value)}
+                />
+              </div>
             </div>
 
-            <div className='flex items-center justify-start w-full gap-20 mt-4'>
-              <label className='text-base font-normal text-gray-500 w-38'>Location :</label>
-              <Autocomplete 
-                disabled={isReadOnly}
-                className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-72`}
-                size='small'
-                options={locations} 
-                value={currentHeader?.Location || ''}
-                onChange={(e, newValue) => handleHeaderChange('Location', newValue)}
-                renderInput={(params) => (
-                  <TextField {...params} 
-                    sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                    placeholder="Select Location" 
-                  />              
-                )} 
-              />
+            <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
+              <div className='flex items-center flex-1 min-w-[280px] gap-3'>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Location :</label>
+                <Autocomplete 
+                  disabled={isReadOnly}
+                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                  size='small'
+                  options={locations} 
+                  value={currentHeader?.Location || ''}
+                  onChange={(e, newValue) => handleHeaderChange('Location', newValue)}
+                  renderInput={(params) => (
+                    <TextField {...params} 
+                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      placeholder="Select Location" 
+                    />              
+                  )} 
+                />
+              </div>
             </div>
 
             <div className='flex items-start justify-start w-full gap-10 mt-4'>
@@ -765,9 +773,8 @@ const refreshData = useCallback(async () => {
                 minRows={2}
                 value={currentHeader?.Remarks || ''}
                 onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                className={`${!state.isEditing && !state.isCreating ? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300`}
+                className={`${!state.isEditing && !state.isCreating ? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 w-full max-w-4xl`}
                 style={{ 
-                  width: '50rem',
                   resize: 'both',
                   padding: '.5rem',
                   border: '1px solid #ccc',
@@ -780,7 +787,7 @@ const refreshData = useCallback(async () => {
       </div>    
       
       <ThemeProvider theme={customTheme}>
-        <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
+        <div className='w-full max-w-[1800px] m-auto lg:px-10 rounded-lg'>
           <TransferTabs
             state={state}
             isCreating={state.isCreating}

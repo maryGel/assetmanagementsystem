@@ -19,12 +19,18 @@ import TRFormPage from './Modules/Movement/pages/transferFormPage.jsx';
 import ADFormPage from './Modules/Movement/pages/disposalPage.jsx';
 import AAFormPage from './Modules/Movement/pages/assetAccPage.jsx';
 import ALFormPage from './Modules/Movement/pages/assetLostPage.jsx';
-
 import SearchTransactions from './Modules/Movement/pages/searchTransactionsPage.jsx';
 import MaintenancePageDesktop from './Modules/Movement/pages/maintenancePage.jsx';
 
 // System Setup Pages
 import UserAccessPage from './Modules/SystemSetup/pages/userAccessPage.jsx';
+
+// Importing the Physical Count component
+import PhysicalCountPlanning from './Modules/Physical/physicalCountPlanning.jsx';
+import CountSheetGenerator from './Modules/Physical/countSheetGenerator.jsx';
+import AssetIdentification from './Modules/Physical/assetIdentification.jsx';
+import SessionDetails from './Modules/Physical/sessionDetails.jsx';
+import AssetQrPrint from './Modules/Physical/assetQrPrint.jsx';
 
 // To initialize the header title based on the current page
 const getInitialTitle = () => {
@@ -160,18 +166,33 @@ function App() {
             />
           } />
 
-
           <Route path="/assetMovement/pages/ALFormPage" element={
             <ALFormPage
               setHeaderTitle={saveTitleUpdate}
             />
           } />
 
+          {/* Physical Count Page */}
+          <Route path="/Physical/physicalCountPlanning" element={
+            <PhysicalCountPlanning />
+          } />
+          <Route path="/assetPhysical/countSheets" element={
+            <CountSheetGenerator />
+          } />
+          <Route path="/assetPhysical/assetScanner" element={
+            <AssetIdentification />
+          } />
+          <Route path="/assetPhysical/assetPrintQr" element={
+            <AssetQrPrint />
+          } />
+
+          <Route path="/physicalCount/session" element={<SessionDetails />} />
+
           {/* System Setup Pages */}
           <Route path="/systemSetup/user/userProfile" element={
             <UserAccessPage
               setHeaderTitle={saveTitleUpdate}
-            />
+          />
           } />
         </Route>
 

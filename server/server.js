@@ -51,6 +51,7 @@
   import assetLostAppRoute from './routes/assetLostAppRoute.js';
   import jo_evalRoute from './routes/jo_evalRoute.js';
   import user0002invRoute from './routes/user0002invRoute.js';
+  import physicalCountRoutes from './routes/physicalCountRoutes.js';
 
 
 
@@ -82,8 +83,8 @@
       // Allow localhost
       if (
         origin.startsWith('http://localhost:5173') ||
-        origin.startsWith('http://localhost') ||
-        origin.startsWith('http://127.0.0.1')
+        origin.startsWith('http://10.0.0.187') ||
+        origin.startsWith('http://127.0.0.1') 
       ) {
         return callback(null, true)
       }
@@ -195,6 +196,7 @@
   app.use('/alostApproval', assetLostAppRoute);
   app.use('/jo_evalRoute', jo_evalRoute);
   app.use('/companyConfig', user0002invRoute);
+  app.use('/physicalCount', physicalCountRoutes);
 
 
   // React (Vite Dist)

@@ -659,12 +659,12 @@ const handleEmployeeChange = (event, newValue) => {
         )}
       </div>
           
-      <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
-        <Box className='flex justify-between w-full h-full gap-1'>
+      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+        <Box className='flex flex-wrap justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800'>
             {state.isCreating ? 'Creating Asset Accountability' : state.isEditing ? 'Editing Asset Accountability' : 'Display Asset Accountability'}
           </h1>
-          <div className='flex gap-2'>
+          <div className='flex flex-wrap gap-2'>
             <span className='text-xs text-gray-500'>Last Asset Accountability created :</span>
             <span className='text-xs text-gray-500'>
               {assetAccHeaders && assetAccHeaders.length > 0 
@@ -716,7 +716,7 @@ const handleEmployeeChange = (event, newValue) => {
           )}
           
           <Box className='mt-2'>
-            <div className='flex items-center justify-start w-full gap-10 mt-4'>
+            <div className='flex flex-wrap items-center justify-start w-full gap-10 mt-4'>
               <label className='text-base font-normal text-gray-500 w-28'>Department :</label>
               <Autocomplete
                 variant='body2'
@@ -745,7 +745,7 @@ const handleEmployeeChange = (event, newValue) => {
             </div>
 
 
-            <div className='flex items-start justify-start w-full gap-10 mt-4'>
+            <div className='flex flex-wrap items-start justify-start w-full gap-10 mt-4'>
               <label className='text-base font-normal text-gray-500 w-28'>Employee :</label>
               <Autocomplete
                 variant='body2'
@@ -768,7 +768,7 @@ const handleEmployeeChange = (event, newValue) => {
       </div>    
       
       <ThemeProvider theme={customTheme}>
-        <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
+        <div className='w-full max-w-[1800px] m-auto lg:px-10 rounded-lg'>
           <AssetAccTabs
             state={state}
             isCreating={state.isCreating}

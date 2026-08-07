@@ -579,7 +579,7 @@ const refreshData = useCallback(async () => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex justify-end gap-3 my-4 mx-14'>
+      <div className='flex flex-wrap justify-end gap-3 my-4 mx-14'>
         {(state.isCreating || state.isEditing) && (
           <CustomBtn variant='saveBtn' iconType='save' onClick={handleSave}>
             {state.saving ? 'Saving...' : 'Save'}
@@ -639,12 +639,12 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-6 my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
-        <Box className='flex justify-between w-full h-full gap-1'>
+      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+        <Box className='flex flex-wrap justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800'>
             {state.isCreating ? 'Creating Disposal Form' : state.isEditing ? 'Editing Disposal Form' : 'Display Disposal Form'}
           </h1>
-          <div className='flex gap-2'>
+          <div className='flex flex-wrap gap-2'>
             <span className='text-xs text-gray-500'>Last Disposal Form created :</span>
             <span className='text-xs text-gray-500'>
               {adHeaders && adHeaders.length > 0 
@@ -696,7 +696,7 @@ const refreshData = useCallback(async () => {
           )}
           
           <Box className='mt-2'>
-            <div className='flex items-center justify-start w-full gap-10 mt-4'>
+            <div className='flex flex-wrap items-center justify-start w-full gap-10 mt-4'>
               <label className='text-base font-normal text-gray-500 w-28'>Department :</label>
               <Autocomplete
                 variant='body2'
@@ -749,7 +749,7 @@ const refreshData = useCallback(async () => {
       </div>    
       
       <ThemeProvider theme={customTheme}>
-        <div className='my-4 bg-gray-100 rounded-lg shadow-lg mx-14'>
+        <div className='w-full max-w-[1800px] m-auto lg:px-10 rounded-lg'>
           <DisposalTabs
             state={state}
             isCreating={state.isCreating}
