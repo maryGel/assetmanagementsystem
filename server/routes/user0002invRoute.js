@@ -1,7 +1,41 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import {fileURLToPath} from 'url';
 import {db} from '../server.js';
 
 const router = express.Router();
+
+// ============================
+// Logo upload storage config
+// Files are written to /uploads/company-logo on disk; the relative path is
+// what gets saved into user0002inv.ReportHeader.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logoUploadDir = path.join(__dirname, '..', 'uploads', 'company-logo');
+
+if (!fs.existsSync(logoUploadDir)) {
+    fs.mkdirSync(logoUploadDir, { recursive: true });
+}
+
+const logoStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, logoUploadDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, `logo-${Date.now()}${ext}`);
+    }
+});
+
+const logoUpload = multer({
+    storage: logoStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+    fileFilter: (req, file, cb) => {
+        const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+        if (allowed.includes(file.mimetype)) return cb(null, true);
+        cb(new Error('Only PNG, JPG, WEBP, or SVG files are allowed for the company logo'));
+    }
+});
 
 // ============================
 // Get company configuration 
@@ -28,19 +62,56 @@ router.get('/', (req, res) => {
 // Post/Update company configuration
 router.post('/', (req, res) => {
     const {
+        // Company Setup - basic info
+        Company,
+        address,
+        CompTel,
+        ReportHeader,
+        // Company Setup - advanced / auto-numbering
+        Cinitial,
+        XJONum,
+        XTRNum,
+        XADNum,
+        XAANum,
+        XALNum,
+        AutoWO,
+        // Pre-existing fields
         ItmPicpath,
         ApprovalApp,
-        AutoWO,
         AccessBySection,
         Dep15Days,
         DepByDay,
         Signatories,
-        DisposalFinanceDetailsPrintOut,
-        XJONum  // Add this
+        DisposalFinanceDetailsPrintOut
     } = req.body;
 
     const checkSql = 'SELECT COUNT(*) as count FROM user0002inv';
-    
+
+    // Column/value pairs kept in one place so INSERT and UPDATE can never drift apart
+    const fields = {
+        Company: Company !== undefined ? Company : null,
+        address: address !== undefined ? address : null,
+        CompTel: CompTel !== undefined ? CompTel : null,
+        ReportHeader: ReportHeader !== undefined ? ReportHeader : null,
+        Cinitial: Cinitial !== undefined ? Cinitial : null,
+        XJONum: XJONum !== undefined ? XJONum : 0,
+        XTRNum: XTRNum !== undefined ? XTRNum : 0,
+        XADNum: XADNum !== undefined ? XADNum : 0,
+        XAANum: XAANum !== undefined ? XAANum : 0,
+        XALNum: XALNum !== undefined ? XALNum : 0,
+        AutoWO: AutoWO || null,
+        ItmPicpath: ItmPicpath || null,
+        ApprovalApp: ApprovalApp !== undefined ? ApprovalApp : null,
+        AccessBySection: AccessBySection !== undefined ? AccessBySection : null,
+        Dep15Days: Dep15Days !== undefined ? Dep15Days : null,
+        DepByDay: DepByDay !== undefined ? DepByDay : null,
+        Signatories: Signatories !== undefined ? Signatories : null,
+        DisposalFinanceDetailsPrintOut: DisposalFinanceDetailsPrintOut !== undefined ? DisposalFinanceDetailsPrintOut : null
+    };
+
+    const columns = Object.keys(fields);
+    const values = Object.values(fields);
+
     db.getConnection((err, connection) => {
         if (err) return res.status(500).json({ error: 'DB connection error' });
 
@@ -52,59 +123,69 @@ router.post('/', (req, res) => {
 
             const exists = results[0].count > 0;
             let sql;
-            let values;
+            let sqlValues;
 
             if (exists) {
-                sql = `UPDATE user0002inv SET 
-                    ItmPicpath = ?,
-                    ApprovalApp = ?,
-                    AutoWO = ?,
-                    AccessBySection = ?,
-                    Dep15Days = ?,
-                    DepByDay = ?,
-                    Signatories = ?,
-                    DisposalFinanceDetailsPrintOut = ?,
-                    XJONum = ?
-                `;
-                values = [
-                    ItmPicpath || null,
-                    ApprovalApp !== undefined ? ApprovalApp : null,
-                    AutoWO || null,
-                    AccessBySection !== undefined ? AccessBySection : null,
-                    Dep15Days !== undefined ? Dep15Days : null,
-                    DepByDay !== undefined ? DepByDay : null,
-                    Signatories !== undefined ? Signatories : null,
-                    DisposalFinanceDetailsPrintOut !== undefined ? DisposalFinanceDetailsPrintOut : null,
-                    XJONum !== undefined ? XJONum : 0
-                ];
+                sql = `UPDATE user0002inv SET ${columns.map(c => `${c} = ?`).join(', ')}`;
+                sqlValues = values;
             } else {
-                sql = `INSERT INTO user0002inv (
-                    ItmPicpath, ApprovalApp, AutoWO, AccessBySection, 
-                    Dep15Days, DepByDay, Signatories, DisposalFinanceDetailsPrintOut, XJONum
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                values = [
-                    ItmPicpath || null,
-                    ApprovalApp !== undefined ? ApprovalApp : null,
-                    AutoWO || null,
-                    AccessBySection !== undefined ? AccessBySection : null,
-                    Dep15Days !== undefined ? Dep15Days : null,
-                    DepByDay !== undefined ? DepByDay : null,
-                    Signatories !== undefined ? Signatories : null,
-                    DisposalFinanceDetailsPrintOut !== undefined ? DisposalFinanceDetailsPrintOut : null,
-                    XJONum !== undefined ? XJONum : 0
-                ];
+                sql = `INSERT INTO user0002inv (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
+                sqlValues = values;
             }
 
-            connection.query(sql, values, (err, result) => {
+            connection.query(sql, sqlValues, (err, result) => {
                 connection.release();
                 if (err) {
                     console.error('Error saving config:', err);
                     return res.status(500).json({ error: 'Error saving configuration', details: err.message });
                 }
 
-                res.status(200).json({ 
-                    success: true, 
+                res.status(200).json({
+                    success: true,
                     message: exists ? 'Configuration updated successfully' : 'Configuration created successfully',
+                    affectedRows: result.affectedRows
+                });
+            });
+        });
+    });
+});
+
+// ============================
+// Upload / replace the company logo (multipart/form-data, field name: "logo")
+// Stores the file on disk and saves its relative path into ReportHeader.
+router.post('/logo', logoUpload.single('logo'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No logo file was uploaded' });
+    }
+
+    const relativePath = `/uploads/company-logo/${req.file.filename}`;
+    const checkSql = 'SELECT COUNT(*) as count FROM user0002inv';
+
+    db.getConnection((err, connection) => {
+        if (err) return res.status(500).json({ error: 'DB connection error' });
+
+        connection.query(checkSql, (err, results) => {
+            if (err) {
+                connection.release();
+                return res.status(500).json({ error: 'Error checking existing record' });
+            }
+
+            const exists = results[0].count > 0;
+            const sql = exists
+                ? 'UPDATE user0002inv SET ReportHeader = ?'
+                : 'INSERT INTO user0002inv (ReportHeader) VALUES (?)';
+
+            connection.query(sql, [relativePath], (err, result) => {
+                connection.release();
+                if (err) {
+                    console.error('Error saving logo path:', err);
+                    return res.status(500).json({ error: 'Error saving logo', details: err.message });
+                }
+
+                res.status(200).json({
+                    success: true,
+                    message: 'Logo uploaded successfully',
+                    ReportHeader: relativePath,
                     affectedRows: result.affectedRows
                 });
             });

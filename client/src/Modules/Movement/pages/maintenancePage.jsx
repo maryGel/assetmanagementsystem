@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 // Custom Hooks
 import { useJO_h} from '../../../hooks/useJO_h';
@@ -9,11 +10,20 @@ import EvalJOFormDesktop from '../maintenance/evalJOFormDesktop';
 import MaintenanceFormDesktop from '../maintenance/maintenanceFormDesktop';
 
 function MaintenancePageDesktop() {    
+  const [searchParams] = useSearchParams();
+  const isDashboardEvaluationView =
+    searchParams.get('tab') === 'evaluate' &&
+    searchParams.get('status') === 'pending' &&
+    searchParams.get('date') === 'all';
+  const isDashboardMaintenanceView =
+    searchParams.get('tab') === 'maintenance' &&
+    searchParams.get('date') === 'all';
+  const dashboardMaintenanceStatuses = searchParams.getAll('status');
   // reference data
   const {joHeaders = [], joRefresh,  updateJOHeader, createJOHeader, } = useJO_h();
   const {joDetails = [], joDetailsRefresh, updateJODetails, createJODetails, getJODetailsByJO} = useJO_d();
-  const [isOpenEvalJo, setIsOpenEvalJo] = useState(true);
-  const [isOpenMainForm, setIsOpenMainForm] = useState(false);
+  const [isOpenEvalJo, setIsOpenEvalJo] = useState(() => !isDashboardMaintenanceView);
+  const [isOpenMainForm, setIsOpenMainForm] = useState(() => isDashboardMaintenanceView);
   
   // ✅ Add a refresh key to force re-render
   const [refreshKey, setRefreshKey] = useState(0);
@@ -112,6 +122,8 @@ function MaintenancePageDesktop() {
                   snackbar={snackbar}
                   showToast={showToast}
                   handleSnackbarClose={handleSnackbarClose}
+                  initialFilter={isDashboardEvaluationView ? 'Pending' : undefined}
+                  initialDatePreset={isDashboardEvaluationView ? 'all' : 'last-30'}
                 />
               </div>
             )}
@@ -124,6 +136,10 @@ function MaintenancePageDesktop() {
                   joDetailsRefresh={handleJoDetailsRefresh}
                   updateJOHeader={updateJOHeader}
                   updateJODetails={updateJODetails}
+                  initialDatePreset={isDashboardMaintenanceView ? 'all' : 'last-30'}
+                  initialStatuses={isDashboardMaintenanceView
+                    ? dashboardMaintenanceStatuses
+                    : []}
                 />
               </div>
             )}

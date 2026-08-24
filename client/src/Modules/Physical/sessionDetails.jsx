@@ -1,11 +1,12 @@
 // assetPhysicalCount/sessionDetails.jsx
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { CustomBtn } from '../../Utils/groupbtns';
 import { api } from '../../api/axios';
 
 const SessionDetails = () => {
-  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const id = searchParams.get('id');
   const navigate = useNavigate();
   const location = useLocation();
   const [session, setSession] = useState(null);
@@ -127,12 +128,6 @@ const SessionDetails = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <button
-              onClick={() => navigate('/physicalCount')}
-              className="mb-2 text-sm text-blue-600 hover:text-blue-800"
-            >
-              ← Back to Planning
-            </button>
             <h1 className="text-2xl font-bold text-gray-800">
               {session.session_name || session.sessionName || 'Untitled Session'}
             </h1>

@@ -1,5 +1,6 @@
 // SearchTransactions.jsx
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 // MUI import
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
@@ -37,6 +38,7 @@ const statusOptions = [
 ];
 
 function SearchTransactions(useProps) {
+  const [searchParams] = useSearchParams();
   // Use the combined hook - only need refetch
   const { docHeaders, isLoading, error, refetch } = useCombinedDocHeaders(useProps);
   const { refLocData } = useRefLocation(useProps);
@@ -65,6 +67,39 @@ function SearchTransactions(useProps) {
     message: '',
     severity: 'info'
   });
+
+  // Dashboard links can provide the document type and one or more numeric
+  // statuses in the URL. Apply them immediately so the table populates as
+  // soon as the document headers finish loading.
+  useEffect(() => {
+    const requestedTypes = searchParams
+      .getAll('type')
+      .filter(type => transTypes.includes(type));
+    const requestedStatusCodes = [...new Set(
+      searchParams
+        .getAll('status')
+        .map(status => Number(status))
+        .filter(status => statusOptions.some(option => option.status === status))
+    )];
+
+    if (requestedTypes.length === 0 && requestedStatusCodes.length === 0) return;
+
+    const requestedStatuses = statusOptions.filter(option =>
+      requestedStatusCodes.includes(option.status)
+    );
+    const dashboardFilters = {
+      type: requestedTypes,
+      location: [],
+      department: [],
+      status: requestedStatusCodes,
+      transNo: ''
+    };
+
+    setDraftTransType(requestedTypes);
+    setDraftStatus(requestedStatuses);
+    setFilters(dashboardFilters);
+    setHasSearched(true);
+  }, [searchParams]);
 
   // Initialize approval hooks
   const jobOrderHook = useJobOrderApproval();
@@ -253,7 +288,7 @@ function SearchTransactions(useProps) {
     // Filter by status
     if (filters.status && filters.status.length > 0) {
       filtered = filtered.filter(doc =>
-        filters.status.includes(doc.status)
+        filters.status.includes(Number(doc.status))
       );
       console.log('📊 After status filter:', filtered.length);
     }

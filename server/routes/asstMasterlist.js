@@ -5,9 +5,33 @@ const router = express.Router();
 
 // Get all itemlist with pagination and filters
 router.get('/', (req, res) => {
+  // When fetchAll=true, ignore pagination entirely and return every
+  // matching row. This avoids silently truncating results whenever a
+  // caller's pageSize happens to be smaller than the table (e.g. a
+  // hardcoded "fetch everything" pageSize of 10000 on a 15,320-row table).
+  const fetchAll = req.query.fetchAll === 'true';
   const page = parseInt(req.query.page) || 1;
   const pageSize = parseInt(req.query.pageSize) || 10;
   const offset = (page - 1) * pageSize;
+
+  // Optional column projection so heavy callers (e.g. "fetch all assets
+  // for a dropdown") don't have to pull large/irrelevant text columns
+  // like Picpath, Description, Remarks, or suppName. Whitelisted against
+  // the real itemlist schema to avoid building SQL from raw user input.
+  const ALLOWED_COLUMNS = new Set([
+    'id', 'FacNO', 'FacName', 'Description', 'ItemClass', 'CATEGORY', 'Unit',
+    'serialNo', 'Department', 'Holder', 'Picpath', 'Adate', 'AAmount', 'Percent',
+    'Abre', 'ItemLocation', 'balance_unit', 'suppName', 'Remarks', 'COA_D',
+    'COA_C', 'xStatus', 'writeOff', 'xAvailable', 'Brand', 'Color', 'BarcodeNo',
+    'xxStats', 'StartDate', 'EndDate', 'Dimention', 'rr_number', 'PC_BATCH',
+    'stackabl', 'mms_item_no', 'ReferenceNo', 'AssetGrpCode'
+  ]);
+  const requestedColumns = req.query.columns
+    ? req.query.columns.split(',').map(c => c.trim()).filter(c => ALLOWED_COLUMNS.has(c))
+    : null;
+  const selectClause = requestedColumns && requestedColumns.length
+    ? requestedColumns.map(c => `\`${c}\``).join(', ')
+    : '*';
 
   // Build WHERE clause from filters
   const filters = [];
@@ -67,7 +91,9 @@ router.get('/', (req, res) => {
   
   const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
   const countSql = `SELECT COUNT(*) as total FROM itemlist ${whereClause}`;
-  const dataSql = `SELECT * FROM itemlist ${whereClause} LIMIT ? OFFSET ?`;
+  const dataSql = fetchAll
+    ? `SELECT ${selectClause} FROM itemlist ${whereClause}`
+    : `SELECT ${selectClause} FROM itemlist ${whereClause} LIMIT ? OFFSET ?`;
 
   db.getConnection((err, connection) => {
     if (err) {
@@ -85,8 +111,8 @@ router.get('/', (req, res) => {
 
       const total = countResults[0].total;
       
-      // Get paginated data - add pageSize and offset to params
-      const dataParams = [...params, pageSize, offset];
+      // Get data - only add LIMIT/OFFSET params when actually paginating
+      const dataParams = fetchAll ? params : [...params, pageSize, offset];
       
       connection.query(dataSql, dataParams, (dataErr, results) => {
         connection.release(); // Release only once here

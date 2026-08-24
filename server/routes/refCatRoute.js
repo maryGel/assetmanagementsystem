@@ -59,7 +59,7 @@ router.get('/:id', (req, res) => {
 
 // POST create new category
 router.post('/', (req, res) => {
-  const { xCode, category } = req.body;
+  const { xCode, category, AssetGrpCode = '' } = req.body;
   // console.log('POST /api/refCat - Creating category:', {xCode, category });
   
   if (!category) {
@@ -71,8 +71,8 @@ router.post('/', (req, res) => {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    const sql = 'INSERT INTO refcategory (xCode, category ) VALUES (?, ?)';
-    const params = [xCode, category || ''];
+    const sql = 'INSERT INTO refcategory (xCode, category, AssetGrpCode) VALUES (?, ?, ?)';
+    const params = [xCode, category || '', AssetGrpCode || ''];
     
     connection.query(sql, params, (error, result) => {
       connection.release();
@@ -86,7 +86,8 @@ router.post('/', (req, res) => {
         message: 'Category created successfully', 
         id: result.insertId,
         category: category,
-        xCode: xCode || ''
+        xCode: xCode || '',
+        AssetGrpCode: AssetGrpCode || ''
       });
     });
   });
@@ -95,7 +96,7 @@ router.post('/', (req, res) => {
 // PUT update category
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { xCode, category } = req.body;
+  const { xCode, category, AssetGrpCode = '' } = req.body;
   // console.log(`PUT /api/refCat/${id} - Updating category to:`, {xCode, category});
   
   if (!category) {
@@ -107,8 +108,8 @@ router.put('/:id', (req, res) => {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    const sql = 'UPDATE refcategory SET xCode = ?, category = ? WHERE id = ?';
-    const params = [xCode, category || '', id];    
+    const sql = 'UPDATE refcategory SET xCode = ?, category = ?, AssetGrpCode = ? WHERE id = ?';
+    const params = [xCode, category || '', AssetGrpCode || '', id];    
     
     connection.query(sql, params, (error, result) => {
       connection.release();

@@ -68,7 +68,7 @@ const getPresetDates = (presetId) => {
   }
 };
 
-const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30' }) => {
+const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30', includeAllPeriods = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(initialPreset);
   const [startDate, setStartDate] = useState(null);
@@ -83,6 +83,7 @@ const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30' }) => 
   const isInitialMount = useRef(true);
 
   const options = useMemo(() => [
+    ...(includeAllPeriods ? [{ id: 'all', label: 'All Periods' }] : []),
     { id: 'today', label: 'Today' },
     { id: 'this-month', label: 'This Month' },
     { id: 'last-7', label: 'Last 7 Days' },
@@ -90,7 +91,7 @@ const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30' }) => 
     { id: 'last-60', label: 'Last 60 Days' },
     { id: 'last-90', label: 'Last 90 Days' },
     { id: 'custom', label: 'Custom Range' }
-  ], []);
+  ], [includeAllPeriods]);
 
   const safeOnDateRangeChange = useCallback((range) => {
     if (onDateRangeChange && typeof onDateRangeChange === 'function') {
@@ -140,9 +141,7 @@ const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30' }) => 
       // Clear custom date inputs
       setDateRange({ startDate: '', endDate: '' });
       
-      if (start && end) {
-        safeOnDateRangeChange({ startDate: start, endDate: end });
-      }
+      safeOnDateRangeChange({ startDate: start, endDate: end });
     } else {
       setStartDate(null);
       setEndDate(null);

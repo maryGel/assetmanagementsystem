@@ -24,6 +24,7 @@ import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
 import { useTRApproval } from '../../../hooks/useTRApproval';
 import { useApprovalActions } from '../../../Utils/approvalActionHandler';
 import { useUsers } from '../../../hooks/useUsers';
+import { openTRPrintPreview } from '../../../Utils/printTransferForm';
 
 export default function TRFormPage(useProps) {
   const { selectedUser, setSelectedUser } = useUsers();
@@ -446,6 +447,17 @@ const refreshData = useCallback(async () => {
     }
   };
 
+  const handlePreview = () => {
+    openTRPrintPreview({
+      currentHeader,
+      currentTRItems,
+      docStatus,
+      companyConfig,
+      userName,
+      totalLevels,
+    });
+  };
+
   return (
     <>
       {/* Save Confirmation Dialog */}
@@ -633,7 +645,7 @@ const refreshData = useCallback(async () => {
         )}
 
         {copyDocNo && (
-          <CustomBtn variant='printBtn' iconType='print'>
+          <CustomBtn variant='printBtn' iconType='print' onClick={handlePreview}>
             Preview
           </CustomBtn>
         )}
@@ -787,7 +799,7 @@ const refreshData = useCallback(async () => {
       </div>    
       
       <ThemeProvider theme={customTheme}>
-        <div className='w-full max-w-[1800px] m-auto lg:px-10 rounded-lg'>
+        <div className='w-full m-auto rounded-lg lg:px-10'>
           <TransferTabs
             state={state}
             isCreating={state.isCreating}

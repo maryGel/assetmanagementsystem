@@ -79,7 +79,7 @@ const AssetQrPrint = () => {
       const term = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(asset => 
         (asset.FacNO?.toLowerCase().includes(term) || false) ||
-        (asset.Description?.toLowerCase().includes(term) || false) ||
+        (asset.FacName?.toLowerCase().includes(term) || false) ||
         (asset.serialNo?.toLowerCase().includes(term) || false) ||
         (asset.ItemLocation?.toLowerCase().includes(term) || false) ||
         (asset.Department?.toLowerCase().includes(term) || false) ||
@@ -221,7 +221,7 @@ const AssetQrPrint = () => {
           </div>
           <div style="text-align:left; font-size:${size.fontSize}; line-height:1.15; overflow:hidden; min-width:0; flex:1;">
             <div style="font-weight:bold; font-size:calc(${size.fontSize} + 1px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${asset.FacNO}</div>
-            ${printOptions.includeAssetInfo ? `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${asset.Description || ''}</div>` : ''}
+            ${printOptions.includeAssetInfo ? `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${asset.FacName || ''}</div>` : ''}
             ${printOptions.includeSerialNo && asset.serialNo ? `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">SN: ${asset.serialNo}</div>` : ''}
             ${printOptions.includeLocation && asset.ItemLocation ? `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Loc: ${asset.ItemLocation}</div>` : ''}
             ${printOptions.includeDepartment && asset.Department ? `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Dept: ${asset.Department}</div>` : ''}

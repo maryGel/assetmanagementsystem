@@ -117,10 +117,21 @@ export const useAssetMasterData = () => {
     const fetchAllAssets = async () => {
       try {
         console.log('Fetching all assets for dropdown...');
+        // fetchAll=true skips LIMIT/OFFSET so every row comes back, and
+        // `columns` trims the payload to just what the dropdown/filter UI
+        // and dashboard rollups actually use — pulling every column
+        // (Picpath, Description, Remarks, suppName, etc.) on 15,000+ rows
+        // was slow enough to blow past the request timeout.
+        // timeout is bumped for this one call as a safety net; it can be
+        // removed once the trimmed payload proves consistently fast.
         const response = await api.get('/itemlist', { 
-          params: { pageSize: 10000, page: 1 }
+          params: {
+            fetchAll: true,
+            columns: 'FacNO,FacName,CATEGORY,ItemClass,Department,ItemLocation,xStatus,AAmount,Abre,serialNo,AssetGrpCode'
+          },
+          timeout: 30000
         });
-        console.log('All assets fetched:', response.data.data?.length);
+        console.log('All assets fetched:', response.data.data?.length, 'of', response.data.total);
         dispatch({ type: 'SET_ALL_ASSETS', payload: response.data.data || [] });
       } catch (error) {
         console.error('Error fetching all assets:', error);

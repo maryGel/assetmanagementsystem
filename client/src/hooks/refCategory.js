@@ -30,7 +30,8 @@ export const useRefCategory = (useProps, deps = []) => {
           ...item,
           id: item.id || `temp-${index}`,
           xCode: item.xCode,
-          category: item.category
+          category: item.category,
+          AssetGrpCode: item.AssetGrpCode ?? ''
         }));
         
         setRefCategoryData(dataWithID);
@@ -47,17 +48,18 @@ export const useRefCategory = (useProps, deps = []) => {
 
   
   // Create category
-  const createRefCategory = async (xCode = '', category) => {
+  const createRefCategory = async (xCode = '', category, AssetGrpCode = '') => {
     try {
       setActionLoading(true);
       setError(null);
 
-      const response = await api.post('/api/refCat', { xCode, category});
+      const response = await api.post('/api/refCat', { xCode, category, AssetGrpCode });
 
       const created = {
         id: response.data.id,
         xCode: response.data.xCode,
-        category: response.data.category
+        category: response.data.category,
+        AssetGrpCode: response.data.AssetGrpCode ?? ''
       }
 
       setRefCategoryData(prev => [...prev, created]);
@@ -74,16 +76,16 @@ export const useRefCategory = (useProps, deps = []) => {
   };
 
   // Update category
-  const updateRefCategory = async (id, xCode = '', category) => {
+  const updateRefCategory = async (id, xCode = '', category, AssetGrpCode = '') => {
     try {
       setActionLoading(true);
       setError(null);
 
-      const response = await api.put(`/api/refCat/${id}`, { xCode, category });
+      const response = await api.put(`/api/refCat/${id}`, { xCode, category, AssetGrpCode });
       // Update the local state
 
       setRefCategoryData(prev =>
-        prev.map(item => item.id ? {...item, xCode, category} : item))
+        prev.map(item => item.id === id ? {...item, xCode, category, AssetGrpCode} : item))
 
       return response.data;
 

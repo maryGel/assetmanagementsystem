@@ -28,11 +28,11 @@ export default function AssetDisplayValue({asset, isEditing, setIsEditing, onFie
           <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500'>Depreciated Cost:</span>
           <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>00.00</span>
           <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500'>Book Value:</span>
-          <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>00.00</span>
+          <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>98,521.00</span>
           <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500'>Life in Years:</span>
           <input type='text' className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500' value={asset.Percent} disabled readOnly />
           <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500'>Deactivation on:</span>
-          <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>01/24/2025</span>
+          <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'></span>
           <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500'>Depreciation Type:</span>
           <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>Straight Line</span>
         </div>      

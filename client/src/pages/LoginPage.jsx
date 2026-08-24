@@ -1,6 +1,6 @@
 import { useState } from "react";
 // MUI
-import { TextField, InputAdornment } from '@mui/material';
+import { CircularProgress, InputAdornment, TextField } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import KeyIcon from '@mui/icons-material/Key';
 import { api } from '../api/axios';
@@ -114,6 +114,16 @@ function LoginPage({setHeaderTitle, setUsername}) {
 
   return (
     <>
+      {isLoading && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/35"
+          role="status"
+          aria-live="polite"
+        >
+          <CircularProgress size={52} sx={{ color: 'white' }} />
+          <p className="text-sm font-medium text-white">Signing in…</p>
+        </div>
+      )}
       <div className={`flex h-screen `}>
         <section className={`grid w-full place-content-center bg-[url('/loginBg.png')] bg-cover`}>
           <h1 className={`font-sans lg:p-4 lg:text-2xl tracking-wider text-center justify-center p-3`}>

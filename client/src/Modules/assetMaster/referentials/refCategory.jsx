@@ -6,12 +6,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import DownloadIcon from '@mui/icons-material/Download';
 import CancelIcon from '@mui/icons-material/Cancel';
+import Autocomplete from '@mui/material/Autocomplete';
 import AddIcon from '@mui/icons-material/Add';
 
 import { IconButton, ThemeProvider, TextField, TablePagination, Snackbar, Alert, Dialog } from '@mui/material';
 
 // Custom hooks
 import { useRefCategory } from '../../../hooks/refCategory';
+import { useRefAssetGroup } from '../../../hooks/refAssetGroup';
 import { useEditableTable } from '../../../Utils/useEditableTable';
 
 // Custom table utilities & theme
@@ -32,6 +34,7 @@ export default function RefCategory({useProps, openTab,}) {
     updateRefCategory,
     deleteRefCategory,
   } = useRefCategory(useProps); 
+  const { assetGroups, isLoading: assetGroupsLoading, error: assetGroupsError } = useRefAssetGroup();
 
   const {handleResizeMouseDown, theaderStyle, tbodyStyle} = useColumnWidths();
 
@@ -72,6 +75,7 @@ export default function RefCategory({useProps, openTab,}) {
         id: `tmp-${crypto.randomUUID()}`,
         xCode: '',
         category: '',
+        AssetGrpCode: '',
         isNew: true
       };
 
@@ -118,11 +122,11 @@ export default function RefCategory({useProps, openTab,}) {
       // Execute saving
       try {
         if (editedRow.isNew) {
-          await createRefCategory(editedRow.xCode, editedRow.category)
+          await createRefCategory(editedRow.xCode, editedRow.category, editedRow.AssetGrpCode)
           showSnackbar('New Category has been created!')
           
         } else {
-          await updateRefCategory(editedRow.id, editedRow.xCode, editedRow.category);
+          await updateRefCategory(editedRow.id, editedRow.xCode, editedRow.category, editedRow.AssetGrpCode);
           showSnackbar('Changes has been saved!')
         }
 
@@ -186,7 +190,8 @@ export default function RefCategory({useProps, openTab,}) {
   const filteredData = data.filter(item =>
     item.id === editingRowId ||
     item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.xCode?.toLowerCase().includes(searchQuery.toLowerCase())
+    item.xCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.AssetGrpCode?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const paginatedRows = filteredData.slice(
@@ -319,6 +324,22 @@ export default function RefCategory({useProps, openTab,}) {
                         />
                       </di>
                     </th>
+                    {/* Asset Group */}
+                    <th
+                      className='relative p-2 text-sm font-semibold text-left text-gray-700 border-r border-gray-200'
+                      style={{ ...theaderStyle('AssetGrpCode'), width: 400, minWidth: 400 }}
+                      onClick={() => handleSort('AssetGrpCode')}
+                    >
+                      <div className='flex justify-between'>
+                        <span className='mr-2'>Asset Group</span>
+                        <RenderSortIcon columnKey='AssetGrpCode' sortConfig={sortConfig} />
+                        <div
+                          onMouseDown={(e) => handleResizeMouseDown('AssetGrpCode', e)}
+                          style={resizeColumn}
+                          title="Resize column"
+                        />
+                      </div>
+                    </th>
                     <th className='p-2 text-sm text-center'>Action</th>
                   </tr>
                 </thead>
@@ -342,7 +363,6 @@ export default function RefCategory({useProps, openTab,}) {
                         row.xCode
                       )}
                     </td>
-
                     {/* Category Name column */}
                     <td className='p-1 pl-2'style={tbodyStyle('category')} >
                     {editingRowId === row.id? (
@@ -354,6 +374,26 @@ export default function RefCategory({useProps, openTab,}) {
                         />
                       ) : (
                         row.category
+                      )}
+                    </td>
+                    {/* Asset Group column */}
+                    <td className='p-1 pl-2' style={{ ...tbodyStyle('AssetGrpCode'), width: 400, minWidth: 400, maxWidth: 400 }}>
+                      {editingRowId === row.id ? (
+                        <Autocomplete
+                          value={assetGroups.find((group) => group.AssetGrpCode === row.AssetGrpCode) || null}
+                          options={assetGroups}
+                          getOptionLabel={(group) => `${group.AssetGrpCode} — ${group.AssetGroup}`}
+                          isOptionEqualToValue={(option, value) => option.AssetGrpCode === value.AssetGrpCode}
+                          onChange={(e, group) => updateCell(row.id, 'AssetGrpCode', group?.AssetGrpCode || '')}
+                          disabled={assetGroupsLoading || !!assetGroupsError}
+                          className="w-full p-1 bg-white border-b"
+                          renderInput={(params) => <TextField {...params} size="small" placeholder="Select asset group" />}
+                        />
+                      ) : (
+                        (() => {
+                          const group = assetGroups.find((item) => item.AssetGrpCode === row.AssetGrpCode);
+                          return group ? `${group.AssetGrpCode} — ${group.AssetGroup}` : row.AssetGrpCode;
+                        })()
                       )}
                     </td>
                       {/* Edit Button */}

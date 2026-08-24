@@ -2,7 +2,7 @@ export const assetUtilList= [
   {
     id: 1,
     title: 'Gen Settings',
-    link: '/assetUtilities/assetSettings',
+    link: '/systemSetup/companyConfig',
     imgSrc: '/icons/menu_icons/settings.png',
     headerTitle: 'General Settings',
   },

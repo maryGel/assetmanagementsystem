@@ -48,6 +48,7 @@ export default defineConfig({
       '/jo_evalRoute': 'http://localhost:3000',
       '/companyConfig': 'http://localhost:3000',
       '/physicalCount': 'http://localhost:3000',
+      '/refAssetGroup': 'http://localhost:3000'
     }
   },
   // Add base URL for Vercel

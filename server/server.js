@@ -1,4 +1,4 @@
-  /**************************************************
+/**************************************************
    * AMS PROJECT — Hybrid Server
    * - Vite React (same-origin)
    * - API-only (future use)
@@ -26,6 +26,7 @@
   import refLocationRoute from './routes/refLocationRoute.js';
   import refDeptRoute from './routes/refDeptRoute.js';
   import refEmpRoute from './routes/refEmpRoute.js';
+  import refAssetGroupRoute from './routes/refAssetGrpRoute.js';
   import authRoute from './routes/authRoute.js';
   import usersRoute from './routes/usersRoute.js';
   import accessRoute from './routes/accessRoute.js';
@@ -122,9 +123,11 @@
     database: process.env.DB_NAME || 'ams1',
     port: 33060,
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 25, // was 10 — too tight once the dashboard's ~7 concurrent
+                         // requests are added to normal traffic from other pages;
+                         // login queries were queuing behind them and timing out
     queueLimit: 0,
-    connectTimeout: 30000,
+    connectTimeout: 10000,
     timezone: '+08:00', // or your local timezone (e.g., 'UTC', 'Asia/Manila')
     dateStrings: true,  // THIS IS KEY - returns dates as strings, not Date objects
   };
@@ -173,6 +176,7 @@
   app.use('/refLocation', refLocationRoute);
   app.use('/refDepartment', refDeptRoute);
   app.use('/refEmployee', refEmpRoute);
+  app.use('/refAssetGroup', refAssetGroupRoute);
   app.use('/accessRights', accessRoute);
   app.use('/colorsRoute', colorsRoute);
   app.use('/secRoutes', sectionsRoute);
@@ -221,4 +225,4 @@
     console.log(`🚀 Local Server running on http://localhost:${PORT}`);
     console.log(`📡 Target DB Host: 192.168.64.5`);
     console.log('='.repeat(50));
-  });         
+  });

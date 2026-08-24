@@ -31,6 +31,20 @@ const getDefaultLast30Days = () => {
     return { startDate: start, endDate: end };
 };
 
+const MAINTENANCE_STATUS_OPTIONS = [
+    { value: 'Not Started', label: 'Not Started' },
+    { value: 'Ongoing', label: 'Ongoing' },
+    { value: 'Completed', label: 'Completed' }
+];
+
+const normalizeMaintenanceStatus = (status) => {
+    const value = String(status || '').trim().toLowerCase();
+    if (value === 'ongoing') return 'Ongoing';
+    if (value === 'not-started' || value === 'not started' || value === '') return 'Not Started';
+    if (value === 'done' || value === 'completed') return 'Completed';
+    return status;
+};
+
 function MaintenanceFormDesktop({
     joHeaders,
     joDetails,
@@ -39,6 +53,8 @@ function MaintenanceFormDesktop({
     updateJOHeader,
     updateJODetails,
     isLoading: externalLoading = false,
+    initialDatePreset = 'last-30',
+    initialStatuses = [],
 }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(externalLoading);
@@ -47,6 +63,9 @@ function MaintenanceFormDesktop({
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [validationError, setValidationError] = useState(null);
+    const [maintenanceStatuses, setMaintenanceStatuses] = useState(() =>
+        initialStatuses.map(normalizeMaintenanceStatus).filter(Boolean)
+    );
 
     const {
       fetchWorkOrderWithExpenses,
@@ -58,6 +77,10 @@ function MaintenanceFormDesktop({
     
     // Date range state with localStorage persistence
     const [dateRange, setDateRange] = useState(() => {
+        if (initialDatePreset === 'all') {
+            return { startDate: null, endDate: null };
+        }
+
         const savedRange = localStorage.getItem('maintenanceDateRange');
         if (savedRange) {
             try {
@@ -74,6 +97,15 @@ function MaintenanceFormDesktop({
         }
         return getDefaultLast30Days();
     });
+
+    // Dashboard links deliberately override the saved range/statuses to show
+    // maintenance needing attention across all periods.
+    useEffect(() => {
+        setMaintenanceStatuses(initialStatuses.map(normalizeMaintenanceStatus).filter(Boolean));
+        if (initialDatePreset === 'all') {
+            setDateRange({ startDate: null, endDate: null });
+        }
+    }, [initialDatePreset, initialStatuses]);
 
     // Save date range to localStorage whenever it changes
     useEffect(() => {
@@ -127,7 +159,7 @@ function MaintenanceFormDesktop({
     // Reset page when filters change
     useEffect(() => {
         setPage(0);
-    }, [searchTerm, dateRange]);
+    }, [searchTerm, dateRange, maintenanceStatuses]);
 
     // Generate Work Order number
     const generateWorkOrderNumber = () => {
@@ -811,8 +843,7 @@ function MaintenanceFormDesktop({
             
             setDateRange({ startDate: start, endDate: end });
         } else {
-            const defaultRange = getDefaultLast30Days();
-            setDateRange(defaultRange);
+            setDateRange({ startDate: null, endDate: null });
         }
         setPage(0);
     }, []);
@@ -858,6 +889,12 @@ function MaintenanceFormDesktop({
                 b.JO_No.localeCompare(a.JO_No)
             );
 
+        if (maintenanceStatuses.length > 0) {
+            filtered = filtered.filter(jo =>
+                maintenanceStatuses.includes(normalizeMaintenanceStatus(jo.main_stat))
+            );
+        }
+
         if (keyword) {
             filtered = filtered.filter(jo => {
                 const status = jo.main_stat || "Not Started";
@@ -888,7 +925,7 @@ function MaintenanceFormDesktop({
         }
 
         return filtered;
-    }, [joHeaders, searchTerm, dateRange]);
+    }, [joHeaders, searchTerm, dateRange, maintenanceStatuses]);
 
     // Get total items count
     const totalItems = filteredJO.length;
@@ -949,9 +986,9 @@ function MaintenanceFormDesktop({
     return (
         <div className="flex flex-col h-full">
             {/* Header with Search and Filters */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-800">Maintenance</h3>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <div className="relative">
                         <SearchIcon className="absolute text-gray-400 transform -translate-y-1/2 left-3 top-1/2" fontSize="small" />
                         <input
@@ -959,9 +996,29 @@ function MaintenanceFormDesktop({
                             placeholder="Search here"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                            className="pl-9 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-44 sm:w-56 md:w-64"
                         />
                     </div>
+                    <FormControl size="small" sx={{ minWidth: 220 }}>
+                        <InputLabel id="maintenance-status-filter-label">Status</InputLabel>
+                        <Select
+                            labelId="maintenance-status-filter-label"
+                            multiple
+                            value={maintenanceStatuses}
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                setMaintenanceStatuses(typeof value === 'string' ? value.split(',') : value);
+                            }}
+                            label="Status"
+                            renderValue={(selected) => selected.length ? selected.join(', ') : 'All statuses'}
+                        >
+                            {MAINTENANCE_STATUS_OPTIONS.map(option => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                     <button
                         onClick={handleOptionsOpen}
                         className={`
@@ -1009,21 +1066,28 @@ function MaintenanceFormDesktop({
                 <div className="py-3 mt-2 border-b border-gray-200 rounded-lg bg-gray-50/80">
                     <HistoryDatePicker 
                         onDateRangeChange={handleDateRangeChange}
-                        initialPreset="last-30"
+                        initialPreset={initialDatePreset}
+                        includeAllPeriods={initialDatePreset === 'all'}
                     />
                 </div>
             )}
 
             {/* Filter Summary */}
-            {(dateRange?.startDate || searchTerm) && (
+            {(dateRange?.startDate || searchTerm || maintenanceStatuses.length > 0) && (
                 <div className="px-4 py-2 mt-3 text-xs text-gray-600 border border-blue-100 rounded-lg bg-blue-50">
                     <div className="flex flex-wrap items-center gap-3">
-                        {dateRange?.startDate && dateRange?.endDate && (
-                            <span>
-                                Date: <strong>
-                                    {dateRange.startDate.toLocaleDateString()} - {dateRange.endDate.toLocaleDateString()}
-                                </strong>
-                            </span>
+                        <span>
+                            Date: <strong>
+                                {dateRange?.startDate && dateRange?.endDate
+                                    ? `${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`
+                                    : 'All Periods'}
+                            </strong>
+                        </span>
+                        {maintenanceStatuses.length > 0 && (
+                            <>
+                                <span>|</span>
+                                <span>Status: <strong>{maintenanceStatuses.join(', ')}</strong></span>
+                            </>
                         )}
                         {searchTerm && (
                             <>
@@ -1158,7 +1222,7 @@ function MaintenanceFormDesktop({
             {/* Work Order Dialog */}
             <Dialog open={openWorkOrderDialog} onClose={() => setOpenWorkOrderDialog(false)} maxWidth="xl" fullWidth>
                 <DialogTitle>
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                             <h2 className="text-lg font-semibold">
                                 Work Order
@@ -1383,7 +1447,7 @@ function MaintenanceFormDesktop({
                         </h4>
                         {workOrderData.items[selectedItemIndex] && (
                             <div>
-                                <div className="flex items-center justify-between mb-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                                     <div className="text-sm text-gray-600">
                                         <span className="font-medium">Asset No:</span> {workOrderData.items[selectedItemIndex].FAC_NO}
                                         <span className="ml-4">
@@ -1483,7 +1547,7 @@ function MaintenanceFormDesktop({
                     )}
                 </DialogTitle>
                 <DialogContent>
-                    <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="grid grid-cols-1 gap-4 mt-2 sm:grid-cols-2">
                         <TextField
                           label="Date"
                           type="date"
@@ -1585,7 +1649,7 @@ function MaintenanceFormDesktop({
                           variant="outlined"
                           multiline
                           rows={3}
-                          className="col-span-2"
+                          className="sm:col-span-2"
                           disabled={isSaving}
                         />
                     </div>

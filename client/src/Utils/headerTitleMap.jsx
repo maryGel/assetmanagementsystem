@@ -33,6 +33,7 @@ export const headerTitleMap = {
   
   // System Setup Pages
   "/systemSetup/user/userProfile": "Roles and Authorizations",
+  "/systemSetup/companyConfig": "General Settings",
 };
 
 
@@ -40,7 +41,6 @@ export const getBackPath = (currentPath) => {
   // Asset Master Pages
   if (currentPath.startsWith('/assetFolder/assetMasterDisplay')) return '/assetFolder/pages/assetMasterList';
   if (currentPath.startsWith('/assetFolder/createAsset')) return '/assetFolder/pages/assetMasterList';
-  if (currentPath.startsWith('/systemSetup/user/userProfile')) return '/Home/SystemSetup';
   if (currentPath.startsWith('/assetFolder/pages')) return '/Home/AssetMasterPage';
 
   // Movement Pages
@@ -60,5 +60,9 @@ export const getBackPath = (currentPath) => {
 
   // Physical Count Session Pages
   if (currentPath.startsWith('/physicalCount/session/:id')) return '/Home/PhysicalCount';
+
+  // System Setup Pages
+  if (currentPath.startsWith('/systemSetup/user/userProfile')) return '/Home/SystemSetup';
+  if (currentPath.startsWith('/systemSetup/companyConfig')) return '/Home/SystemSetup';
 
 };

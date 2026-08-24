@@ -12,6 +12,7 @@ import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
+import { openALPrintPreview } from '../../../Utils/printLostAssetForm'
 
 // Custom Hooks
 import { useAD_h } from '../../../hooks/useAD_h';
@@ -440,6 +441,17 @@ const handleEmployeeChange = (event, newValue) => {
     setLocalSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  const handlePreview = () => {
+    openALPrintPreview({
+      currentHeader: baseHeader,
+      currentALItems: state.assetLostDetails,
+      docStatus,
+      companyConfig,
+      userName,
+      totalLevels,
+    });
+  };
+
   const buttonConfig = getButtonConfig(state, baseHeader, canApprove);
 
   // Warn about unsaved changes
@@ -653,7 +665,7 @@ const handleEmployeeChange = (event, newValue) => {
         )}
 
         {copyDocNo && (
-          <CustomBtn variant='printBtn' iconType='print'>
+          <CustomBtn variant='printBtn' iconType='print' onClick={handlePreview}>
             Preview
           </CustomBtn>
         )}
@@ -788,7 +800,7 @@ const handleEmployeeChange = (event, newValue) => {
       </div>    
       
       <ThemeProvider theme={customTheme}>
-        <div className='w-full max-w-[1800px] m-auto lg:px-10 rounded-lg'>
+        <div className='w-full m-auto rounded-lg lg:px-10'>
           <AssetLostTabs
             state={state}
             isCreating={state.isCreating}

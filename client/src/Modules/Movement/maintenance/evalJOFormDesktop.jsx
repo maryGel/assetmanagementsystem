@@ -36,11 +36,17 @@ function EvalJOFormDesktop({
   error: externalError = null,
   snackbar,
   showToast, 
-  handleSnackbarClose
+  handleSnackbarClose,
+  initialFilter = 'Pending',
+  initialDatePreset = 'last-30'
 }) {
   // ALL HOOKS AT THE TOP
-  const [filter, setFilter] = useState('Pending');
+  const [filter, setFilter] = useState(initialFilter);
   const [dateRange, setDateRange] = useState(() => {
+    if (initialDatePreset === 'all') {
+      return { startDate: null, endDate: null };
+    }
+
     const savedRange = localStorage.getItem('evalDateRange');
     if (savedRange) {
       try {
@@ -66,6 +72,15 @@ function EvalJOFormDesktop({
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Dashboard links intentionally override the saved range so every pending
+  // evaluation is visible, regardless of when the job order was created.
+  useEffect(() => {
+    setFilter(initialFilter);
+    if (initialDatePreset === 'all') {
+      setDateRange({ startDate: null, endDate: null });
+    }
+  }, [initialFilter, initialDatePreset]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -458,7 +473,7 @@ function EvalJOFormDesktop({
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search here"
-          className="w-48 py-1.5 pl-9 pr-8 text-sm transition-colors border border-gray-300 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="w-36 py-1.5 pl-9 pr-8 text-sm transition-colors border border-gray-300 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:w-48"
           autoComplete="off"
         />
         {searchQuery && (
@@ -502,7 +517,11 @@ function EvalJOFormDesktop({
   {/* Filter Panel */}
   {isOptionsOpen && (
     <div className="py-3 mt-2 border-b border-gray-200 rounded-lg bg-gray-50/80">
-      <HistoryDatePicker onDateRangeChange={handleDateRangeChange} />
+      <HistoryDatePicker
+        onDateRangeChange={handleDateRangeChange}
+        initialPreset={initialDatePreset}
+        includeAllPeriods={initialDatePreset === 'all'}
+      />
     </div>
   )}
 
@@ -518,13 +537,13 @@ function EvalJOFormDesktop({
         ) : (
           // Normal filter display
           <>
-            {dateRange?.startDate && dateRange?.endDate && (
-              <span>
-                Date: <strong>
-                  {dateRange.startDate.toLocaleDateString()} - {dateRange.endDate.toLocaleDateString()}
-                </strong>
-              </span>
-            )}
+            <span>
+              Date: <strong>
+                {dateRange?.startDate && dateRange?.endDate
+                  ? `${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`
+                  : 'All Periods'}
+              </strong>
+            </span>
             <span>|</span>
             <span>
               Filter: <strong>{filter}</strong>
@@ -557,9 +576,9 @@ function EvalJOFormDesktop({
     </div>
   )}
 
-        {/* Job Orders List - Half Width */}
-        <div className='grid grid-cols-[40rem_1fr] gap-2'>
-          <div className="w-full p-2 mt-8 overflow-y-auto" id="jo-list-container">
+        {/* Job Orders List - Half Width on desktop, stacked on tablet/mobile */}
+        <div className='grid grid-cols-1 gap-2 lg:grid-cols-[28rem_1fr] xl:grid-cols-[32rem_1fr]'>
+          <div className="w-full min-w-0 p-2 mt-8 overflow-y-auto" id="jo-list-container">
             {currentItems.length === 0 ? (
               <div className="flex justify-center h-full">
                 <div className="text-center text-gray-500">
@@ -716,7 +735,7 @@ function EvalJOFormDesktop({
             )}
           </div>
           
-          <div className='flex'>
+          <div className='flex min-w-0'>
             {/* Selected JO Detail View */}
             {selectedJO && (
               <EvalJO

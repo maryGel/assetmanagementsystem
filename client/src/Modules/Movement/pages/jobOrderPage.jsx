@@ -25,6 +25,10 @@ import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
 import { useJobOrderApproval } from '../../../hooks/useJobOrderApproval';
 import { useApprovalActions } from '../../../Utils/approvalActionHandler';
 import { useUsers } from '../../../hooks/useUsers';
+import { useApprovalLogs } from '../../../hooks/useApprovalLogs';
+
+// Print utility
+import { openJOPrintPreview } from '../../../Utils/printJobOrder';
 
 export default function JOFormPage(useProps) {
 
@@ -116,6 +120,18 @@ export default function JOFormPage(useProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const copyDocNo = searchParams.get('docId');
   const isCreatingRef = useRef(false);
+
+  // Approval logs for this JO (used to populate the printable JO's approval/signature section)
+  const { approvalLogs } = useApprovalLogs(useProps);
+  const joApprovalLogs = (approvalLogs || []).filter(
+    (log) =>
+      log.TRNO === copyDocNo &&
+      (log.Module === 'Job Order' ||
+        log.Module === 'Transfer (Internal)' ||
+        log.Module === 'Disposal' ||
+        log.Module === 'Asset Accountability' ||
+        log.Module === 'Lost Asset')
+  );
 
 
     // Fetch total levels
@@ -510,6 +526,19 @@ const refreshData = useCallback(async () => {
 
   const buttonConfig = getButtonConfig(state, baseHeader, canApprove);
 
+  // Open a professional, printable version of this Job Order in a new tab
+  const handlePreviewPrint = () => {
+    openJOPrintPreview({
+      currentHeader,
+      currentJOItems,
+      docStatus,
+      companyConfig,
+      userName,
+      totalLevels,
+      approvalLogs: joApprovalLogs,
+    });
+  };
+
   // warn users if they try to leave with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -767,6 +796,7 @@ const refreshData = useCallback(async () => {
             variant='printBtn'
             iconType='print'
             title='Preview and Print'
+            onClick={handlePreviewPrint}
           >
             Preview
           </CustomBtn>
@@ -901,7 +931,7 @@ const refreshData = useCallback(async () => {
         </form>
       </div>    
       <ThemeProvider theme={customTheme}>
-        <div className='w-full max-w-[1800px] m-auto lg:px-10 rounded-lg'>
+        <div className='w-full m-auto rounded-lg lg:px-10'>
           <JobOrderTabs
             state={state}
             isCreating={state.isCreating}
