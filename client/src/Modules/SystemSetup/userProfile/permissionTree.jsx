@@ -6,6 +6,8 @@ import {
   Typography,
   Stack,
   Paper,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { TreeView, TreeItem } from "@mui/lab";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -15,8 +17,10 @@ import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 
 //Custom hooks
 import { useAccess } from '../../../hooks/useAccess';
+import { useUserPermissions } from '../../../hooks/userUserPermission';
 import DeptAccess from './deptAccess';
 import ApprovalRouting from './approvalRouting';
+import AssignAccessDialog from './assignAccessDialog';
 
 
 function filterTree(nodes, q) {
@@ -51,17 +55,25 @@ function collectAllIds(nodes) {
        P E R M I S S I O N    C O M P O N E N T
   --------------------------------------------------*/}
 
-export default function PermissionsTree({ isEditing, selectedUser, setSelectedUser, isCreating }) {
+export default function PermissionsTree({ isEditing, selectedUser, setSelectedUser, isCreating, formData, onUserChange }) {
   const [checked, setChecked] = useState(new Set());
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState([]);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   
   // Use the hook with selected user
-  const { accessData, loading, error } = useAccess(selectedUser?.user);
+  const { accessData, loading, error, refetch } = useAccess(selectedUser?.user);
+
+  // Full permission catalog - this is the universe the Assign Access
+  // dialog's "Available" column is built from, independent of this user.
+  const { treeData: masterTreeData, loading: masterLoading, error: masterError } = useUserPermissions();
+
+  // The username access rows are saved/loaded under (G_CODE)
+  const gcode = selectedUser?.user;
 
   // Tree data is already transformed from the hook
   const treeData = useMemo(() => {
-    console.log('Tree data from hook:', accessData);
     return accessData || [];
   }, [accessData]);
 
@@ -70,16 +82,11 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
     return collectAllIds(treeData);
   }, [treeData]);
 
-  // Set default selected state based on isEditing
+  // Keep `checked` in sync with what's actually granted to this G_CODE in
+  // user_permissions_granted (via useAccess).
   useEffect(() => {
-    if (!isEditing && allIds.length > 0) {
-      // When not editing, select all permissions by default
-      setChecked(new Set(allIds));
-    } else if (isEditing) {
-      // When editing, start with empty selection
-      setChecked(new Set());
-    }
-  }, [isEditing, allIds]);
+    setChecked(new Set(allIds));
+  }, [allIds]);
 
   // Filter tree data based on search query
   const visibleData = useMemo(() => filterTree(treeData, query), [treeData, query]);
@@ -96,9 +103,25 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
     }
   };
 
+  const handleExpandAll = () => setExpanded(allIds.map(String));
+  const handleCollapseAll = () => setExpanded([]);
 
   const handleSearchChange = (event) => {
     setQuery(event.target.value);
+  };
+
+  const closeSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleAssignSaved = async (newCheckedSet, message) => {
+    setChecked(newCheckedSet);
+    await refetch();
+    setSnackbar({
+      open: true,
+      message: message || 'Access rights saved successfully.',
+      severity: 'success',
+    });
   };
 
   const renderNode = (node) => {
@@ -123,7 +146,6 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
     );
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className='flex justify-between gap-3 flex-3'>
@@ -134,7 +156,6 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className='flex justify-between gap-3 flex-3'>
@@ -152,26 +173,44 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
           User Access Rights
         </Typography>
 
-        <div className='flex justify-between pb-3 ' >          
+        <div className='flex justify-between pb-3' >          
           <TextField
             label="Search"
             variant="outlined"
             size="small"
             value={query}
             onChange={handleSearchChange}
-            sx={{width: 300}}
+            sx={{width: 200}}
           />
-          {isEditing && (
-            <Button 
-              size="small" 
-              variant="body2" 
-              // onClick={handleSelectToggle}
-              disabled={!isEditing && !isCreating }
-              sx={{boxShadow: '0px 4px 8px rgba(0,0,0,0.2)', backgroundColor: '#eceff1', textTransform: 'none'  }}
+          <div className='flex gap-2'>
+            <Button
+              size="small"
+              variant="body2"
+              onClick={handleExpandAll}
+              sx={{ textTransform: 'none' }}
             >
-               <AssignmentTurnedInIcon/> Assign Access
+              Expand All
             </Button>
-          )}
+            <Button
+              size="small"
+              variant="body2"
+              onClick={handleCollapseAll}
+              sx={{ textTransform: 'none' }}
+            >
+              Collapse All
+            </Button>
+            {isEditing && (
+              <Button 
+                size="small" 
+                variant="body2" 
+                onClick={() => setAssignDialogOpen(true)}
+                disabled={!isEditing && !isCreating }
+                sx={{boxShadow: '0px 4px 8px rgba(0,0,0,0.2)', backgroundColor: '#eceff1', textTransform: 'none'  }}
+              >
+                 <AssignmentTurnedInIcon/> Assign Access
+              </Button>
+            )}
+          </div>
         </div>
 
         <Box
@@ -211,19 +250,45 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
 
       {/* Second Paper - Approval Routing */}
       <ApprovalRouting 
-        selectedUser ={selectedUser}
-        isEditing = {isEditing}
-        setSelectedUser = { selectedUser }
+        selectedUser={selectedUser}
+        isEditing={isEditing}
         isCreating={isCreating}
+        formData={formData}
+        onUserChange={onUserChange}
       />
 
       {/* Third Paper - Departmental Access Control */}
       <DeptAccess
-        selectedUser ={selectedUser}
-        isEditing = {isEditing}
-        setSelectedUser = { selectedUser }
+        selectedUser={selectedUser}
+        isEditing={isEditing}
         isCreating={isCreating}
+        formData={formData}
+        onUserChange={onUserChange}
       />
+
+      {/* Assign Access - two-column transfer list */}
+      <AssignAccessDialog
+        open={assignDialogOpen}
+        onClose={() => setAssignDialogOpen(false)}
+        masterTreeData={masterTreeData}
+        masterLoading={masterLoading}
+        masterError={masterError}
+        checked={checked}
+        gcode={gcode}
+        onSaved={handleAssignSaved}
+      />
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={closeSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }} onClose={closeSnackbar}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

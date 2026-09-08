@@ -53,6 +53,7 @@
   import jo_evalRoute from './routes/jo_evalRoute.js';
   import user0002invRoute from './routes/user0002invRoute.js';
   import physicalCountRoutes from './routes/physicalCountRoutes.js';
+  import userPermissionsRoute from './routes/userPermissionsRoute.js';
 
 
 
@@ -201,6 +202,7 @@
   app.use('/jo_evalRoute', jo_evalRoute);
   app.use('/companyConfig', user0002invRoute);
   app.use('/physicalCount', physicalCountRoutes);
+  app.use('/userPermissions', userPermissionsRoute);
 
 
   // React (Vite Dist)

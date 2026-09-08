@@ -245,6 +245,8 @@ export default function UserAccessPage() {
               setSelectedUser={setSelectedUser}
               isEditing={isEditing}
               isCreating={isCreating}
+              formData={formData}
+              onUserChange={updateForm}
               />
           </div>
         }
