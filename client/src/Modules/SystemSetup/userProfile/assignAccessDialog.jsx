@@ -84,7 +84,7 @@ function renderTreeNode(node) {
           />
           <Typography
             variant="body2"
-            sx={{ color: node.own ? "text.primary" : "text.disabled" }}
+            sx={{ color: node.own ? "text.primary" : "text.disabled", fontSize: { xs: '0.78rem', md: '0.875rem' } }}
           >
             {node.label}
           </Typography>
@@ -100,12 +100,17 @@ function TreeColumn({ title, treeData, count, search, onSearchChange, selected, 
   return (
     <Paper
       variant="outlined"
-      sx={{ width: 320, height: 420, display: "flex", flexDirection: "column" }}
+      sx={{
+        width: { xs: '100%', sm: 280, md: 320 },
+        height: { xs: 260, sm: 420 },
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
       <Box sx={{ p: 1 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography variant="subtitle2">{title}</Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="subtitle2" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>{title}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
             {count}
           </Typography>
         </Box>
@@ -293,19 +298,26 @@ export default function AssignAccessDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md">
-      <DialogTitle>Assign Access</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>Assign Access</DialogTitle>
       <DialogContent>
         {masterLoading ? (
-          <Typography sx={{ py: 4 }} align="center" color="text.secondary">
+          <Typography sx={{ py: 4, fontSize: { xs: '0.85rem', md: '1rem' } }} align="center" color="text.secondary">
             Loading permission catalog...
           </Typography>
         ) : masterError ? (
-          <Typography sx={{ py: 4 }} align="center" color="error">
+          <Typography sx={{ py: 4, fontSize: { xs: '0.85rem', md: '1rem' } }} align="center" color="error">
             Error loading permissions: {masterError}
           </Typography>
         ) : (
-        <Box display="flex" alignItems="center" justifyContent="center" gap={2} sx={{ pt: 1 }}>
+        <Box
+          display="flex"
+          flexDirection={{ xs: 'column', sm: 'row' }}
+          alignItems="center"
+          justifyContent="center"
+          gap={2}
+          sx={{ pt: 1 }}
+        >
           <TreeColumn
             title="Available"
             treeData={leftTree}
@@ -318,17 +330,45 @@ export default function AssignAccessDialog({
             onToggleExpand={setLeftExpanded}
           />
 
-          <Box display="flex" flexDirection="column" gap={1}>
-            <IconButton onClick={moveAllRight} disabled={leftIds.size === 0} size="small" title="Move all to selected">
+          <Box
+            display="flex"
+            flexDirection={{ xs: 'row', sm: 'column' }}
+            gap={1}
+          >
+            <IconButton
+              onClick={moveAllRight}
+              disabled={leftIds.size === 0}
+              size="small"
+              title="Move all to selected"
+              sx={{ transform: { xs: 'rotate(90deg)', sm: 'none' } }}
+            >
               <KeyboardDoubleArrowRightIcon />
             </IconButton>
-            <IconButton onClick={moveRight} disabled={leftSelected.length === 0} size="small" title="Move selected">
+            <IconButton
+              onClick={moveRight}
+              disabled={leftSelected.length === 0}
+              size="small"
+              title="Move selected"
+              sx={{ transform: { xs: 'rotate(90deg)', sm: 'none' } }}
+            >
               <ChevronRightArrowIcon />
             </IconButton>
-            <IconButton onClick={moveLeft} disabled={rightSelected.length === 0} size="small" title="Remove selected">
+            <IconButton
+              onClick={moveLeft}
+              disabled={rightSelected.length === 0}
+              size="small"
+              title="Remove selected"
+              sx={{ transform: { xs: 'rotate(90deg)', sm: 'none' } }}
+            >
               <ChevronLeftIcon />
             </IconButton>
-            <IconButton onClick={moveAllLeft} disabled={rightIds.size === 0} size="small" title="Remove all">
+            <IconButton
+              onClick={moveAllLeft}
+              disabled={rightIds.size === 0}
+              size="small"
+              title="Remove all"
+              sx={{ transform: { xs: 'rotate(90deg)', sm: 'none' } }}
+            >
               <KeyboardDoubleArrowLeftIcon />
             </IconButton>
           </Box>
@@ -347,16 +387,16 @@ export default function AssignAccessDialog({
         </Box>
         )}
         {saveError && (
-          <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+          <Typography color="error" variant="body2" sx={{ mt: 1, fontSize: { xs: '0.78rem', md: '0.875rem' } }}>
             {saveError}
           </Typography>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button onClick={onClose} disabled={saving} sx={{ fontSize: { xs: '0.78rem', md: '0.875rem' } }}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || masterLoading}>
+        <Button variant="contained" onClick={handleSave} disabled={saving || masterLoading} sx={{ fontSize: { xs: '0.78rem', md: '0.875rem' } }}>
           {saving ? 'Saving...' : 'Save'}
         </Button>
       </DialogActions>

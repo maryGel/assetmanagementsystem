@@ -134,7 +134,7 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
             <CheckIcon sx={{ fontSize: 'small'}}/>
             <Typography 
               variant="body2" 
-              sx={{ color: !isEditing ? 'gray' : 'text.primary', fontSize: 'medium' }}
+              sx={{ color: !isEditing ? 'gray' : 'text.primary', fontSize: { xs: '0.8rem', md: '0.875rem' } }}
             >
               {node.label}
             </Typography>
@@ -148,9 +148,9 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
 
   if (loading) {
     return (
-      <div className='flex justify-between gap-3 flex-3'>
+      <div className='flex flex-col gap-3 md:flex-row'>
         <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-          <Typography>Loading access data...</Typography>
+          <Typography sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Loading access data...</Typography>
         </Paper>
       </div>
     );
@@ -158,36 +158,61 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
 
   if (error) {
     return (
-      <div className='flex justify-between gap-3 flex-3'>
+      <div className='flex flex-col gap-3 md:flex-row'>
         <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-          <Typography color="error">Error: {error}</Typography>
+          <Typography color="error" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Error: {error}</Typography>
         </Paper>
       </div>
     );
   }
 
   return (
-    <div className='flex justify-between h-auto gap-3 flex-3'>
-      <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-        <Typography variant="subtitle1"  fontWeight="bold" mb={1}>
+    <div className='flex flex-col justify-between h-auto gap-3 md:flex-row'>
+      <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          mb={1}
+          sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
+        >
           User Access Rights
         </Typography>
 
-        <div className='flex justify-between pb-3' >          
+        <div className='flex flex-wrap items-center justify-between gap-2 pb-3' >          
           <TextField
             label="Search"
             variant="outlined"
             size="small"
             value={query}
             onChange={handleSearchChange}
-            sx={{width: 200}}
+            sx={{ width: { xs: '100%', sm: 200 } }}
           />
-          <div className='flex gap-2'>
+          {isEditing && (
+              <Button 
+                size="small" 
+                variant="body2" 
+                onClick={() => setAssignDialogOpen(true)}
+                disabled={!isEditing && !isCreating }
+                sx={{
+                  boxShadow: '0px 4px 8px rgba(0,0,0,0.2)',
+                  backgroundColor: '#eceff1',
+                  textTransform: 'none',
+                  fontSize: { xs: '0.7rem', md: '0.8125rem' },
+                }}
+              >
+                 <AssignmentTurnedInIcon/> Assign Access
+              </Button>
+            )}
+
+         
+        </div>
+        <div className='py-3 '>
+          <div className='flex flex-wrap gap-2'>
             <Button
               size="small"
               variant="body2"
               onClick={handleExpandAll}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
             >
               Expand All
             </Button>
@@ -195,22 +220,13 @@ export default function PermissionsTree({ isEditing, selectedUser, setSelectedUs
               size="small"
               variant="body2"
               onClick={handleCollapseAll}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
             >
               Collapse All
             </Button>
-            {isEditing && (
-              <Button 
-                size="small" 
-                variant="body2" 
-                onClick={() => setAssignDialogOpen(true)}
-                disabled={!isEditing && !isCreating }
-                sx={{boxShadow: '0px 4px 8px rgba(0,0,0,0.2)', backgroundColor: '#eceff1', textTransform: 'none'  }}
-              >
-                 <AssignmentTurnedInIcon/> Assign Access
-              </Button>
-            )}
+            
           </div>
+           
         </div>
 
         <Box

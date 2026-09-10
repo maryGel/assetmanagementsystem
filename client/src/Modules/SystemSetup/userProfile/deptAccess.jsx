@@ -131,8 +131,8 @@ export default function DeptAccess({ isEditing, selectedUser, isCreating, formDa
   // Loading state
   if (loading) {
     return (
-      <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-        <Typography>Loading department data...</Typography>
+      <Paper variant="outlined" sx={{ p: 2, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+        <Typography sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Loading department data...</Typography>
       </Paper>
     );
   }
@@ -140,8 +140,8 @@ export default function DeptAccess({ isEditing, selectedUser, isCreating, formDa
   // Error state
   if (error) {
     return (
-      <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-        <Typography color="error">Error loading departments: {error}</Typography>
+      <Paper variant="outlined" sx={{ p: 2, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+        <Typography color="error" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Error loading departments: {error}</Typography>
       </Paper>
     );
   }
@@ -149,19 +149,24 @@ export default function DeptAccess({ isEditing, selectedUser, isCreating, formDa
   // Check if we have data
   if (!departmentList || departmentList.length === 0) {
     return (
-      <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-        <Typography>No departments available</Typography>
+      <Paper variant="outlined" sx={{ p: 2, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+        <Typography sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>No departments available</Typography>
       </Paper>
     );
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-      <Typography variant="subtitle1"  fontWeight="bold" mb={1}>
+    <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+      <Typography
+        variant="subtitle1"
+        fontWeight="bold"
+        mb={1}
+        sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
+      >
         Department Access Control
       </Typography>
 
-      <Stack direction="row" justifyContent="space-between" alignItems="center" pb={2}>
+      <Stack direction="row" flexWrap="wrap" rowGap={1} justifyContent="space-between" alignItems="center" pb={2}>
         <TextField
           label="Search"
           variant="outlined"
@@ -169,7 +174,7 @@ export default function DeptAccess({ isEditing, selectedUser, isCreating, formDa
           value={query}
           onChange={handleSearchChange}
           disabled={!isEditing}
-          sx={{width: 300}}
+          sx={{ width: { xs: '100%', sm: 300 } }}
         />
 
         {isEditing && (
@@ -178,7 +183,7 @@ export default function DeptAccess({ isEditing, selectedUser, isCreating, formDa
             size="small"
             onClick={handleSelectToggle}
             disabled={!isEditing || visibleData.length === 0}
-            sx={{textTransform: 'none' }}
+            sx={{ textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
           >
             {allSelected ? 'Deselect All' : 'Select All'}
           </Button>
@@ -237,7 +242,7 @@ export default function DeptAccess({ isEditing, selectedUser, isCreating, formDa
                     primaryTypographyProps={{
                       sx: {
                         color: !isEditing ? 'gray' : (isChecked ? 'primary.main' : 'text.primary'),
-                        fontSize: 'medium',
+                        fontSize: { xs: '0.8rem', md: '0.875rem' },
                         fontWeight: isChecked && isEditing ? 500 : 400,
                       }
                     }}
@@ -256,12 +261,12 @@ export default function DeptAccess({ isEditing, selectedUser, isCreating, formDa
         </List>
       </Box>
 
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
-        <Typography variant="caption" color="text.secondary">
+      <Stack direction="row" flexWrap="wrap" rowGap={0.5} justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
           Total: {departmentList.length} | Visible: {visibleData.length} | Selected: {checked.size}
         </Typography>
         {!isEditing && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
             (Read Only)
           </Typography>
         )}

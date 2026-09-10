@@ -90,6 +90,17 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
     ? (formData?.MULTI_APP ?? '')
     : (selectedUser?.MULTI_APP ?? '');
 
+  // Approval routing can only be assigned once the user is flagged as an
+  // Approver. While editing, read the live draft value from formData (kept
+  // in sync via the Approver checkbox in UserInfo); otherwise fall back to
+  // the persisted value on selectedUser.
+  const isApprover = isEditing
+    ? Number(formData?.Approver) === 1
+    : Number(selectedUser?.Approver) === 1;
+
+  // Tree is only interactive when we're editing AND the user is an Approver.
+  const canAssignApprovals = isEditing && isApprover;
+
   const checked = useMemo(() => {
     return new Set(
       String(rawMultiApp)
@@ -109,7 +120,7 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
   };
 
   const handleNodeClick = (node) => {
-    if (!isEditing) return;
+    if (!canAssignApprovals) return;
 
     const codesToToggle = node.children && node.children.length
       ? collectAllCodes([node])
@@ -131,7 +142,7 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
   const allSelected = allCodes.length > 0 && allCodes.every((code) => checked.has(code));
 
   const handleSelectToggle = () => {
-    if (!isEditing) return;
+    if (!canAssignApprovals) return;
     onUserChange({ MULTI_APP: allSelected ? '' : allCodes.join('|') });
   };
 
@@ -140,18 +151,20 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
 
   const renderNode = (node) => {
     const isSelected = isNodeChecked(node);
-    // Blue only while editing; read-only view shows a neutral grey fill
-    // for granted items so it's clear nothing here is currently editable.
-    const showBlue = isEditing && isSelected;
+    // Blue only when the tree is actually assignable (editing + Approver
+    // ticked); read-only / locked view shows a neutral grey fill for
+    // granted items so it's clear nothing here is currently editable.
+    const showBlue = canAssignApprovals && isSelected;
 
     return (
       <TreeItem
         key={node.id}
         nodeId={node.id.toString()}
-        onClick={() => {
+        onClick={(e) => {
           e.stopPropagation(); // prevent bubbling to ancestor TreeItems
           handleNodeClick(node);
         }}
+        sx={{ cursor: canAssignApprovals ? 'pointer' : 'default' }}
         label={
           <Box display="flex" alignItems="center" gap={1} sx={{ py: 0.5 }}>
             <Box
@@ -172,7 +185,7 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
             </Box>
             <Typography
               variant="body2"
-              sx={{ color: !isEditing ? 'gray' : 'text.primary' }}
+              sx={{ color: !canAssignApprovals ? 'gray' : 'text.primary', fontSize: { xs: '0.8rem', md: '0.875rem' } }}
             >
               {node.label}
             </Typography>
@@ -186,25 +199,40 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
 
   if (loading) {
     return (
-      <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-        <Typography>Loading approval routing data...</Typography>
+      <Paper variant="outlined" sx={{ p: 2, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+        <Typography sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Loading approval routing data...</Typography>
       </Paper>
     );
   }
 
   if (error) {
     return (
-      <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-        <Typography color="error">Error loading approval routing: {error}</Typography>
+      <Paper variant="outlined" sx={{ p: 2, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+        <Typography color="error" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Error loading approval routing: {error}</Typography>
       </Paper>
     );
   }
 
   return (
-      <Paper variant="outlined" sx={{ p: 2, width: "100%" }}>
-        <Typography variant="subtitle1" fontWeight="bold" mb={2}>
+      <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, width: '100%', minWidth: 0, flex: { md: 1 } }}>
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          mb={2}
+          sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
+        >
           Approval Routing
         </Typography>
+
+        {isEditing && !isApprover && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mb: 1, display: 'block', fontSize: { xs: '0.7rem', md: '0.75rem' } }}
+          >
+            Tick "Approver" in User Information to assign approval areas.
+          </Typography>
+        )}
 
         <Stack direction="row" spacing={1} justifyContent={'space-between'} alignItems="center" mb={2} flexWrap="wrap" rowGap={1}>
           <TextField
@@ -213,14 +241,14 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
             size="small"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            sx={{ width: 300 }}
+            sx={{ width: { xs: '100%', sm: 300 } }}
           />
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
             <Button
               size="small"
               variant="body2"
               onClick={handleExpandAll}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
             >
               Expand All
             </Button>
@@ -228,16 +256,16 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
               size="small"
               variant="body2"
               onClick={handleCollapseAll}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
             >
               Collapse All
             </Button>
-            {isEditing && (
+            {canAssignApprovals && (
               <Button
                 size="small"
                 variant="body2"
                 onClick={handleSelectToggle}
-                sx={{ textTransform: 'none' }}
+                sx={{ textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.8125rem' } }}
               >
                 {allSelected ? "Deselect All" : "Select All"}
               </Button>
@@ -245,7 +273,16 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
           </Stack>
         </Stack>
 
-        <Box sx={{ border: "1px solid #eee", borderRadius: 1, height: 'auto', overflow: "auto" }}>
+        <Box
+          sx={{
+            border: "1px solid #eee",
+            borderRadius: 1,
+            height: 'auto',
+            overflow: "auto",
+            backgroundColor: !canAssignApprovals ? 'grey.50' : 'transparent',
+            opacity: isEditing && !isApprover ? 0.6 : 1,
+          }}
+        >
           {visibleData.length > 0 ? (
             <TreeView
               defaultCollapseIcon={<ExpandMoreIcon />}
@@ -262,7 +299,7 @@ export default function ApprovalRouting({ isEditing, selectedUser, isCreating, f
           )}
         </Box>
 
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
           Selected: {checked.size} / {allCodes.length}
         </Typography>
       </Paper>

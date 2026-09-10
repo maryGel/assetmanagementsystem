@@ -2,9 +2,9 @@ import { DataGrid } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
 
 const columns = [
-  { field: 'user', headerName: 'Username', width: 100 },
-  { field: 'fname', headerName: 'First Name', width: 130 },
-  { field: 'xlevel', headerName: 'Access Level', width: 200 },
+  { field: 'user', headerName: 'Username', flex: 1, minWidth: 90 },
+  { field: 'fname', headerName: 'First Name', flex: 1, minWidth: 110 },
+  { field: 'xlevel', headerName: 'Access Level', flex: 1.3, minWidth: 140 },
 ];
 
 export default function UseList({
@@ -67,6 +67,10 @@ export default function UseList({
           disableRowSelectionOnClick={isEditing}
           hideFooterSelectedRowCount
           sx={{
+            fontSize: { xs: '0.78rem', md: '0.875rem' },
+            '& .MuiDataGrid-columnHeaders': {
+              fontSize: { xs: '0.78rem', md: '0.875rem' },
+            },
             '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
               outline: 'none',
             },

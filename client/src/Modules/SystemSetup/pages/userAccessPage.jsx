@@ -140,20 +140,20 @@ export default function UserAccessPage() {
 
 
   return (
-    <div className='h-auto p-5 border rounded-lg bg-gray-50 m-7 border-spacing-1'>
+    <div className='h-auto p-3 m-2 border rounded-lg md:p-5 bg-gray-50 md:m-7 border-spacing-1'>
       {/* Header with Search and Buttons */}
-      <div className='flex items-center justify-between mb-4'>
-        <div className='ml-.5'>
+      <div className='flex flex-col gap-3 mb-4 md:flex-row md:items-center md:justify-between'>
+        <div className='ml-0 md:ml-.5'>
             <TextField
               label="Search"
               size="small"
-              className='w-56 bg-white rounded-md'
+              className='w-full bg-white rounded-md md:w-56'
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
         </div>
 
-        <div className='flex gap-2'>
+        <div className='flex flex-wrap gap-2'>
           {isEditing && (
             <CustomBtn
               variant='saveBtn'
@@ -203,8 +203,8 @@ export default function UserAccessPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className='grid grid-cols-[35rem_1fr] border border-spacing-2 bg-white rounded-lg p-2 mb-4'>
-        <div className='p-2'>
+      <div className='grid grid-cols-1 md:grid-cols-[22rem_1fr] lg:grid-cols-[28rem_1fr] xl:grid-cols-[35rem_1fr] border border-spacing-2 bg-white rounded-lg p-2 mb-4 gap-3 md:gap-0'>
+        <div className='min-w-0 p-2'>
           <UseList
             users={users}
             page={page}
@@ -218,7 +218,7 @@ export default function UserAccessPage() {
             setOpenAccess={setOpenAccess}
           />
         </div>
-        <div className='p-2'>
+        <div className='min-w-0 p-2'>
           <UserInfo 
             userData={formData}
             isEditing={isEditing}
@@ -231,7 +231,12 @@ export default function UserAccessPage() {
       </div>
         <div className='flex justify-end'>
           <Button
-            sx = {{background: '#eceff1', padding: 1.5, textTransform: 'none'}}
+            sx = {{
+              background: '#eceff1',
+              padding: { xs: 1, md: 1.5 },
+              textTransform: 'none',
+              fontSize: { xs: '0.75rem', md: '0.875rem' },
+            }}
             onClick = {()=> setOpenAccess(prev => !prev)}
           > 
             See Assigned Access  {openAccess ?  <KeyboardArrowDownIcon/> : <KeyboardArrowRightIcon/> }
@@ -300,9 +305,9 @@ export default function UserAccessPage() {
 
       {/* Optional: Visual indicator for unsaved changes */}
       {hasUnsavedChanges && (
-        <div className="fixed flex items-center gap-2 px-4 py-2 text-yellow-800 bg-yellow-100 rounded-lg shadow-lg bottom-4 right-4">
+        <div className="fixed flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-yellow-800 bg-yellow-100 rounded-lg shadow-lg bottom-4 right-4 z-50">
           <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-          <span className="text-sm font-medium">Unsaved changes</span>
+          <span className="text-xs font-medium md:text-sm">Unsaved changes</span>
         </div>
       )}
     </div>

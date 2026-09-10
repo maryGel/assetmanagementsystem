@@ -29,8 +29,8 @@ export default function UserInfo({
   if (!userData && !isCreating) {
     return (
       <div className='w-full gap-3 p-2 border border-spacing-1'>
-        <h1 className='mb-4 text-gray-700'>User Information</h1>
-        <p className='py-8 text-center text-gray-500'>Select a user to view details</p>
+        <h1 className='mb-4 text-base text-gray-700 md:text-xl'>User Information</h1>
+        <p className='py-8 text-sm text-center text-gray-500 md:text-base'>Select a user to view details</p>
       </div>    
     );
   }
@@ -40,24 +40,24 @@ export default function UserInfo({
 
   return (
     <div className='w-full gap-3 p-2'>
-      <h1 className='mb-8 text-gray-700'>
+      <h1 className='mb-4 text-base text-gray-700 md:mb-8 md:text-xl'>
         User Information 
         {isEditing && !isCreating && (
-          <span className='ml-2 text-sm text-blue-500'>(Editing Mode)</span>
+          <span className='ml-2 text-xs text-blue-500 md:text-sm'>(Editing Mode)</span>
         )}
         {isCreating && (
-          <span className='ml-2 text-sm text-green-500'>(Creating New User)</span>
+          <span className='ml-2 text-xs text-green-500 md:text-sm'>(Creating New User)</span>
         )}
       </h1>
       
       <div className='flex flex-col gap-4 mb-4'>
         {/* Username and Password Row */}
-        <div className='flex gap-2'>
+        <div className='flex flex-wrap gap-2'>
           <TextField
             label="Username"
             variant="outlined"
             size="small"
-            className='w-52'
+            className='w-full sm:w-52'
             value={displayData.user || ''}  // Fixed: was userData.userData
             disabled={!isEditing}
             onChange={(e) => handleChange('user', e.target.value)}  // Fixed: was 'userData'
@@ -67,7 +67,7 @@ export default function UserInfo({
             label="Password"
             variant="outlined"
             size="small"
-            className='w-52'
+            className='w-full sm:w-52'
             type="password"
             value={displayData.password || ''}
             disabled={!isEditing}
@@ -85,12 +85,12 @@ export default function UserInfo({
         </div>
 
         {/* Name Fields */}
-        <div className='flex gap-2'>
+        <div className='flex flex-wrap gap-2'>
           <TextField
             label="First Name"
             variant="outlined"
             size="small"
-            className='w-80'
+            className='w-full sm:w-80'
             value={displayData.fname || ''}
             disabled={!isEditing}
             onChange={(e) => handleChange('fname', e.target.value)}
@@ -99,19 +99,19 @@ export default function UserInfo({
             label="Middle Name"
             variant="outlined"
             size="small"
-            className='w-80'
+            className='w-full sm:w-80'
             value={displayData.mname || ''}
             disabled={!isEditing}
             onChange={(e) => handleChange('mname', e.target.value)}
           />
         </div>
 
-        <div className='flex gap-2'>
+        <div className='flex flex-wrap gap-2'>
           <TextField
             label="Last Name"
             variant="outlined"
             size="small"
-            className='w-80'
+            className='w-full sm:w-80'
             value={displayData.lname || ''}
             disabled={!isEditing}
             onChange={(e) => handleChange('lname', e.target.value)}
@@ -119,12 +119,12 @@ export default function UserInfo({
         </div>
 
         {/* Position and Department */}
-        <div className='flex gap-2'>
+        <div className='flex flex-wrap gap-2'>
           <TextField
             label="Position"
             variant="outlined"
             size="small"
-            className='w-64'
+            className='w-full sm:w-64'
             value={displayData.xPosi || ''}
             disabled={!isEditing}
             onChange={(e) => handleChange('xPosi', e.target.value)}
@@ -138,12 +138,12 @@ export default function UserInfo({
             renderInput={(params) => (
               <TextField {...params} label="Department"   placeholder="Department" />
             )}
-            sx={{ width: '15rem', marginRight: '1rem' }}
+            sx={{ width: { xs: '100%', sm: '15rem' }, marginRight: { sm: '1rem' } }}
           />
         </div>
 
         {/* Access Level and Section */}
-        <div className='flex gap-2'>
+        <div className='flex flex-wrap gap-2'>
           <Autocomplete
             size="small"           
             options={accessLevel}  
@@ -153,7 +153,7 @@ export default function UserInfo({
             renderInput={(params) => (
               <TextField {...params} label="Access Level"   placeholder="Access Level" />
             )}
-            sx={{ width: '20rem', marginRight: '1rem' }}
+            sx={{ width: { xs: '100%', sm: '20rem' }, marginRight: { sm: '1rem' } }}
           />
           <Autocomplete
             size="small"           
@@ -164,7 +164,7 @@ export default function UserInfo({
             renderInput={(params) => (
               <TextField {...params} label="Maintenance"   placeholder="Maintenance" />
             )}
-            sx={{ width: '20rem', marginRight: '1rem' }}
+            sx={{ width: { xs: '100%', sm: '20rem' }, marginRight: { sm: '1rem' } }}
           />
 
         </div>
