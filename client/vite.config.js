@@ -9,7 +9,7 @@ export default defineConfig({
     sourcemap: false
   },
   server: {
-    port: 5173,
+    port: 5174,
     host: true, // Expose to network
     proxy: {
       // Proxy all API requests to your Express server
@@ -49,7 +49,9 @@ export default defineConfig({
       '/companyConfig': 'http://localhost:3000',
       '/physicalCount': 'http://localhost:3000',
       '/refAssetGroup': 'http://localhost:3000',
-      '/userPermissions': 'http://localhost:3000'
+      '/userPermissions': 'http://localhost:3000',
+      '/assetReport': 'http://localhost:3000',
+      '/lineItemReport': 'http://localhost:3000'
     }
   },
   // Add base URL for Vercel

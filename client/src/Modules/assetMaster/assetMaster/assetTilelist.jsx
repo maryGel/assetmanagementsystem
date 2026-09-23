@@ -12,5 +12,12 @@ export const assetTileList = [
     link: '/assetFolder/pages/referentialPage',
     imgSrc: '/icons/menu_icons/assets.png',
     headerTitle: 'Referential Maintenance',
+  },
+  {
+    id: 3,
+    title: 'Create Asset',
+    link: '/assetFolder/createAsset',
+    imgSrc: '/icons/menu_icons/addasset.png',
+    headerTitle: 'Create Asset',
   }
 ]

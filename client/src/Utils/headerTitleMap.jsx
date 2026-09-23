@@ -40,7 +40,7 @@ export const headerTitleMap = {
 export const getBackPath = (currentPath) => {
   // Asset Master Pages
   if (currentPath.startsWith('/assetFolder/assetMasterDisplay')) return '/assetFolder/pages/assetMasterList';
-  if (currentPath.startsWith('/assetFolder/createAsset')) return '/assetFolder/pages/assetMasterList';
+  if (currentPath.startsWith('/assetFolder/createAsset')) return '/Home/AssetMasterPage';
   if (currentPath.startsWith('/assetFolder/pages')) return '/Home/AssetMasterPage';
 
   // Movement Pages
@@ -60,6 +60,10 @@ export const getBackPath = (currentPath) => {
 
   // Physical Count Session Pages
   if (currentPath.startsWith('/physicalCount/session/:id')) return '/Home/PhysicalCount';
+
+  // Reports Pages
+  if (currentPath.startsWith('/assetReports/assetSummaryReport')) return '/Home/Reports';
+  if (currentPath.startsWith('/assetReports/assetLineItemReport')) return '/Home/Reports';
 
   // System Setup Pages
   if (currentPath.startsWith('/systemSetup/user/userProfile')) return '/Home/SystemSetup';

@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useMemo} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useTheme } from '@mui/material/styles';
@@ -16,6 +16,9 @@ import AssetReports from '../Modules/Reports/assetReport';
 import PhysicalCount from '../Modules/Physical/assetPhysicalCount';
 import DashboardPage from '../Modules/Dashboard/dashBoardPage';
 import SystemSetup from '../Modules/SystemSetup/custom Utils/systemSetupTile';
+
+import { useMyAccess } from '../api/accessContext.jsx';
+// ^ adjust if AccessContext.jsx doesn't end up at src/contexts/AccessContext.jsx
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -60,26 +63,66 @@ export default function FullWidthTabs({
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { hasCode, loading: accessLoading } = useMyAccess();
 
-  const [value, setValue] = useState(() => {
+  // Each top-level tab has its own U_CODE in user_permissions_granted -
+  // menu visibility is a direct lookup against that code, unrelated to
+  // whether any individual tile underneath it is also restricted.
+  // label/Component/code line up 1:1 with tabPaths (by position) so
+  // each tab keeps its original link.
+  const tabDefs = useMemo(() => ([
+    { label: 'DASHBOARD', Component: DashboardPage, code: 'DASHBOARD' },
+    { label: 'ASSET MASTER', Component: AssetMasterTile, code: 'ASSET_MASTER_MENU' },
+    { label: 'MOVEMENT', Component: AssetMovement, code: 'MOVEMENT_MENU' },
+    { label: 'DEPRECIATION', Component: Depreciation, code: 'DEPRECIATION_MENU' },
+    { label: 'REPORTS', Component: AssetReports, code: 'REPORTS_MENU' },
+    { label: 'PHYSICAL COUNT', Component: PhysicalCount, code: 'PHYSICAL_COUNT_MENU' },
+    { label: 'SYSTEM SETUP', Component: SystemSetup, code: 'SYSTEM_SETUP_MENU' },
+  ]), []);
+
+  // Hide-by-default while the granted-permissions fetch is in flight
+  // (same choice used for the tiles), so a tab never flashes into view
+  // and then disappears once access data lands.
+  const visibleTabs = useMemo(() => {
+    if (accessLoading) return [];
+    return tabDefs
+      .map((def, i) => ({ ...def, link: tabPaths[i]?.link }))
+      .filter((def) => hasCode(def.code));
+  }, [tabDefs, tabPaths, hasCode, accessLoading]);
+
+  // `value` is a position within visibleTabs, NOT the original fixed id
+  // - since hiding tabs shifts positions, it has to be recomputed
+  // whenever visibleTabs changes (e.g. once access finishes loading).
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
     const currentPath = location.pathname;
-    const foundTab = tabPaths.find(tab => tab.link === currentPath);
-    return foundTab ? foundTab.id : 0; 
-  });
+    const foundIndex = visibleTabs.findIndex((tab) => tab.link === currentPath);
+    if (foundIndex !== -1) {
+      if (foundIndex !== value) setValue(foundIndex);
+    } else if (value >= visibleTabs.length) {
+      // The previously active tab position no longer exists (e.g. it
+      // was hidden once access loaded in) - fall back to the first
+      // visible tab rather than pointing at nothing.
+      setValue(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, visibleTabs]);
 
   const handleChange = (e, newValue) => {
     setValue(newValue);
-    navigate(tabPaths[newValue].link);
+    navigate(visibleTabs[newValue].link);
   };
 
-  // Optional: Handle browser back/forward buttons
-  useEffect(() => {
-    const currentPath = location.pathname;
-    const foundTab = tabPaths.find(tab => tab.link === currentPath);
-    if (foundTab && foundTab.id !== value) {
-      setValue(foundTab.id);
-    }
-  }, [location.pathname, value]);
+  if (!accessLoading && visibleTabs.length === 0) {
+    return (
+      <Box sx={{ bgcolor: 'background.paper', width: '100%', p: 3 }}>
+        <Typography color="text.secondary" align="center">
+          No modules have been assigned to your account yet. Contact your administrator for access.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box  
@@ -105,36 +148,21 @@ export default function FullWidthTabs({
           allowScrollButtonsMobile
           aria-label="full width tabs example"
         >
-          <Tab label="DASHBOARD" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(0)} />
-          <Tab label="ASSET MASTER" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(1)} />
-          <Tab label="MOVEMENT" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(2)} />
-          <Tab label="DEPRECIATION" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(3)} />
-          <Tab label="REPORTS" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(4)} />
-          <Tab label="PHYSICAL COUNT" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(5)} />
-          <Tab label="SYSTEM SETUP" sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }} {...a11yProps(6)} />
+          {visibleTabs.map((tab, i) => (
+            <Tab
+              key={tab.label}
+              label={tab.label}
+              sx={{ letterSpacing: { xs: '0.03em', md: '0.1em' }, fontSize: { xs: '0.75rem', md: '0.875rem' } }}
+              {...a11yProps(i)}
+            />
+          ))}
         </Tabs>
       </AppBar>
-      <TabPanel value={value} index={0} dir={theme.direction}>
-        <DashboardPage/>
-      </TabPanel>
-      <TabPanel value={value} index={1} dir={theme.direction}>
-        <AssetMasterTile />
-      </TabPanel>
-      <TabPanel value={value} index={2} dir={theme.direction}>
-        <AssetMovement/>
-      </TabPanel>
-      <TabPanel value={value} index={3} dir={theme.direction}>
-        <Depreciation/>
-      </TabPanel>
-      <TabPanel value={value} index={4} dir={theme.direction}>
-        <AssetReports/>
-      </TabPanel>
-      <TabPanel value={value} index={5} dir={theme.direction}>
-        <PhysicalCount/>
-      </TabPanel>
-      <TabPanel value={value} index={6} dir={theme.direction}>
-        <SystemSetup/>
-      </TabPanel>
+      {visibleTabs.map((tab, i) => (
+        <TabPanel key={tab.label} value={value} index={i} dir={theme.direction}>
+          <tab.Component />
+        </TabPanel>
+      ))}
     </Box>
   );
 }

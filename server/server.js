@@ -54,6 +54,8 @@
   import user0002invRoute from './routes/user0002invRoute.js';
   import physicalCountRoutes from './routes/physicalCountRoutes.js';
   import userPermissionsRoute from './routes/userPermissionsRoute.js';
+  import assetReportRoute from './routes/assetReportRoute.js';
+  import lineItemReport from './routes/lineitemReportRoute.js';
 
 
 
@@ -69,10 +71,11 @@
   // --- CORS CONFIGURATION ---
   // Focused strictly on local development to avoid "split-brain" issues
   const allowedOrigins = [ 
-    'http://localhost:5173',
+    // 'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
-    'http://127.0.0.1:3000'
+    'http://127.0.0.1:3000',
+    'http://localhost:5174',
   ];
 
 
@@ -84,7 +87,7 @@
 
       // Allow localhost
       if (
-        origin.startsWith('http://localhost:5173') ||
+        origin.startsWith('http://localhost:5174') ||
         origin.startsWith('http://10.0.0.187') ||
         origin.startsWith('http://127.0.0.1') 
       ) {
@@ -118,18 +121,16 @@
   // --- DATABASE CONFIGURATION ---
   // Hardcoded to ensure Node always talks to the same DB as SQLyog
   const dbConfig = {
-    host: process.env.DB_HOST || '127.0.0.1',
+    host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'myuser101',
     password: process.env.DB_PASSWORD || 'MmFjbV69',
     database: process.env.DB_NAME || 'ams1',
     port: 33060,
     waitForConnections: true,
-    connectionLimit: 25, // was 10 — too tight once the dashboard's ~7 concurrent
-                         // requests are added to normal traffic from other pages;
-                         // login queries were queuing behind them and timing out
+    connectionLimit: 25,
     queueLimit: 0,
     connectTimeout: 10000,
-    timezone: '+08:00', // or your local timezone (e.g., 'UTC', 'Asia/Manila')
+    timezone: '+08:00', // local timezone (e.g., 'UTC', 'Asia/Manila')
     dateStrings: true,  // THIS IS KEY - returns dates as strings, not Date objects
   };
 
@@ -203,7 +204,8 @@
   app.use('/companyConfig', user0002invRoute);
   app.use('/physicalCount', physicalCountRoutes);
   app.use('/userPermissions', userPermissionsRoute);
-
+  app.use('/assetReport', assetReportRoute);
+  app.use('/lineItemReport', lineItemReport);
 
   // React (Vite Dist)
   app.use(express.static(path.join(__dirname, '../client/dist')))
@@ -225,6 +227,6 @@
   app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));
     console.log(`🚀 Local Server running on http://localhost:${PORT}`);
-    console.log(`📡 Target DB Host: 192.168.64.5`);
+    // console.log(`📡 Target DB Host: `);
     console.log('='.repeat(50));
   });

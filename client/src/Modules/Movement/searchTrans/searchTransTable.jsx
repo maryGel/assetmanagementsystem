@@ -1,4 +1,4 @@
-// components/searchTrans/searchTransTable.jsx
+
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { alpha } from '@mui/material/styles';

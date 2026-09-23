@@ -1,4 +1,4 @@
-// SearchTransactions.jsx
+
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 // MUI import
@@ -150,9 +150,9 @@ function SearchTransactions(useProps) {
       // Use refetch to refresh all data
       if (refetch) {
         await refetch();
-        console.log('✅ Refetch completed');
+        console.log('Refetch completed');
       } else {
-        console.warn('⚠️ No refetch function available');
+        console.warn('No refetch function available');
       }
       
       // Force data version increment to trigger re-render
@@ -165,7 +165,7 @@ function SearchTransactions(useProps) {
       // Trigger a re-apply of filters
       setRefreshTrigger(prev => {
         const newTrigger = prev + 1;
-        console.log('🔄 Refresh trigger updated to:', newTrigger);
+        console.log('Refresh trigger updated to:', newTrigger);
         return newTrigger;
       });
 
@@ -222,14 +222,14 @@ function SearchTransactions(useProps) {
       }
     },
     onRefresh: async () => {
-      console.log('🔄 Bulk action completed, refreshing...');
+      console.log('Bulk action completed, refreshing...');
       
       // Refresh data while keeping filters
       await refreshData();
       
       // Force another re-apply of filters after a short delay
       setTimeout(() => {
-        console.log('🔄 Re-applying filters after refresh...');
+        console.log('Re-applying filters after refresh...');
         setRefreshTrigger(prev => prev + 1);
         // Increment data version again to ensure table updates
         setDataVersion(prev => prev + 1);
@@ -241,10 +241,10 @@ function SearchTransactions(useProps) {
 
   // Function to apply filters
   const applyFilters = useCallback(() => {
-    console.log('📊 Applying filters...');
-    console.log('📊 docHeaders length:', docHeaders.length);
-    console.log('📊 hasSearched:', hasSearched);
-    console.log('📊 filters:', filters);
+    console.log('Applying filters...');
+    console.log('docHeaders length:', docHeaders.length);
+    console.log('hasSearched:', hasSearched);
+    console.log('filters:', filters);
     
     if (!hasSearched || !filters) {
       console.log('📊 No filters or search not performed, clearing results');
@@ -283,7 +283,7 @@ function SearchTransactions(useProps) {
         (doc.Departmnet || doc.Department_Code) && 
         filters.department.includes(doc.Departmnet || doc.Department_Code)
       );
-      console.log('📊 After department filter:', filtered.length);
+      console.log('After department filter:', filtered.length);
     }
     // Filter by status
     if (filters.status && filters.status.length > 0) {

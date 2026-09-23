@@ -1,17 +1,17 @@
 export const assetReportList= [
   {
     id: 1,
-    title: 'Asset Summ',
-    link: '/assetReports/assetReport',
-    imgSrc: '/icons/menu_icons/assetreport.png',
-    headerTitle: 'Asset Summary Report',
+    title: 'Asset Bal Rep',
+    link: '/assetReports/assetSummaryReport',
+    imgSrc: '/icons/menu_icons/assetbalreport.png',
+    headerTitle: 'Asset Bal Report',
   },
   {
     id: 2,
-    title: 'Asset Bal Rep',
-    link: '/assetReports/assetBalReport',
-    imgSrc: '/icons/menu_icons/assetbalreport.png',
-    headerTitle: 'Asset Bal Report',
+    title: 'Line Item Rep',
+    link: '/assetReports/assetLineItemReport',
+    imgSrc: '/icons/menu_icons/assetreport.png',
+    headerTitle: 'Line Item Rep',
   },
   {
     id: 3,

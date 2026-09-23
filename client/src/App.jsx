@@ -2,7 +2,11 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { CircularProgress } from "@mui/material";
 import ProtectedRoute from "./api/ProtectedRoute.jsx";
+import PermissionRoute from "./api/PermissionRoute.jsx";
 import Layout from "./Utils/headerLayout.jsx";
+import { AccessProvider } from "./api/accessContext.jsx";
+// ^ adjust these two import paths (./api/PermissionRoute.jsx and
+// ./contexts/AccessContext.jsx) to wherever those files actually end up
 
 // Public pages
 const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
@@ -71,8 +75,23 @@ const CompanySetupPage = lazy(() =>
   import("./Modules/SystemSetup/pages/companyConfigPage.jsx")
 );
 
+// Reports pages
+const AssetReportPage = lazy(() =>
+  import("./Modules/Reports/pages/assetReportPage.jsx")
+);
+
+const LineItemReportPage = lazy(() =>
+  import("./Modules/Reports/pages/lineItemRepPage.jsx")
+);
+
+
+
+
+
+// Header
 const getInitialTitle = () =>
   localStorage.getItem("currentHeaderTitle") || "Asset Management System";
+
 
 function PageLoader() {
   return (
@@ -127,12 +146,19 @@ function App() {
           <Route
             element={
               <ProtectedRoute>
-                <Layout
-                  headerTitle={headerTitle}
-                  setHeaderTitle={setHeaderTitle}
-                  username={username}
-                  isMobile={isMobile}
-                />
+                {/* AccessProvider fetches the logged-in user's granted
+                    permissions once and exposes hasAccess() to every
+                    page/tile below - both the tile lists and the
+                    PermissionRoute guards on individual routes read
+                    from it. */}
+                <AccessProvider>
+                  <Layout
+                    headerTitle={headerTitle}
+                    setHeaderTitle={setHeaderTitle}
+                    username={username}
+                    isMobile={isMobile}
+                  />
+                </AccessProvider>
               </ProtectedRoute>
             }
           >
@@ -150,7 +176,11 @@ function App() {
 
             <Route
               path="/assetFolder/pages/assetMasterList"
-              element={<AssetMasterListPage setHeaderTitle={saveTitleUpdate} />}
+              element={
+                <PermissionRoute path="/assetFolder/pages/assetMasterList">
+                  <AssetMasterListPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
             />
             <Route
               path="/assetFolder/createAsset"
@@ -171,29 +201,51 @@ function App() {
             />
             <Route
               path="/assetMovement/pages/JOFormPage"
-              element={<JOFormPage setHeaderTitle={saveTitleUpdate} />}
+              element={
+                <PermissionRoute path="/assetMovement/pages/JOFormPage">
+                  <JOFormPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
             />
             <Route
               path="/assetMovement/pages/maintenancePage"
               element={
-                <MaintenancePageDesktop setHeaderTitle={saveTitleUpdate} />
+                <PermissionRoute path="/assetMovement/pages/maintenancePage">
+                  <MaintenancePageDesktop setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
               }
             />
             <Route
               path="/assetMovement/pages/TRFormPage"
-              element={<TRFormPage setHeaderTitle={saveTitleUpdate} />}
+              element={
+                <PermissionRoute path="/assetMovement/pages/TRFormPage">
+                  <TRFormPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
             />
             <Route
               path="/assetMovement/pages/ADFormPage"
-              element={<ADFormPage setHeaderTitle={saveTitleUpdate} />}
+              element={
+                <PermissionRoute path="/assetMovement/pages/ADFormPage">
+                  <ADFormPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
             />
             <Route
               path="/assetMovement/pages/AAFormPage"
-              element={<AAFormPage setHeaderTitle={saveTitleUpdate} />}
+              element={
+                <PermissionRoute path="/assetMovement/pages/AAFormPage">
+                  <AAFormPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
             />
             <Route
               path="/assetMovement/pages/ALFormPage"
-              element={<ALFormPage setHeaderTitle={saveTitleUpdate} />}
+              element={
+                <PermissionRoute path="/assetMovement/pages/ALFormPage">
+                  <ALFormPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
             />
 
             <Route
@@ -217,9 +269,25 @@ function App() {
               element={<SessionDetails />}
             />
 
+            {/* Reports */}
+            <Route
+              path="/assetReports/assetSummaryReport"
+              element={<AssetReportPage setHeaderTitle={saveTitleUpdate} />}
+            />
+
+             <Route
+              path="/assetReports/assetLineItemReport"
+              element={<LineItemReportPage setHeaderTitle={saveTitleUpdate} />}
+            />
+
+            {/* System Setup */}
             <Route
               path="/systemSetup/user/userProfile"
-              element={<UserAccessPage setHeaderTitle={saveTitleUpdate} />}
+              element={
+                <PermissionRoute path="/systemSetup/user/userProfile">
+                  <UserAccessPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
             />
 
             <Route

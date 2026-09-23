@@ -404,15 +404,7 @@ function DashboardPage(useProps) {
   // Asset Group lookup (AssetGrpCode -> AssetGroup name), joined against
   // itemlist.AssetGrpCode for the "Asset Summary by Asset Group" panel.
   const { assetGroups, isLoading: assetGroupsLoading, assetGroupsRefresh } = useRefAssetGroup();
-  // NOTE: this page previously also called useTR_d, useAD_d, useAssetAccD,
-  // and useAssetLostD, but nothing on this page reads trDetails, adDetails,
-  // assetAccDetails, or assetLostDetails — they were pure dead weight, each
-  // one an extra concurrent DB connection on every mount. Removing them
-  // drops this page from 11 simultaneous requests to 7. If a future card
-  // needs one of those detail sets, re-add just that one hook.
 
-  // True while any of the underlying hooks are fetching — drives both the
-  // spin on the refresh button and each card's individual spinner.
   const isAnyLoading =
     joLoading || joDetailsLoading || trLoading || adLoading || accLoading || aLostLoading ||
     allAssetsLoading || assetGroupsLoading;
