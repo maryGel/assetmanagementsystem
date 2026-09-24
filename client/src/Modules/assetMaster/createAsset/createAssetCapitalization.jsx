@@ -1,75 +1,56 @@
-import Reac, {useState, useEffect} from 'react';
+import { useMemo } from 'react';
 import { NumericFormat } from 'react-number-format';
 import {
   Typography,
-  TextField, 
+  TextField,
   Autocomplete,
   Box,
   Checkbox,
-  FormControlLabel, 
+  FormControlLabel,
   Alert,
-  CircularProgress  
+  CircularProgress
 } from '@mui/material';
 
-//Custom Hooks
-import { useRefUom } from '../../../hooks/refUom'; // import the refUnit data
+// Custom Hooks
+import { useRefUom } from '../../../hooks/refUom';
 import { useRefCategory } from '../../../hooks/refCategory';
 import { useRefItemClass } from '../../../hooks/refClass';
-import { useRefLocation } from '../../../hooks/refLocation'; 
-import { useRefDepartment } from '../../../hooks/refDepartment'; 
-import formatWithCommas from '../../../Utils/formatWithCommas';
-import formatDateForInput from '../../../Utils/formatDateForInput';
+import { useRefLocation } from '../../../hooks/refLocation';
+import { useRefDepartment } from '../../../hooks/refDepartment';
+
+// Builds a clean option list from a reference table
+const toOptions = (data, key) =>
+  Array.isArray(data) ? data.map((item) => item[key]).filter(Boolean) : [];
 
 export default function CreateAssetCapitalization({
   asset,
   updateAssetData,
-  originalAsset,
   loading,
-  error
+  error,
+  facNOLoading,
+  autoNumbering = true
 }) {
   const { uomData } = useRefUom();
-  const {refCategoryData} = useRefCategory();
-  const {refItemClassData} = useRefItemClass();
-  const {refDeptData} = useRefDepartment();
-  const {refLocData} = useRefLocation();
+  const { refCategoryData } = useRefCategory();
+  const { refItemClassData } = useRefItemClass();
+  const { refDeptData } = useRefDepartment();
+  const { refLocData } = useRefLocation();
 
-  const [uomOptions, setUomOptions] = useState([]);
-  const [categoryOptions, setCategoryOptions] = useState([]);
-  const [itemClassOptions, setItemClassOptions] = useState([]);
-  const [locationOptions, setLocationOptions] = useState([]);
-  const [departmentOptions, setDepartmentOptions] = useState([]);
-  
+  const uomOptions = useMemo(() => toOptions(uomData, 'Unit'), [uomData]);
+  const categoryOptions = useMemo(() => toOptions(refCategoryData, 'category'), [refCategoryData]);
 
-  useEffect(() => {
-    if (uomData && Array.isArray(uomData)){
-      setUomOptions(uomData.map(item => item.Unit).filter(Boolean));
-    }
-  }, [uomData]);
+  // Each refItemclass row belongs to exactly one category (see the 'category'
+  // column in refItemClass.jsx), so Asset Class options depend on Category.
+  const itemClassOptions = useMemo(() => {
+    if (!asset.CATEGORY || !Array.isArray(refItemClassData)) return [];
+    return refItemClassData
+      .filter((item) => item.category === asset.CATEGORY)
+      .map((item) => item.itemClass)
+      .filter(Boolean);
+  }, [refItemClassData, asset.CATEGORY]);
 
-
-  useEffect(() => {
-    if (refCategoryData && Array.isArray(refCategoryData)) {
-      setCategoryOptions(refCategoryData.map(item => item.category).filter(Boolean));
-    }
-  }, [refCategoryData]);
-
-  useEffect(() => {
-    if (refItemClassData && Array.isArray(refItemClassData)) {
-      setItemClassOptions(refItemClassData.map(item => item.itemClass).filter(Boolean));
-    }
-  }, [refItemClassData]);
-
-  useEffect(() => {
-    if (refLocData && Array.isArray(refLocData)) {
-      setLocationOptions(refLocData.map(item => item.LocationName).filter(Boolean));
-    }
-  }, [refLocData]);
-
-  useEffect(() => {
-    if (refDeptData && Array.isArray(refDeptData)) {
-      setDepartmentOptions(refDeptData.map(item => item.Department).filter(Boolean));
-    }
-  }, [refDeptData]);
+  const locationOptions = useMemo(() => toOptions(refLocData, 'LocationName'), [refLocData]);
+  const departmentOptions = useMemo(() => toOptions(refDeptData, 'Department'), [refDeptData]);
 
   if (loading) return (
     <Box className='flex justify-center p-5'>
@@ -88,122 +69,164 @@ export default function CreateAssetCapitalization({
     updateAssetData({ [field]: value });
   };
 
+  // Changing the category can orphan the previously chosen class
+  // (e.g. switching from "IT Equipment" to "Furniture" while "Laptop" is selected).
+  const handleCategoryChange = (newCategory) => {
+    const stillValid = refItemClassData?.some(
+      (item) => item.category === newCategory && item.itemClass === asset.ItemClass
+    );
+    updateAssetData({
+      CATEGORY: newCategory,
+      ItemClass: stillValid ? asset.ItemClass : ''
+    });
+  };
+
+  // NumericFormat: store the raw number string ("1250.5"), not the display
+  // string ("1,250.50"). `source === 'event'` ignores echoes of our own value.
+  const handleNumberChange = (field) => (values, sourceInfo) => {
+    if (sourceInfo.source === 'event') {
+      handleInputChange(field, values.value);
+    }
+  };
+
+  const selectSx = { width: '50rem', marginTop: '1rem' };
+  const inputSx = { '& .MuiInputBase-input': { fontSize: '.9rem' } };
+
   return (
     <div className='grid justify-center gap-2 mt-10'>
       <Typography variant="h6" gutterBottom>
-        Asset Capitalization 
+        Asset Capitalization
       </Typography>
 
-      {/* ... Asset Class and Category ... */}
+      {/* ... Category (drives the asset number) and Asset Number ... */}
       <Autocomplete
-        key = {`Asset Category`}
-        sx={{ width: '50rem', marginTop: '1rem'}}
-        margin="normal" 
-        options = {categoryOptions}  
-        value = {asset.CATEGORY || ''}       
-        onChange={(event, newValue) => handleInputChange('CATEGORY', newValue)}
+        key="Asset Category"
+        sx={selectSx}
+        options={categoryOptions}
+        value={asset.CATEGORY || null}
+        onChange={(event, newValue) => handleCategoryChange(newValue || '')}
         renderInput={(params) => (
-          <TextField 
-            {...params} 
-            label="Category" 
-            placeholder="Select Category" 
-            sx ={{'& .MuiInputBase-input': { fontSize: '.9rem'}}}
+          <TextField
+            {...params}
+            label="Category"
+            placeholder="Select Category"
+            sx={inputSx}
             required
-          />              
-        )}       
-        freeSolo   
+          />
+        )}
       />
 
+      {autoNumbering ? (
+        <TextField
+          label="Asset Number"
+          sx={selectSx}
+          value={facNOLoading ? 'Generating...' : asset.FacNO || ''}
+          helperText={
+            asset.FacNO
+              ? 'Generated from the category code'
+              : 'Select a category to generate the asset number'
+          }
+          InputProps={{ readOnly: true }}
+          InputLabelProps={{ shrink: true }}
+        />
+      ) : (
+        <TextField
+          label="Asset Number"
+          sx={selectSx}
+          value={asset.FacNO || ''}
+          onChange={(e) => handleInputChange('FacNO', e.target.value)}
+          helperText="Auto-numbering is off. Enter a unique asset number."
+          InputLabelProps={{ shrink: true }}
+          required
+        />
+      )}
+
       <Autocomplete
-        key = {`Asset Class`}
-        sx={{ width: '50rem', marginTop: '1rem'}}
-        margin="normal" 
-        options = {itemClassOptions}  
-        value = {asset.ItemClass || ''}       
-        onChange={(event, newValue) => handleInputChange('ItemClass', newValue)}
+        key="Asset Class"
+        sx={selectSx}
+        options={itemClassOptions}
+        value={asset.ItemClass || null}
+        onChange={(event, newValue) => handleInputChange('ItemClass', newValue || '')}
+        disabled={!asset.CATEGORY}
         renderInput={(params) => (
-          <TextField {...params} 
-            label="Asset Class" 
-            placeholder="Asset Class" 
-            sx ={{'& .MuiInputBase-input': { fontSize: '.9rem'}}}
+          <TextField
+            {...params}
+            label="Asset Class"
+            placeholder={asset.CATEGORY ? 'Asset Class' : 'Select a category first'}
+            helperText={
+              asset.CATEGORY && itemClassOptions.length === 0
+                ? 'No asset classes are set up for this category yet'
+                : ' '
+            }
+            sx={inputSx}
             required
-          />              
-        )} 
-        freeSolo
+          />
+        )}
       />
 
-      {/*  ... Acquired Date, UOM, and Quantity ... */}
-
+      {/* ... Acquired Date, UOM, and Quantity ... */}
       <Box className="flex justify-start gap-2">
         <TextField
           label="Acquisition Date"
-          sx={{ 
+          sx={{
             width: '16rem',
             color: 'gray',
-            "& .MuiInputBase-input": {
-            color: "gray",
-            }
+            '& .MuiInputBase-input': { color: 'gray' }
           }}
           type="date"
-          margin="normal" 
-          value={asset.Adate || ''}  //TODO: update the dataformat
+          margin="normal"
+          value={asset.Adate || ''}
           onChange={(e) => handleInputChange('Adate', e.target.value)}
-          InputLabelProps={{ shrink: true }}   
-          required         
+          InputLabelProps={{ shrink: true }}
+          required
         />
 
         <Autocomplete
-          key = {`Unit of Measure`}
-          sx={{ width: '10rem', marginTop: '1rem'}}
-          margin="normal" 
-          options = {uomOptions}  
-          value = {asset.Unit || []}      
-          onChange={(e, newValue) => handleInputChange('Unit', newValue)}
+          key="Unit of Measure"
+          sx={{ width: '10rem', marginTop: '1rem' }}
+          options={uomOptions}
+          value={asset.Unit || null}
+          onChange={(e, newValue) => handleInputChange('Unit', newValue || '')}
           renderInput={(params) => (
-            <TextField {...params} 
-              label="UOM" 
-              placeholder="UOM" 
-              sx ={{'& .MuiInputBase-input': { fontSize: '14px'}}}
-            />              
-          )}          
+            <TextField
+              {...params}
+              label="UOM"
+              placeholder="UOM"
+              sx={{ '& .MuiInputBase-input': { fontSize: '14px' } }}
+              required
+            />
+          )}
         />
 
         <TextField
           label="Quantity"
+          type="number"
           sx={{ width: '15rem' }}
-          margin="normal" 
-          value={asset.balance_unit || 1}
-          onChange={(e) => handleInputChange('balance_unit', e.target.value)} 
-          InputProps={{ inputProps: { min: 1 } }}
+          margin="normal"
+          value={asset.balance_unit}
+          onChange={(e) => handleInputChange('balance_unit', e.target.value)}
+          inputProps={{ min: 1 }}
         />
 
         <FormControlLabel
-          control={
-            <Checkbox
-              // checked={asset.splitAsset || 0}
-              // onChange={(e) => handleInputChange('splitAsset',e.target.checked ? 1 : 0)}
-              sx={{ color: 'gray' }}
-            />
-          }
+          control={<Checkbox sx={{ color: 'gray' }} />}
           label="Split Asset"
           sx={{ color: 'gray' }}
         />
       </Box>
 
       {/* ... Acquired Value, Residual Value, and Life in Years ... */}
-
       <Box className="flex justify-start gap-2">
         <NumericFormat
           customInput={TextField}
           label="Acquired Value"
           sx={{ width: '18rem' }}
-          margin="normal" 
+          margin="normal"
           thousandSeparator=","
           allowNegative={false}
           decimalScale={2}
-          value={asset.AAmount || ''}
-          onChange={(e) => handleInputChange('AAmount', e.target.value)} 
-          InputProps={{ inputProps: { min: 1 } }}
+          value={asset.AAmount ?? ''}
+          onValueChange={handleNumberChange('AAmount')}
           required
         />
 
@@ -211,61 +234,60 @@ export default function CreateAssetCapitalization({
           customInput={TextField}
           label="Residual Value"
           sx={{ width: '18rem' }}
-          margin="normal" 
+          margin="normal"
           thousandSeparator=","
           allowNegative={false}
           decimalScale={2}
-          value={asset.Abre || ''}
-          onChange={(e) => handleInputChange('Abre', e.target.value)} 
-          InputProps={{ inputProps: { min: 1 } }}
+          value={asset.Abre ?? ''}
+          onValueChange={handleNumberChange('Abre')}
         />
 
         <NumericFormat
           customInput={TextField}
           label="Life in years"
           sx={{ width: '10rem' }}
-          margin="normal" 
-          thousandSeparator=","
+          margin="normal"
           allowNegative={false}
           decimalScale={2}
-          value={asset.Percent || 1}
-          onChange={(e) => handleInputChange('Percent', e.target.value)} 
-          InputProps={{ inputProps: { min: 1 } }}
+          value={asset.Percent ?? ''}
+          onValueChange={handleNumberChange('Percent')}
           required
         />
       </Box>
 
-      {/*  ... Department and Locations ... */}
+      {/* ... Department and Locations ... */}
       <Autocomplete
-        key = {`Department`}
-        sx={{ width: '50rem', marginTop: '1rem'}}
-        margin="normal" 
-        options = {departmentOptions}  
-        value = {asset.Department || ''}       
-        onChange={(event, newValue) => handleInputChange('Department', newValue)}
+        key="Department"
+        sx={selectSx}
+        options={departmentOptions}
+        value={asset.Department || null}
+        onChange={(event, newValue) => handleInputChange('Department', newValue || '')}
         renderInput={(params) => (
-          <TextField {...params} 
-            label="Department" 
-            placeholder="Department" 
-            sx ={{'& .MuiInputBase-input': { fontSize: '.9rem'}}}
-          />              
-        )}          
+          <TextField
+            {...params}
+            label="Department"
+            placeholder="Department"
+            sx={inputSx}
+            required
+          />
+        )}
       />
 
       <Autocomplete
-        key = {`Location`}
-        sx={{ width: '50rem', marginTop: '1rem'}}
-        margin="normal" 
-        options = {(locationOptions)}  
-        value = {asset.ItemLocation || ''}    
-        onChange={(event, newValue) => handleInputChange('ItemLocation', newValue)}        
+        key="Location"
+        sx={selectSx}
+        options={locationOptions}
+        value={asset.ItemLocation || null}
+        onChange={(event, newValue) => handleInputChange('ItemLocation', newValue || '')}
         renderInput={(params) => (
-          <TextField {...params} 
-            label="Location" 
-            placeholder="Location" 
-            sx ={{'& .MuiInputBase-input': { fontSize: '.9rem'}}}
-          />              
-        )}      
+          <TextField
+            {...params}
+            label="Location"
+            placeholder="Location"
+            sx={inputSx}
+            required
+          />
+        )}
       />
     </div>
   );

@@ -67,16 +67,19 @@ router.get('/', (req, res) => {
   }
 
   // jo_woe can have several entries per FAC_NO (one per work-order expense
-  // logged over time). The report only wants one Work Order / Work Order
-  // Date per asset, so this picks the most recent entry (by xDate) per
-  // FAC_NO rather than joining directly, which would otherwise fan out into
-  // duplicate report rows whenever an asset has more than one jo_woe entry.
+  // logged over time), and the same asset can appear on more than one Job
+  // Order over its life. So the match isn't "latest work order for this
+  // FAC_NO" — it's scoped to this row's own Job Order first (jo_no = the
+  // line item's DocNo), then narrowed to the FAC_NO within that JO, and only
+  // then to the most recent entry (by xDate) within that pair. This also
+  // means the join naturally contributes nothing for non-Job-Order rows,
+  // since their DocNo values never match a jo_woe.jo_no.
   const latestWorkOrder = `(
-    SELECT w.FAC_NO, w.workNo, w.xDate
+    SELECT w.FAC_NO, w.jo_no, w.workNo, w.xDate
     FROM jo_woe w
     INNER JOIN (
-      SELECT FAC_NO, MAX(xDate) AS maxDate FROM jo_woe GROUP BY FAC_NO
-    ) latest ON latest.FAC_NO = w.FAC_NO AND latest.maxDate = w.xDate
+      SELECT FAC_NO, jo_no, MAX(xDate) AS maxDate FROM jo_woe GROUP BY FAC_NO, jo_no
+    ) latest ON latest.FAC_NO = w.FAC_NO AND latest.jo_no = w.jo_no AND latest.maxDate = w.xDate
   ) wo`;
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
@@ -84,7 +87,7 @@ router.get('/', (req, res) => {
     FROM ${lineItemUnion}
     JOIN itemlist i ON i.FacNO = li.LinkFacNo
     LEFT JOIN refassetgroup ag ON ag.AssetGrpCode = i.AssetGrpCode
-    LEFT JOIN ${latestWorkOrder} ON wo.FAC_NO = i.FacNO
+    LEFT JOIN ${latestWorkOrder} ON wo.FAC_NO = i.FacNO AND wo.jo_no = li.DocNo
     ${where}`;
   const select = `
     SELECT li.DocNo, li.DocType,

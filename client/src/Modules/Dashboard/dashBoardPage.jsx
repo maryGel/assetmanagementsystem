@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { CircularProgress, IconButton, Tooltip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 //custom hooks
 import { dashItems } from '../../Utils/dashItems';
@@ -133,15 +134,19 @@ function StatCard({ icon, iconBg, label, value, trend, trendLabel, loading }) {
   );
 }
 
-function OpsCard({ icon, iconBg, label, value, subItems, onClick, disabled, loading }) {
+function OpsCard({ icon, iconSrc, iconBg, label, value, subItems, onClick, disabled, loading }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`text-left flex flex-col gap-2 p-4 bg-white border border-gray-100 shadow-sm rounded-xl transition hover:shadow-md ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+      className={`relative text-left flex flex-col gap-2 p-4 bg-white border border-gray-100 shadow-sm rounded-xl transition hover:shadow-md ${disabled ? 'pointer-events-none opacity-60' : ''}`}
     >
-      <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${iconBg}`}>
-        {icon}
+      <div className={`flex items-center justify-center w-14 h-14 rounded-lg ${iconBg}`}>
+        {iconSrc ? (
+          <img src={iconSrc} alt={label} className="object-contain w-8 h-18" />
+        ) : (
+          icon
+        )}
       </div>
       <span className="text-xs font-semibold tracking-wide text-gray-500">{label}</span>
       {loading ? (
@@ -161,6 +166,10 @@ function OpsCard({ icon, iconBg, label, value, subItems, onClick, disabled, load
           ))}
         </div>
       )}
+      <ArrowForwardIcon
+        className="absolute text-gray-400 bottom-3 right-3"
+        sx={{ fontSize: 16 }}
+      />
     </button>
   );
 }
@@ -378,6 +387,9 @@ const Icon = {
   Trash: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   Alert: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M12 4l9 16H3L12 4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M12 10v4M12 17h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
 };
+
+
+
 
 /* ------------------------------------------------------------------ */
 /* Main component                                                      */
@@ -670,8 +682,8 @@ function DashboardPage(useProps) {
       {/* ---------------- Ops cards (Job Orders / Maintenance / Transfers / Borrow / Disposals / Lost) ---------------- */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-7 md:grid-cols-5">
         <OpsCard
-          icon={Icon.Box('w-4 h-4 text-indigo-600')}
-          iconBg="bg-indigo-100"
+          iconSrc="/dashIcons/jo.png"
+          // iconBg="bg-indigo-100"
           label="JOB ORDERS"
           value={joCount}
           onClick={() => openPendingTransactions('Job Order')}
@@ -679,8 +691,8 @@ function DashboardPage(useProps) {
           loading={joLoading}
         />
         <OpsCard
-          icon={Icon.Wrench('w-4 h-4 text-blue-600')}
-          iconBg="bg-blue-100"
+          iconSrc="/dashIcons/joeval.png"
+          // iconBg="bg-blue-100"
           label="JO EVALUATION"
           value={joEvalCount}
           onClick={() => window.open(
@@ -692,8 +704,8 @@ function DashboardPage(useProps) {
           loading={joLoading}
         />
          <OpsCard
-          icon={Icon.Wrench('w-4 h-4 text-blue-600')}
-          iconBg="bg-red-100"
+          iconSrc="/dashIcons/mechanic.png"
+          // iconBg="bg-red-100"
           label="MAINTENANCE"
           value={joEvalCount}
           onClick={() => window.open(
@@ -705,8 +717,8 @@ function DashboardPage(useProps) {
           loading={joLoading}
         />
         <OpsCard
-          icon={Icon.Transfer('w-4 h-4 text-purple-600')}
-          iconBg="bg-purple-100"
+          iconSrc="/dashIcons/transfer.png"
+          // iconBg="bg-purple-100"
           label="TRANSFERS"
           value={trCount}
           onClick={() => openPendingTransactions('Transfer Order Form')}
@@ -714,8 +726,8 @@ function DashboardPage(useProps) {
           loading={trLoading}
         />
         <OpsCard
-          icon={Icon.Users('w-4 h-4 text-green-600')}
-          iconBg="bg-green-100"
+          iconSrc="/dashIcons/issuance.png"
+          // iconBg="bg-green-100"
           label="BORROW / ISSUE"
           value={aAcctCount}
           onClick={() => openPendingTransactions('Asset Accountability Form')}
@@ -723,8 +735,8 @@ function DashboardPage(useProps) {
           loading={accLoading}
         />
         <OpsCard
-          icon={Icon.Trash('w-4 h-4 text-orange-600')}
-          iconBg="bg-orange-100"
+          iconSrc="/dashIcons/garbage.png"
+          // iconBg="bg-orange-100"
           label="DISPOSALS"
           value={adCount}
           onClick={() => openPendingTransactions('Disposal Form')}
@@ -732,8 +744,8 @@ function DashboardPage(useProps) {
           loading={adLoading}
         />
         <OpsCard
-          icon={Icon.Alert('w-4 h-4 text-red-600')}
-          iconBg="bg-red-100"
+          iconSrc="/dashIcons/lost.png"
+          // iconBg="bg-red-100"
           label="LOST ASSETS"
           value={aLostCount}
           onClick={() => openPendingTransactions('Lost Asset Form')}

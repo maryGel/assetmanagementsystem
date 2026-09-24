@@ -75,6 +75,9 @@ router.post('/', (req, res) => {
         XAANum,
         XALNum,
         AutoWO,
+        // Asset creation auto-numbering toggle: 1 = generate FacNO from the
+        // category code automatically, 0 = the user types it in by hand.
+        AutoFacNO,
         // Pre-existing fields
         ItmPicpath,
         ApprovalApp,
@@ -100,6 +103,8 @@ router.post('/', (req, res) => {
         XAANum: XAANum !== undefined ? XAANum : 0,
         XALNum: XALNum !== undefined ? XALNum : 0,
         AutoWO: AutoWO || null,
+        // Stored as 0/1; default to 1 (auto) so existing installs keep today's behavior
+        AutoFacNO: AutoFacNO !== undefined ? (AutoFacNO ? 1 : 0) : 1,
         ItmPicpath: ItmPicpath || null,
         ApprovalApp: ApprovalApp !== undefined ? ApprovalApp : null,
         AccessBySection: AccessBySection !== undefined ? AccessBySection : null,

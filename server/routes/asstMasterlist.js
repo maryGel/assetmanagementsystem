@@ -134,6 +134,54 @@ router.get('/', (req, res) => {
 });
 
 
+// Get the next available asset number for a category code (xCode).
+// IMPORTANT: this must be declared BEFORE '/:facNo', otherwise Express
+// treats "next-facno" as a facNo value.
+// Fills the first gap in the sequence (1, 2, 4 -> 3), same rule as before,
+// but computed on the server from ALL rows of that category.
+router.get('/next-facno', (req, res) => {
+  const xCode = (req.query.xCode || '').toString().trim();
+  if (!xCode) {
+    return res.status(400).json({ error: 'xCode is required' });
+  }
+
+  const prefix = `${xCode}-`;
+  // Normalise stray spaces / NBSP so legacy rows are still counted
+  const sql = `
+    SELECT REPLACE(REPLACE(FacNO, CHAR(160), ''), ' ', '') AS FacNO
+    FROM itemlist
+    WHERE LEFT(REPLACE(REPLACE(FacNO, CHAR(160), ''), ' ', ''), ?) = ?
+  `;
+
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error('Error getting connection from pool:', err.stack);
+      return res.status(500).json({ error: 'Database connection error' });
+    }
+
+    connection.query(sql, [prefix.length, prefix], (error, results) => {
+      connection.release();
+
+      if (error) {
+        console.error('Error generating next FacNO:', error.stack);
+        return res.status(500).json({ error: 'Error generating asset number' });
+      }
+
+      const used = new Set();
+      results.forEach(({ FacNO }) => {
+        const match = String(FacNO).match(/-(\d+)$/);
+        if (match) used.add(parseInt(match[1], 10));
+      });
+
+      let next = 1;
+      while (used.has(next)) next++;
+
+      res.json({ facNO: `${prefix}${String(next).padStart(7, '0')}` });
+    });
+  });
+});
+
+
 // Get a single asset by facNo
 router.get('/:facNo', (req, res) => {
   const { facNo } = req.params;
@@ -285,6 +333,12 @@ router.post('/', (req, res) => {
         console.error('SQL state:', error.sqlState);
         console.error('Full error:', error);
         console.error('Error executing query:' + error.stack);
+        // Two users can be handed the same number at the same time.
+        // Needs a UNIQUE index on itemlist.FacNO to trigger; the client
+        // reacts to 409 by fetching a fresh number.
+        if (error.code === 'ER_DUP_ENTRY') {
+          return res.status(409).json({ error: `Asset number ${FacNO} already exists` });
+        }
         return res.status(500).json({ error: 'Error inserting asset' });
       }
 

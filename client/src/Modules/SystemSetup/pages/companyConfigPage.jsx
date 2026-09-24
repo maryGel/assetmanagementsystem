@@ -24,6 +24,7 @@ const emptyForm = {
   XAANum: 0,
   XALNum: 0,
   AutoWO: 0,
+  AutoFacNO: 1, // default on: asset numbers are generated from the category code
 };
 
 export default function CompanySetupPage() {
@@ -59,12 +60,20 @@ export default function CompanySetupPage() {
         XAANum: companyConfig.XAANum ?? 0,
         XALNum: companyConfig.XALNum ?? 0,
         AutoWO: companyConfig.AutoWO ?? 0,
+        // Coerce whatever the DB gives back (0/1, null, "1") into a clean boolean-ish 0/1
+        AutoFacNO: companyConfig.AutoFacNO === undefined || companyConfig.AutoFacNO === null
+          ? 1
+          : Number(companyConfig.AutoFacNO),
       });
     }
   }, [companyConfig]);
 
   const handleChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleCheckboxChange = (field) => (e) => {
+    setFormData((prev) => ({ ...prev, [field]: e.target.checked ? 1 : 0 }));
   };
 
   const handleLogoPick = () => {
@@ -96,6 +105,9 @@ export default function CompanySetupPage() {
         XAANum: companyConfig.XAANum ?? 0,
         XALNum: companyConfig.XALNum ?? 0,
         AutoWO: companyConfig.AutoWO ?? 0,
+        AutoFacNO: companyConfig.AutoFacNO === undefined || companyConfig.AutoFacNO === null
+          ? 1
+          : Number(companyConfig.AutoFacNO),
       });
     }
     setLogoFile(null);
@@ -116,6 +128,7 @@ export default function CompanySetupPage() {
       XAANum: Number(formData.XAANum) || 0,
       XALNum: Number(formData.XALNum) || 0,
       AutoWO: Number(formData.AutoWO) || 0,
+      AutoFacNO: formData.AutoFacNO ? 1 : 0,
     };
 
     const result = await saveCompanyConfig(payload);
@@ -301,6 +314,28 @@ export default function CompanySetupPage() {
               <p className="mt-1 text-xs text-gray-400">
                 Prefix/format used when generating new transaction numbers.
               </p>
+            </div>
+
+            <div>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={!!formData.AutoFacNO}
+                  onChange={handleCheckboxChange('AutoFacNO')}
+                  disabled={!isEditing}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-700">
+                    Auto-generate asset numbers
+                  </span>
+                  <span className="block text-xs text-gray-400">
+                    When checked, new assets get a number generated automatically from the
+                    selected category&apos;s code. When unchecked, the person creating the
+                    asset must type the asset number in by hand.
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div>
