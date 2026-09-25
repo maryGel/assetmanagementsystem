@@ -12,7 +12,7 @@ router.get('/', ( req, res ) => {
       return res.status(500).json({error: 'Database connection error'});
     }
     
-    const sqlSelect = 'SELECT * FROM refsector';
+    const sqlSelect = 'SELECT * FROM refsupplier';
     
     connection.query(sqlSelect, (error, results) => {
       connection.release(); // release connection back to pool
@@ -33,7 +33,7 @@ router.get('/:id', (req, res) => {
       return res.status(500).json({error: 'Database connection failed'});
     }
 
-    const sql = 'SELECT * FROM refsector WHERE id = ?';
+    const sql = 'SELECT * FROM refsupplier WHERE id = ?';
 
     connection.query(sql, [id], (error, result) => {
       connection.release();
@@ -52,9 +52,9 @@ router.get('/:id', (req, res) => {
 
 // Post create new Section
 router.post('/',(req,res) => {
-  const { xcode, xdesc } = req.body;
+  const { suppID, suppName } = req.body;
 
-  if(!xdesc){
+  if(!suppName){
     return res.status(400).json({error: 'Section Code is required'})
   }
 
@@ -63,8 +63,8 @@ router.post('/',(req,res) => {
       return res.status(500).json({error: 'Database connection failed'});
     }
 
-    const sql = 'INSERT INTO refsector(xcode, xdesc) VALUES (?,?)';
-    const params = [xcode, xdesc || '']
+    const sql = 'INSERT INTO refsupplier(suppID, suppName) VALUES (?,?)';
+    const params = [suppID, suppName || '']
 
     connection.query(sql, params, (error, result) => {
       connection.release();
@@ -74,10 +74,10 @@ router.post('/',(req,res) => {
       }
 
       res.json({
-        message: 'New Section has been successfully created',
+        message: 'New Supplier has been successfully created',
         id: result.insertId,
-        xcode,
-        xdesc
+        suppID,
+        suppName
       });
     });
   });
@@ -87,10 +87,10 @@ router.post('/',(req,res) => {
 // PUT update Section
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { xcode, xdesc } = req.body;
+  const { suppID, suppName } = req.body;
 
-  if(!xdesc){
-    return res.status(400).json({error: 'Section name is required'})
+  if(!suppName){
+    return res.status(400).json({error: 'Supplier name is required'})
   }
 
   db.getConnection((error, connection) => {
@@ -99,8 +99,8 @@ router.put('/:id', (req, res) => {
       return res.status(500).json({error: ' Database connection failed'});
     }
 
-    const sql = 'UPDATE refsector SET xcode = ?, xdesc = ? where id = ?';
-    const params = [xcode, xdesc || '', id];
+    const sql = 'UPDATE refsupplier SET suppID = ?, suppName = ? where id = ?';
+    const params = [suppID, suppName || '', id];
 
     connection.query(sql, params, (error, result) => {
       connection.release();
@@ -110,10 +110,10 @@ router.put('/:id', (req, res) => {
       }
   
       if(result.affectedRows === 0 ){
-        return res.status(404).json({error: 'Section not found'});
+        return res.status(404).json({error: 'Supplier not found'});
       }
 
-      res.json({message : 'Section updates has been successfully'});
+      res.json({message : 'Supplier updates has been successfully'});
     });
   });
 });
@@ -128,7 +128,7 @@ router.delete('/:id', (req,res) => {
       return res.status(500).json({error: 'Database connection failed'});
     }
 
-    connection.query('Delete from refsector where id = ?', [id], (error, result) => {
+    connection.query('Delete from refsupplier where id = ?', [id], (error, result) => {
       connection.release();
 
       if(error){
@@ -136,10 +136,10 @@ router.delete('/:id', (req,res) => {
       }
 
       if(result.affectedRows === 0){
-        return res.status(404).json({ error: 'Section not found'});
+        return res.status(404).json({ error: 'Supplier not found'});
       }
 
-      res.json({message: 'Section has been deleted successfully'});
+      res.json({message: 'Supplier has been deleted successfully'});
     });
   });
 });

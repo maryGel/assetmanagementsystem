@@ -47,7 +47,8 @@ export default function RefTabs({handleOpenTab}){
               {[
                 'Unit of Measure', 
                 'Brand',
-                'Color'
+                'Color',
+                'Supplier',
                 ].map((item) => (
                   <ListItemButton 
                     key = {item}

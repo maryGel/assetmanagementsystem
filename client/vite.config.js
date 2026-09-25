@@ -51,7 +51,8 @@ export default defineConfig({
       '/refAssetGroup': 'http://localhost:3000',
       '/userPermissions': 'http://localhost:3000',
       '/assetReport': 'http://localhost:3000',
-      '/lineItemReport': 'http://localhost:3000'
+      '/lineItemReport': 'http://localhost:3000',
+      '/refSupplierRoute': 'http://localhost:3000'
     }
   },
   // Add base URL for Vercel

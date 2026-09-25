@@ -17,6 +17,7 @@
   dotenv.config();
 
   // Route imports
+    // Referential Routes
   import useItemlist from './routes/asstMasterlist.js';
   import referentialsRoute from './routes/referentials.js';
   import refCategoryRoute from './routes/refCatRoute.js';
@@ -27,11 +28,14 @@
   import refDeptRoute from './routes/refDeptRoute.js';
   import refEmpRoute from './routes/refEmpRoute.js';
   import refAssetGroupRoute from './routes/refAssetGrpRoute.js';
+  import colorsRoute from './routes/refColorRoute.js';
+  import sectionsRoute from './routes/refSecRoute.js';
+  import refSuppRoute from './routes/refSuppRoute.js';
+
   import authRoute from './routes/authRoute.js';
   import usersRoute from './routes/usersRoute.js';
   import accessRoute from './routes/accessRoute.js';
-  import colorsRoute from './routes/refColorRoute.js';
-  import sectionsRoute from './routes/refSecRoute.js';
+
   import approvalRoute from './routes/refApprovalRoute.js';
   import jo_hRoute from './routes/jo_hRoute.js';
   import jo_dRoute from './routes/jo_dRoute.js';
@@ -179,6 +183,7 @@
   app.use('/refDepartment', refDeptRoute);
   app.use('/refEmployee', refEmpRoute);
   app.use('/refAssetGroup', refAssetGroupRoute);
+  app.use('/refSupplierRoute', refSuppRoute);
   app.use('/accessRights', accessRoute);
   app.use('/colorsRoute', colorsRoute);
   app.use('/secRoutes', sectionsRoute);

@@ -11,7 +11,7 @@ import {
 // Custom hooks
 import { useRefBrand } from '../../../hooks/refBrand';
 import { useColors } from '../../../hooks/refColor';
-
+import { useSuppliers } from '../../../hooks/refSupp';
 /* --------------------------------------------------
    G E N E R A L   I N F O   C O M P O N E N T
 ---------------------------------------------------- */
@@ -23,7 +23,8 @@ export default function CreateAssetGenInfo({
   error
 }) {
   const { refBrandData } = useRefBrand();
-  const { refColors } = useColors(); // if your hook needs an argument here, pass it the same way refColor.jsx does
+  const { refColors } = useColors(); 
+  const { refSuppliers } = useSuppliers();
   const [brandOptions, setBrandOptions] = useState([]);
 
   useEffect(() => {
@@ -32,15 +33,20 @@ export default function CreateAssetGenInfo({
     }
   }, [refBrandData]);
 
-  // Color names from the reference list. If the asset already has a color that
-  // is not in the list (e.g. copied from an older record typed as free text),
-  // keep it as an option so MUI doesn't complain and the value isn't lost.
+
   const colorOptions = useMemo(() => {
     const names = Array.isArray(refColors)
       ? refColors.map((c) => c.ColName).filter(Boolean)
       : [];
     return asset.Color && !names.includes(asset.Color) ? [asset.Color, ...names] : names;
   }, [refColors, asset.Color]);
+
+  const supplierOptions = useMemo(() => {
+    const names = Array.isArray(refSuppliers)
+      ? refSuppliers.map((s) => s.suppName).filter(Boolean)
+      : [];
+    return asset.suppName && !names.includes(asset.suppName) ? [asset.suppName, ...names] : names;
+  }, [refSuppliers, asset.suppName]);
 
   if (loading) return (
     <Box className='flex justify-center p-5'>
@@ -115,12 +121,18 @@ export default function CreateAssetGenInfo({
         </Box>
 
         {/* ... Supplier and Reference ... */}
-        <TextField
+        <Autocomplete
+          key="Supplier"
+          id="supplier-autocomplete"
           label={'Supplier'}
           sx={{ width: '60rem' }}
+          options={supplierOptions}
           margin="normal"
           value={asset.suppName || ''}
           onChange={(e) => handleInputChange('suppName', e.target.value)}
+          renderInput={(params) => (
+              <TextField {...params} label="Supplier" placeholder="Supplier" />
+            )}
         />
 
         <TextField

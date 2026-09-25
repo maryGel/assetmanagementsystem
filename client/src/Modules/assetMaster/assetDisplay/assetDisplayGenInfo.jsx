@@ -14,6 +14,7 @@ import { useRefDepartment } from '../../../hooks/refDepartment';
 import { useRefLocation } from '../../../hooks/refLocation';
 import { useRefBrand } from '../../../hooks/refBrand';
 import { useColors } from '../../../hooks/refColor';
+import { useSuppliers } from '../../../hooks/refSupp';
 
 // ---------------------------------------------------------------------------
 // Shared styling. Flat gray fills read as placeholders rather than finished
@@ -46,6 +47,7 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
   const { refLocData } = useRefLocation(useProps);
   const { refBrandData } = useRefBrand(useProps);
   const { refColors } = useColors();
+  const { refSuppliers } = useSuppliers();
 
   // Keep a color the asset already has even if it's not in the reference
   // list (e.g. legacy free-text data), so it isn't silently dropped.
@@ -53,6 +55,11 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
     const names = Array.isArray(refColors) ? refColors.map((c) => c.ColName).filter(Boolean) : [];
     return asset.Color && !names.includes(asset.Color) ? [asset.Color, ...names] : names;
   }, [refColors, asset.Color]);
+
+  const supplierOptions = useMemo(() => {
+    const names = Array.isArray(refSuppliers) ? refSuppliers.map((s) => s.suppName).filter(Boolean) : [];
+    return asset.suppName && !names.includes(asset.suppName) ? [asset.suppName, ...names] : names;
+  }, [refSuppliers, asset.suppName]);
 
   return (
     <div className='w-full min-w-0 px-10'>
@@ -124,13 +131,15 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
             onChange={(e) => onFieldChange('serialNo', e.target.value)}
           />
           <span className={fieldLabelClass}>Supplier:</span>
-          <input
-            type='text'
-            className={fieldValueClass(isEditing)}
-            value={asset.suppName}
+          <Autocomplete
             disabled={!isEditing}
-            readOnly={!isEditing}
-            onChange={(e) => onFieldChange('suppName', e.target.value)}
+            size='small'
+            options={supplierOptions}
+            value={asset.suppName || ''}
+            onChange={(event, newValue) => onFieldChange('suppName', newValue || '')}
+            renderInput={(params) => (
+              <TextField {...params} sx={getAutocompleteSx(isEditing)} />
+            )}
           />
           <span className={fieldLabelClass}>Reference:</span>
           <input
