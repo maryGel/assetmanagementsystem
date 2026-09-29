@@ -17,7 +17,7 @@ import { openAAPrintPreview } from '../../../Utils/printAssetAccountability'
 // Custom Hooks
 import { useAD_h } from '../../../hooks/useAD_h';
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
-import { userRefEmployee } from '../../../hooks/refEmployee'; 
+import { useRefEmployees } from '../../../hooks/refEmployee'; 
 import { useRefLocation } from '../../../hooks/refLocation'; 
 import { useSections } from '../../../hooks/refSection';
 import { useAAData } from '../../../hooks/useAssetAcc_reducer';
@@ -98,11 +98,11 @@ export default function AAFormPage(useProps) {
 
   // Reference data
   const { refDeptData } = useRefDepartment();
-  const { refEmployeeData } = userRefEmployee();
+  const { refEmployees } = useRefEmployees();
   const { refLocData } = useRefLocation();
   const { refSections } = useSections();
   const departments = refDeptData.map(item => item.Department);
-  const employees = refEmployeeData.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
+  const employees = refEmployees.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
   const locations = refLocData.map(item => item.LocationName);
   const sections = refSections.map(item => item.xdesc);
   const [refreshTrigger, setRefreshTrigger] = useState(0);

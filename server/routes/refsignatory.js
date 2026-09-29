@@ -1,11 +1,11 @@
-// routes/refCat.js
+// routes/signatory.js
 import express from 'express';
 import { db } from '../server.js';
 
 const router = express.Router();
 
 
-// GET all categories
+// GET all signatories
 router.get('/', (req, res) => {
   
   db.getConnection((err, connection) => {
@@ -13,14 +13,13 @@ router.get('/', (req, res) => {
       console.error('Database connection error:', err);
       return res.status(500).json({ error: 'Database connection failed' });
     }
+
+    const sql = 'SELECT * FROM signatory';
     
-    const sqlSelect = 'SELECT * FROM refemployee';
-    
-    connection.query(sqlSelect, (error, results) => {
+    connection.query(sql, (error, results) => {
       connection.release();
       
       if (error) {
-        console.error('Database query error:', error);
         return res.status(500).json({ error: 'Database query failed', details: error.message });
       }
       
@@ -29,7 +28,7 @@ router.get('/', (req, res) => {
   });
 });
 
-// GET single employee by ID
+// GET single signatory by ID
 router.get('/:id', (req, res) => {
   const { id } = req.params;
   
@@ -38,7 +37,7 @@ router.get('/:id', (req, res) => {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    const sql = 'SELECT * FROM refemployee WHERE id = ?';
+    const sql = 'SELECT * FROM signatory WHERE id = ?';
     
     connection.query(sql, [id], (error, results) => {
       connection.release();
@@ -49,7 +48,7 @@ router.get('/:id', (req, res) => {
       }
       
       if (results.length === 0) {
-        return res.status(404).json({ error: 'employee not found' });
+        return res.status(404).json({ error: 'signatory not found' });
       }
       
       res.json(results[0]);
@@ -57,13 +56,12 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// POST create new employee
+// POST create new signatory
 router.post('/', (req, res) => {
-  const { Emp_No, Emp_FName, Emp_MName, Emp_LName  } = req.body;
-  // console.log('POST /api/refCat - Creating employee:', {xCode, employee });
+  const { xModule, xLabel, xName, xPosition } = req.body;
   
-  if (!Emp_No) {
-    return res.status(400).json({ error: 'Employee Number is required' });
+  if (!xModule || !xLabel || !xName || !xPosition) {
+    return res.status(400).json({ error: 'Module, Label, Name, and Position are required' });
   }
   
   db.getConnection((err, connection) => {
@@ -71,37 +69,36 @@ router.post('/', (req, res) => {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    const sql = 'INSERT INTO refemployee (Emp_No, Emp_FName, Emp_MName, Emp_LName ) VALUES (?, ?, ?, ?)';
-    const params = [Emp_No, Emp_FName || '', Emp_MName || '', Emp_LName || ''];
+    const sql = 'INSERT INTO signatory( xModule, xLabel, xName, xPosition) VALUES (?, ?, ?, ?)';
+    const params = [xModule, xLabel, xName, xPosition];
     
     connection.query(sql, params, (error, result) => {
       connection.release();
       
       if (error) {
-        console.error('Database query error:', error);
         return res.status(500).json({ error: 'Database query failed', details: error.message, sql: sql });
       }
       
       res.json({ 
-        message: 'employee created successfully', 
+        message: 'signatory has been created successfully', 
         id: result.insertId,
-            Emp_No: Emp_No,
-            Emp_FName: Emp_FName || '',
-            Emp_MName: Emp_MName || '',
-            Emp_LName: Emp_LName || ''
+        xModule: xModule || '',
+        xLabel: xLabel || '',
+        xName: xName || '',
+        xPosition: xPosition || ''
       });
     });
   });
 });
 
-// PUT update employee
+
+// PUT update signatory
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { Emp_No, Emp_FName, Emp_MName, Emp_LName  } = req.body;
-  // console.log(`PUT /api/refCat/${id} - Updating employee to:`, {xCode, employee});
+  const { xModule, xLabel, xName, xPosition } = req.body;
   
-  if (!Emp_No) {
-    return res.status(400).json({ error: 'Employee Number is required' });
+  if (!xModule || !xLabel || !xName || !xPosition) {
+    return res.status(400).json({ error: 'Module, Label, Name, and Position are required' });
   }
 
   db.getConnection((err, connection) => {
@@ -109,8 +106,8 @@ router.put('/:id', (req, res) => {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    const sql = 'UPDATE refemployee SET Emp_No = ?, Emp_FName = ?, Emp_MName = ?, Emp_LName = ? WHERE id = ?';
-    const params = [Emp_No, Emp_FName || '', Emp_MName || '', Emp_LName || '', id];
+    const sql = 'UPDATE signatory SET xModule = ?, xLabel = ?, xName = ?, xPosition = ? WHERE id = ?';
+    const params = [xModule, xLabel, xName, xPosition, id];
 
     connection.query(sql, params, (error, result) => {
       connection.release();
@@ -120,25 +117,26 @@ router.put('/:id', (req, res) => {
       }
       
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'employee not found' });
+        return res.status(404).json({ error: 'signatory not found' });
       }
       
-      res.json({ message: 'employee updates has been successfully' });
+      res.json({ message: 'signatory updates has been successfully' });
     });
   });
 });
 
-// DELETE employee
+// DELETE signatory
 router.delete('/:id', (req, res) => {
   const { id } = req.params;
-  // console.log(`DELETE /api/refCat/${id} - Deleting employee`);
   
   db.getConnection((err, connection) => {
     if (err) {
       return res.status(500).json({ error: 'Database connection failed' });
     }
+
+    const sql = 'DELETE FROM signatory WHERE id = ?';
     
-    connection.query('DELETE FROM refemployee WHERE id = ?', [id], (error, result) => {
+    connection.query(sql, [id], (error, result) => {
       connection.release();
       
       if (error) {
@@ -146,10 +144,10 @@ router.delete('/:id', (req, res) => {
       }
       
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'employee not found' });
+        return res.status(404).json({ error: 'signatory not found' });
       }
       
-      res.json({ message: 'employee deleted successfully' });
+      res.json({ message: 'signatory deleted successfully' });
     });
   });
 });

@@ -16,7 +16,7 @@ import { CustomDialog } from '../../../Utils/customDialog'
 // Custom Hooks
 import { useTR_h } from '../../../hooks/useTR_h';
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
-import { userRefEmployee } from '../../../hooks/refEmployee'; 
+import { useRefEmployees } from '../../../hooks/refEmployee'; 
 import { useRefLocation } from '../../../hooks/refLocation'; 
 import { useSections } from '../../../hooks/refSection';
 import { useTRData } from '../../../hooks/useTR_reducer';
@@ -91,11 +91,11 @@ export default function TRFormPage(useProps) {
   // Reference data
   const { trHeaders } = useTR_h();
   const { refDeptData } = useRefDepartment();
-  const { refEmployeeData } = userRefEmployee();
+  const { refEmployees } = useRefEmployees();
   const { refLocData } = useRefLocation();
   const { refSections } = useSections();
   const departments = refDeptData.map(item => item.Department);
-  const employees = refEmployeeData.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
+  const employees = refEmployees.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
   const locations = refLocData.map(item => item.LocationName);
   const sections = refSections.map(item => item.xdesc);
   const [refreshTrigger, setRefreshTrigger] = useState(0);

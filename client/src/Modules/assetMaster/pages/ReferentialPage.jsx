@@ -9,6 +9,7 @@ import RefDepartment from '../referentials/refDepartment';
 import RefColor from '../referentials/refColor';
 import RefSection from '../referentials/refSection';
 import RefSupplier from '../referentials/refSupplier';
+import RefEmployee from '../referentials/refEmployee';
 
 function ReferentialPage() {
 
@@ -50,6 +51,9 @@ function ReferentialPage() {
             openTab = {openTab}
           />
           <RefSupplier
+            openTab = {openTab}
+          />
+          <RefEmployee
             openTab = {openTab}
           />
 

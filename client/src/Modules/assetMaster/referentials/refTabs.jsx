@@ -11,7 +11,8 @@ import {
   ExpandLess,
   ExpandMore,
   Settings as SettingsIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  ManageAccounts as ManageAccountsIcon,
 } from '@mui/icons-material';
 
 
@@ -19,10 +20,12 @@ export default function RefTabs({handleOpenTab}){
 
     const [openGenSet, setOpenGenSet] = useState(false);
     const [openItemAssigment, setOpenItemAssigment] = useState(false);
+    const [openApprovalAssignment, setOpenApprovalAssignment] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null) 
   
     const handleGenSetClick = () => setOpenGenSet(prev => !prev);
     const handleItemClick = () => setOpenItemAssigment(prev => !prev);   
+    const handleApprovalClick = () => setOpenApprovalAssignment(prev => !prev);
     const handleSubItemClick = (item) => {
       setSelectedItem(item)
       handleOpenTab(item)
@@ -34,6 +37,7 @@ export default function RefTabs({handleOpenTab}){
         component="nav"
         aria-labelledby="nested-list-subheader"
       >
+          {/* GENERAL SETTINGS */}
           <ListItemButton onClick={handleGenSetClick}>
             <ListItemIcon sx={{ minWidth: 0, marginRight: 1 }}>
               <SettingsIcon  />
@@ -69,13 +73,15 @@ export default function RefTabs({handleOpenTab}){
             </List>
           </Collapse>
 
+          {/* ITEM ASSIGNMENT */}
           <ListItemButton onClick={handleItemClick}>
-          <ListItemIcon sx={{ minWidth: 0, marginRight: 1 }}>
-            <AssignmentIcon />
-          </ListItemIcon>
-          <ListItemText primary="Item Assignment" />
-            {openItemAssigment ? <ExpandLess /> : <ExpandMore />}
+            <ListItemIcon sx={{ minWidth: 0, marginRight: 1 }}>
+              <AssignmentIcon />
+            </ListItemIcon>
+            <ListItemText primary="Item Assignment" />
+              {openItemAssigment ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
+
           <Collapse in={openItemAssigment} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
               {[
@@ -84,8 +90,43 @@ export default function RefTabs({handleOpenTab}){
                 'Location',
                 'Department',
                 'Maintenance',
-                'Depreciation Type',
-                'Journal Entries'
+                // 'Depreciation Type',
+                // 'Journal Entries'
+              ].map((item) => (
+                <ListItemButton
+                  key={item}
+                  sx={{
+                    pl: 8,
+                    '&.Mui-selected': {
+                      bgcolor: '#0091ea',
+                      color: 'white',
+                      '&:hover': { bgcolor: '#0091ea' },
+                    },
+                  }}
+                  selected={selectedItem === item}
+                  onClick={() => handleSubItemClick(item)}
+                >
+                  <ListItemText primary={item} />
+                </ListItemButton>
+              ))}
+            </List>
+          </Collapse>
+
+          {/* Approval Assignment */}
+          <ListItemButton onClick={handleApprovalClick}>
+            <ListItemIcon sx={{ minWidth: 0, marginRight: 1 }}>
+              <ManageAccountsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Approval Assignment" />
+              {openApprovalAssignment ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+
+          <Collapse in={openApprovalAssignment} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {[
+                'Employee List',
+                'Assign Signatory',
+                'Configure Approval Matrix',
               ].map((item) => (
                 <ListItemButton
                   key={item}
