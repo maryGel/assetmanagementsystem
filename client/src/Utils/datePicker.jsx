@@ -22,6 +22,10 @@ const getPresetDates = (presetId) => {
   endOfToday.setHours(23, 59, 59, 999);
   
   switch(presetId) {
+    case 'anytime': {
+      return [null, null];
+    }
+
     case 'today': {
       const startOfToday = new Date(today);
       startOfToday.setHours(0, 0, 0, 0);
@@ -84,6 +88,7 @@ const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30', inclu
 
   const options = useMemo(() => [
     ...(includeAllPeriods ? [{ id: 'all', label: 'All Periods' }] : []),
+    { id: 'anytime', label: 'Anytime' },
     { id: 'today', label: 'Today' },
     { id: 'this-month', label: 'This Month' },
     { id: 'last-7', label: 'Last 7 Days' },

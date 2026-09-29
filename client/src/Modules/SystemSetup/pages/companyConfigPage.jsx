@@ -122,6 +122,7 @@ export default function CompanySetupPage() {
     const payload = {
       ...formData,
       // Auto-numbering fields must be persisted as numbers
+      CInitial: formData.CInitial || '',
       XJONum: Number(formData.XJONum) || 0,
       XTRNum: Number(formData.XTRNum) || 0,
       XADNum: Number(formData.XADNum) || 0,

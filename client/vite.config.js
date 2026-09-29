@@ -16,6 +16,7 @@ export default defineConfig({
       '/login': 'http://localhost:3000',
       '/users': 'http://localhost:3000',
       '/itemlist': 'http://localhost:3000',
+      '/uploads': 'http://localhost:3000',
       '/referentials': 'http://localhost:3000',
       '/api': 'http://localhost:3000',
       '/refBrand': 'http://localhost:3000',

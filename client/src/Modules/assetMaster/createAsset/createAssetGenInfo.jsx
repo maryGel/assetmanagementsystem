@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Typography,
   Box,
@@ -25,13 +25,8 @@ export default function CreateAssetGenInfo({
   const { refBrandData } = useRefBrand();
   const { refColors } = useColors(); 
   const { refSuppliers } = useSuppliers();
-  const [brandOptions, setBrandOptions] = useState([]);
-
-  useEffect(() => {
-    if (refBrandData && Array.isArray(refBrandData)) {
-      setBrandOptions(refBrandData.map((item) => item.BrandName).filter(Boolean));
-    }
-  }, [refBrandData]);
+  const brandOptions = refBrandData ?? [];
+  const supplierOptions = refSuppliers ?? [];
 
 
   const colorOptions = useMemo(() => {
@@ -41,12 +36,7 @@ export default function CreateAssetGenInfo({
     return asset.Color && !names.includes(asset.Color) ? [asset.Color, ...names] : names;
   }, [refColors, asset.Color]);
 
-  const supplierOptions = useMemo(() => {
-    const names = Array.isArray(refSuppliers)
-      ? refSuppliers.map((s) => s.suppName).filter(Boolean)
-      : [];
-    return asset.suppName && !names.includes(asset.suppName) ? [asset.suppName, ...names] : names;
-  }, [refSuppliers, asset.suppName]);
+
 
   if (loading) return (
     <Box className='flex justify-center p-5'>
@@ -109,14 +99,19 @@ export default function CreateAssetGenInfo({
           />
 
           <Autocomplete
-            key="Brand"
-            sx={{ width: '25rem', marginTop: '1rem' }}
             options={brandOptions}
-            value={asset.Brand || null}
-            onChange={(event, newValue) => handleInputChange('Brand', newValue || '')}
-            renderInput={(params) => (
-              <TextField {...params} label="Brand" placeholder="Brand" />
-            )}
+            sx={{ width: '25rem', marginTop: '1rem' }}
+            margin="normal"
+            value={brandOptions.find((brand) => brand.id === asset.BrandID) ?? null}
+            getOptionLabel={(brand) => `${brand.BrandID} - ${brand.BrandName} `}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            onChange={(_, brand) =>
+              updateAssetData({
+                BrandID: brand?.id ?? '',
+                Brand: brand?.BrandName ?? ''
+              })
+            }
+            renderInput={(params) => <TextField {...params} label="Brand" />}
           />
         </Box>
 
@@ -128,8 +123,10 @@ export default function CreateAssetGenInfo({
           sx={{ width: '60rem' }}
           options={supplierOptions}
           margin="normal"
-          value={asset.suppName || ''}
-          onChange={(e) => handleInputChange('suppName', e.target.value)}
+          getOptionLabel={(supplier) => `${supplier.suppID} - ${supplier.suppName} `}
+          value={supplierOptions.find((supplier) => supplier.suppName === asset.suppName) ?? null}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          onChange={(_, supplier) => handleInputChange('suppName', supplier?.suppName ?? '')}
           renderInput={(params) => (
               <TextField {...params} label="Supplier" placeholder="Supplier" />
             )}

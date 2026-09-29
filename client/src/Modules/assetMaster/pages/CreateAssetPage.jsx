@@ -209,7 +209,7 @@ export default function CreateAsset({ setHeaderTitle }) {
     }
 
     try {
-      await createAsset(prepareAssetPayload(asset));
+      await createAsset(prepareAssetPayload(asset), asset.uploadPicture?.file);
       setSubmitSuccess(true);
 
       setTimeout(() => {

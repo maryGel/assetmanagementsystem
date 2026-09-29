@@ -68,7 +68,7 @@ router.post('/', (req, res) => {
         CompTel,
         ReportHeader,
         // Company Setup - advanced / auto-numbering
-        Cinitial,
+        CInitial,
         XJONum,
         XTRNum,
         XADNum,
@@ -96,7 +96,7 @@ router.post('/', (req, res) => {
         address: address !== undefined ? address : null,
         CompTel: CompTel !== undefined ? CompTel : null,
         ReportHeader: ReportHeader !== undefined ? ReportHeader : null,
-        Cinitial: Cinitial !== undefined ? Cinitial : null,
+        CInitial: CInitial !== undefined ? CInitial : null,
         XJONum: XJONum !== undefined ? XJONum : 0,
         XTRNum: XTRNum !== undefined ? XTRNum : 0,
         XADNum: XADNum !== undefined ? XADNum : 0,

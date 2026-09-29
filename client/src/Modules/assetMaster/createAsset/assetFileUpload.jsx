@@ -20,7 +20,7 @@ const AssetFileUpload = ({ asset, updateAssetData }) => {
         Upload Picture (Optional)
       </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        Upload an image of the asset. Max file size: 5MB. Supported formats: JPG, PNG, GIF.
+        Upload an image of the asset. Max file size: 5MB. Supported formats: JPG, PNG, GIF, WEBP.
       </Typography>
       
       <Box sx={{ mt: 2 }}>
@@ -29,7 +29,7 @@ const AssetFileUpload = ({ asset, updateAssetData }) => {
           <input
             type="file"
             hidden
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp"
             onChange={handleFileChange}
           />
         </Button>

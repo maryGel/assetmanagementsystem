@@ -93,7 +93,8 @@
       if (
         origin.startsWith('http://localhost:5174') ||
         origin.startsWith('http://10.0.0.187') ||
-        origin.startsWith('http://127.0.0.1') 
+        origin.startsWith('http://127.0.0.1') ||
+        origin.startsWith('http://103.137.179.26:5174')
       ) {
         return callback(null, true)
       }
@@ -171,6 +172,9 @@
   });
 
   // API Routes
+  // Public asset and company image files. The database stores paths beginning
+  // with /uploads, never an absolute filesystem path.
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
   app.use('/login', authRoute);
   app.use('/users', usersRoute);
   app.use('/itemlist', useItemlist);

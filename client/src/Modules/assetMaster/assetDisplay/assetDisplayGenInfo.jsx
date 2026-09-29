@@ -27,7 +27,7 @@ const sectionHeaderClass = 'block pl-5 mb-4 pb-2 border-b border-slate-100 text-
 const fieldLabelClass = 'p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500 whitespace-nowrap';
 
 const fieldValueClass = (isEditing) =>
-  `w-full min-w-0 flex-1 px-2.5 py-1.5 rounded text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${
+  `w-auto min-w-0 flex-1 px-2.5 py-1.5 rounded text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${
     isEditing
       ? 'border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400'
       : 'border border-transparent bg-transparent text-slate-600'
@@ -219,11 +219,11 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
           />
 
           <span className={fieldLabelClass}>Warranty:</span>
-          <div className='flex flex-wrap items-center gap-2'>
+          <div className='flex items-center gap-2 flex-cols-[minmax(4rem,6rem)_minmax(4rem,6rem)]'>
             <span className='text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500 whitespace-nowrap'>From</span>
             <input
               type='date'
-              className={fieldValueClass(isEditing) + ' w-auto flex-none'}
+              className={fieldValueClass(isEditing)}
               value={asset.StartDate || ''}
               disabled={!isEditing}
               readOnly={!isEditing}
@@ -232,7 +232,7 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
             <span className='text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500 whitespace-nowrap'>to</span>
             <input
               type='date'
-              className={fieldValueClass(isEditing) + ' w-auto flex-none'}
+              className={fieldValueClass(isEditing)}
               value={asset.EndDate || ''}
               disabled={!isEditing}
               readOnly={!isEditing}

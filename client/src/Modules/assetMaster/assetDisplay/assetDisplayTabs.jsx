@@ -48,7 +48,7 @@ function a11yProps(index) {
   };
 }
 
-export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFieldChange}){
+export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFieldChange, facNo}){
 
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
@@ -93,7 +93,7 @@ export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFiel
         />
       </TabPanel>
       <TabPanel value={value} index={2} dir={theme.direction}>
-        <AssetDisplayTrans/>
+        <AssetDisplayTrans facNo={facNo || asset?.FacNO} />
       </TabPanel>
     </Box>
   );

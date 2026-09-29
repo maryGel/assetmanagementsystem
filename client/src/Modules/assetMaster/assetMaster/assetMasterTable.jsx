@@ -300,10 +300,14 @@ export default function AssetMasterTable({
   }
 
 
+  // `rows` contains only the page returned by the server, not every matching
+  // asset. Comparing the requested page against rows.length therefore reset
+  // page 2 (and every later page) back to page 1. Use the server's total
+  // instead, and only correct the page when filtering/page-size changes put
+  // it beyond the actual final page.
   useEffect(() => {
-    if (page > 0 && page * rowsPerPage >= rows.length) {
-      setPage(0);
-    }
+    const lastPage = Math.max(0, Math.ceil(total / rowsPerPage) - 1);
+    if (page > lastPage) setPage(lastPage);
   }, [total, page, rowsPerPage, setPage]);
 
 

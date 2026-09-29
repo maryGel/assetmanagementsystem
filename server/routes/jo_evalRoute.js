@@ -201,8 +201,12 @@ router.put('/evaluate/:JO_No', (req, res) => {
 
         // ✅ Only update header if ALL items are evaluated
         if (allItemsResult.length > 0) {
-          const totalItems = allItemsResult[0].total_items;
-          const unevaluatedCount = allItemsResult[0].unevaluated_count;
+          // ✅ FIX: SUM()/COUNT() can come back as strings depending on the
+          // MySQL driver/typecasting config, which broke this strict (===)
+          // comparison — most visibly on single-item JOs, where the only
+          // evaluation call is also the "last item" call.
+          const totalItems = Number(allItemsResult[0].total_items);
+          const unevaluatedCount = Number(allItemsResult[0].unevaluated_count);
           
           if (unevaluatedCount === 0 && totalItems > 0) {
             // All items are evaluated - update header to 'DONE'

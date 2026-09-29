@@ -258,14 +258,25 @@ export const useAssetMasterData = () => {
     dispatch({ type: 'CLEAR_SINGLE_ASSET' });
   }, []);
 
-  const createAsset = async (payload) => {
+  const createAsset = async (payload, pictureFile = null) => {
     try {
       dispatch({ type: 'MUTATING' });
       
-      const res = await api.post('/itemlist', payload)
+      const requestBody = pictureFile
+        ? Object.entries(payload).reduce((formData, [key, value]) => {
+            formData.append(key, value ?? '');
+            return formData;
+          }, new FormData())
+        : payload;
+
+      if (pictureFile) requestBody.append('picture', pictureFile);
+
+      const res = await api.post('/itemlist', requestBody, pictureFile ? {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      } : undefined);
       dispatch({
         type: 'ADD_ASSET',
-        payload: { id: res.data.assetID, ...payload },
+        payload: { id: res.data.assetId, Picpath: res.data.Picpath, ...payload },
       });
 
       dispatch({ type: 'SUCCESS' })
@@ -278,17 +289,29 @@ export const useAssetMasterData = () => {
     }
   };
 
-  const updateAsset = async (facNo, payload) => {
+  const updateAsset = async (facNo, payload, pictureFile = null) => {
     try {
       dispatch({ type: 'MUTATING' });
 
-      const res = await api.put(`/itemlist/${facNo}`, payload);
+      const requestBody = pictureFile
+        ? Object.entries(payload).reduce((formData, [key, value]) => {
+            formData.append(key, value ?? '');
+            return formData;
+          }, new FormData())
+        : payload;
+
+      if (pictureFile) requestBody.append('picture', pictureFile);
+
+      const res = await api.put(`/itemlist/${facNo}`, requestBody, pictureFile ? {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      } : undefined);
       dispatch({
         type: 'UPDATE_ASSET',
-        payload: { FacNO: facNo, ...payload }
+        payload: { FacNO: facNo, ...payload, Picpath: res.data.Picpath }
       })
 
       dispatch({ type: 'SUCCESS' });
+      return res.data;
     } catch (error) {
       dispatch({
         type: 'ERROR',

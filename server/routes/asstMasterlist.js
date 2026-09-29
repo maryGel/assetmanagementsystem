@@ -1,7 +1,34 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 import { db } from '../server.js';
 
 const router = express.Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const assetImageDir = path.join(__dirname, '..', 'uploads', 'asset-images');
+
+fs.mkdirSync(assetImageDir, { recursive: true });
+
+const assetImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, assetImageDir),
+    filename: (_req, file, cb) => {
+      const extension = path.extname(file.originalname).toLowerCase();
+      cb(null, `asset-${randomUUID()}${extension}`);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+    if (allowedTypes.has(file.mimetype)) return cb(null, true);
+    cb(new Error('Only JPG, PNG, GIF, and WEBP image files are allowed'));
+  }
+});
 
 // Get all itemlist with pagination and filters
 router.get('/', (req, res) => {
@@ -216,6 +243,22 @@ router.get('/:facNo', (req, res) => {
 });
 
 router.post('/', (req, res) => {
+  assetImageUpload.single('picture')(req, res, (uploadError) => {
+    if (uploadError) {
+      const message = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'Image must be 5 MB or smaller'
+        : uploadError.message;
+      return res.status(400).json({ error: message });
+    }
+
+    createAsset(req, res);
+  });
+});
+
+const createAsset = (req, res) => {
+  const discardUploadedFile = () => {
+    if (req.file) fs.unlink(req.file.path, () => {});
+  };
 
   const {
     FacNO,
@@ -248,6 +291,7 @@ router.post('/', (req, res) => {
 
    // ADD THIS VALIDATION
   if (!FacNO || FacNO.trim() === '') {
+    discardUploadedFile();
     return res.status(400).json({
       error: 'FacNO is required and cannot be empty'
     });
@@ -270,6 +314,7 @@ router.post('/', (req, res) => {
 
   for (const [key, value] of Object.entries(requiredFields)) {
     if (value === undefined || value === null || value === '') {
+      discardUploadedFile();
       return res.status(400).json({
         error: `${key} is required`
       });
@@ -307,7 +352,7 @@ router.post('/', (req, res) => {
     EndDate || null,
     ReferenceNo || null,
     'ACTIVE',
-    null,
+    req.file ? `/uploads/asset-images/${req.file.filename}` : null,
     // splitAsset ?? 0,
     Remarks || null,
   ];
@@ -319,6 +364,7 @@ router.post('/', (req, res) => {
 
   db.getConnection((err, connection) => {
     if (err) {
+      discardUploadedFile();
       console.error('Error getting connection from pool:' + err.stack);
       return res.status(500).json({ error: 'Database connection error' });
     }
@@ -327,6 +373,7 @@ router.post('/', (req, res) => {
       connection.release();
 
       if (error) {
+        discardUploadedFile();
         console.error('=== SQL ERROR DETAILS ===');
         console.error('Error message:', error.message);
         console.error('Error code:', error.code);
@@ -344,15 +391,29 @@ router.post('/', (req, res) => {
 
       res.status(201).json({
         message: 'Asset created successfully',
-        assetId: results.insertId
+        assetId: results.insertId,
+        Picpath: req.file ? `/uploads/asset-images/${req.file.filename}` : null
       });
       console.log(`DB result: ${results}`)
     });
   });
-});
+};
 
 
 router.put('/:facNo', (req, res) => {
+  assetImageUpload.single('picture')(req, res, (uploadError) => {
+    if (uploadError) {
+      const message = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'Image must be 5 MB or smaller'
+        : uploadError.message;
+      return res.status(400).json({ error: message });
+    }
+
+    updateAsset(req, res);
+  });
+});
+
+const updateAsset = (req, res) => {
 
   const { facNo } = req.params;
 
@@ -383,6 +444,7 @@ router.put('/:facNo', (req, res) => {
   } = req.body;
 
   if (!facNo) {
+    if (req.file) fs.unlink(req.file.path, () => {});
     return res.status(400).json({ error: 'FacNO is required' });
   }
 
@@ -409,7 +471,8 @@ router.put('/:facNo', (req, res) => {
       StartDate = ?,
       EndDate = ?,
       ReferenceNo = ?,
-      Remarks = ?
+      Remarks = ?,
+      Picpath = COALESCE(?, Picpath)
 
     WHERE FacNO = ?
   `;
@@ -437,6 +500,7 @@ router.put('/:facNo', (req, res) => {
     EndDate || null,
     ReferenceNo || null,
     Remarks || null,
+    req.file ? `/uploads/asset-images/${req.file.filename}` : null,
     // splitAsset ?? 0,
     facNo
   ];
@@ -450,26 +514,44 @@ router.put('/:facNo', (req, res) => {
 
   db.getConnection((err, connection) => {
     if (err) {
+      if (req.file) fs.unlink(req.file.path, () => {});
       console.error(err);
       return res.status(500).json({ error: 'Database connection error' });
     }
 
-    connection.query(sqlUpdate, values, (error, results) => {
+    const saveUpdate = (oldPicpath = null) => connection.query(sqlUpdate, values, (error, results) => {
       connection.release();
 
       if (error) {
+        if (req.file) fs.unlink(req.file.path, () => {});
         console.error(error);
         return res.status(500).json({ error: 'Error updating asset' });
       }
 
       if (results.affectedRows === 0) {
+        if (req.file) fs.unlink(req.file.path, () => {});
         return res.status(404).json({ error: 'Asset not found' });
       }
 
-      res.json({ message: 'Asset updated successfully' });
+      const Picpath = req.file ? `/uploads/asset-images/${req.file.filename}` : oldPicpath;
+      if (req.file && oldPicpath?.startsWith('/uploads/asset-images/')) {
+        fs.unlink(path.join(assetImageDir, path.basename(oldPicpath)), () => {});
+      }
+
+      res.json({ message: 'Asset updated successfully', Picpath });
+    });
+
+    connection.query('SELECT Picpath FROM itemlist WHERE FacNO = ?', [facNo], (selectError, rows) => {
+      if (selectError) {
+        connection.release();
+        if (req.file) fs.unlink(req.file.path, () => {});
+        console.error(selectError);
+        return res.status(500).json({ error: 'Error preparing asset image update' });
+      }
+      saveUpdate(rows[0]?.Picpath || null);
     });
   });
-});
+};
 
 
 export default router;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 // MUI
-import { Snackbar, Alert } from '@mui/material';
+import { Snackbar, Alert, Button } from '@mui/material';
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 
 // Custom Utils
@@ -64,6 +64,7 @@ const mapAssetToForm = (source = {}) => ({
   Percent: source.Percent ?? '',
   Abre: source.Abre ?? '',
   Holder: source.Holder || '',
+  Picpath: source.Picpath || '',
   xxStats: source.xxStats || '',
   writeOff: source.writeOff ? 1 : 0,
   PC_BATCH: source.PC_BATCH || '',
@@ -90,6 +91,8 @@ export default function AssetMasterDisplay() {
   // was reading off that broken shape until singleAsset loaded and replaced it.
   const [asset, setAssetData] = useState(mapAssetToForm(assetMasterFields));
   const [isEditing, setIsEditing] = useState(false);
+  const [pictureFile, setPictureFile] = useState(null);
+  const [picturePreview, setPicturePreview] = useState('');
   const [saveError, setSaveError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -114,6 +117,10 @@ export default function AssetMasterDisplay() {
     }
   }, [singleAsset]);
 
+  useEffect(() => () => {
+    if (picturePreview) URL.revokeObjectURL(picturePreview);
+  }, [picturePreview]);
+
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
@@ -135,7 +142,12 @@ export default function AssetMasterDisplay() {
     try {
       setSaveError(null);
       const payload = prepareAssetPayload(asset);
-      await updateAsset(asset.FacNO, payload);
+      const result = await updateAsset(asset.FacNO, payload, pictureFile);
+      if (pictureFile && result.Picpath) {
+        setAssetData((prev) => ({ ...prev, Picpath: result.Picpath }));
+        setPictureFile(null);
+        setPicturePreview('');
+      }
       showSnackbar('Changes have been saved successfully.');
       setIsEditing(false);
     } catch (error) {
@@ -145,7 +157,24 @@ export default function AssetMasterDisplay() {
 
   const cancelEdit = () => {
     setIsEditing(false);
+    setPictureFile(null);
+    setPicturePreview('');
     if (singleAsset) setAssetData(mapAssetToForm(singleAsset));
+  };
+
+  const handlePictureChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError('Image must be 5 MB or smaller.');
+      event.target.value = '';
+      return;
+    }
+
+    setSaveError(null);
+    setPictureFile(file);
+    setPicturePreview(URL.createObjectURL(file));
   };
 
   // Re-fetches the currently displayed asset. Disabled while editing so it
@@ -272,20 +301,20 @@ export default function AssetMasterDisplay() {
                 pair wraps to its own line as a unit, instead of a grid
                 column silently truncating the label or input.
               */}
-              <div className='flex-col gap-4 shadow-sm mt-1 ml-[clamp(1rem,4vw,4rem)] py-2 px-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] bg-slate-50 border border-slate-100 rounded'>
-                <div className='flex items-center gap-2 min-w-[14rem] flex-1 basis-64'>
-                  <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500 whitespace-nowrap'>Asset Name:</span>
-                  <input type="text" className={`p-2 w-full min-w-0 flex-1 rounded text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.FacName || ''} readOnly={!isEditing} onChange={(e) => handleChange('FacName', e.target.value)} />
+              <div className='m-3 space-y-3 rounded border border-slate-100 bg-slate-50 p-4 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] shadow-sm sm:ml-6'>
+                <div className='flex min-w-0 items-center gap-3'>
+                  <span className='w-28 shrink-0 text-gray-500'>Asset Name:</span>
+                  <input type="text" className={`min-w-0 flex-1 rounded px-2 py-1.5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.FacName || ''} readOnly={!isEditing} onChange={(e) => handleChange('FacName', e.target.value)} />
                 </div>
 
-                <div className='flex items-center gap-2 min-w-[14rem] flex-1 basis-64'>
-                  <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500 whitespace-nowrap'>Description:</span>
-                  <input type="text" className={`p-2 w-full min-w-0 flex-1 rounded text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.Description || ''} readOnly={!isEditing} onChange={(e) => handleChange('Description', e.target.value)} />
+                <div className='flex min-w-0 items-center gap-3'>
+                  <span className='w-28 shrink-0 text-gray-500'>Description:</span>
+                  <input type="text" className={`min-w-0 flex-1 rounded px-2 py-1.5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.Description || ''} readOnly={!isEditing} onChange={(e) => handleChange('Description', e.target.value)} />
                 </div>
 
-                <div className='flex items-center gap-2 min-w-[14rem] flex-1 basis-64'>
-                  <span className='p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500 whitespace-nowrap'>Status:</span>
-                  <div className='p-2'>
+                <div className='flex min-w-0 items-center gap-3'>
+                  <span className='w-28 shrink-0 text-gray-500'>Status:</span>
+                  <div>
                     <StatusBadge status={asset.xxStats} />
                   </div>
                 </div>
@@ -294,10 +323,28 @@ export default function AssetMasterDisplay() {
 
             {/* Column 2: Display Photo */}
             <div className='flex justify-center items-start p-2 flex-1 basis-48 min-w-[9rem] max-w-[9rem] sm:min-w-[10rem] sm:max-w-[10rem] md:min-w-[12rem] md:max-w-xs lg:min-w-[14rem] lg:max-w-sm xl:min-w-[16rem] xl:max-w-md'>
-              <img
-                className='w-full h-auto max-w-[7rem] sm:max-w-[8rem] md:max-w-[12rem] lg:max-w-[14rem] xl:max-w-[16rem]'
-                src='/public/images/assets/laptop.jpg'
-              />
+              {picturePreview || asset.Picpath ? (
+                <img
+                  className='w-full h-auto max-w-[7rem] rounded border border-slate-200 object-contain sm:max-w-[8rem] md:max-w-[12rem] lg:max-w-[14rem] xl:max-w-[16rem]'
+                  src={picturePreview || asset.Picpath}
+                  alt={`Photo of ${asset.FacName || 'asset'}`}
+                />
+              ) : (
+                <div className='flex min-h-28 w-full items-center justify-center rounded border border-dashed border-slate-300 px-3 text-center text-xs text-slate-400'>
+                  No image uploaded
+                </div>
+              )}
+              {isEditing && (
+                <Button component="label" size="small" sx={{ mt: 1, textTransform: 'none' }}>
+                  {pictureFile ? 'Choose another image' : 'Change image'}
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handlePictureChange}
+                  />
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -307,6 +354,7 @@ export default function AssetMasterDisplay() {
           isEditing={isEditing}
           setIsEditing={setIsEditing}
           onFieldChange={handleChange}
+          facNo={copyFacN0}
         />
       </div>
     </>

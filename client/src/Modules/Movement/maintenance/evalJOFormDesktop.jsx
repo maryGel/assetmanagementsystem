@@ -15,6 +15,11 @@ import { evalStatus } from '../../../Utils/filters';
 // Components
 import EvalJO from '../maintenance/evalJO';
 
+// sessionStorage (not localStorage): the saved date range should survive tab
+// switches and re-renders within the same browsing session, but reset once the
+// tab/window is actually closed.
+const DATE_RANGE_STORAGE_KEY = 'evalDateRange';
+
 const getDefaultLast30Days = () => {
   const today = new Date();
   const end = new Date(today);
@@ -47,10 +52,15 @@ function EvalJOFormDesktop({
       return { startDate: null, endDate: null };
     }
 
-    const savedRange = localStorage.getItem('evalDateRange');
+    const savedRange = sessionStorage.getItem(DATE_RANGE_STORAGE_KEY);
     if (savedRange) {
       try {
         const parsed = JSON.parse(savedRange);
+        // "Anytime" is saved as null/null - honor it instead of falling
+        // through to the last-30-days default below.
+        if (parsed.startDate === null && parsed.endDate === null) {
+          return { startDate: null, endDate: null };
+        }
         if (parsed.startDate && parsed.endDate) {
           return {
             startDate: new Date(parsed.startDate),
@@ -86,12 +96,13 @@ function EvalJOFormDesktop({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
-  // Save date range to localStorage whenever it changes
+  // Save date range whenever it changes - including "Anytime" (null/null),
+  // so that selection is remembered too, not just explicit date ranges.
   useEffect(() => {
-    if (dateRange?.startDate && dateRange?.endDate) {
-      localStorage.setItem('evalDateRange', JSON.stringify({
-        startDate: dateRange.startDate.toISOString(),
-        endDate: dateRange.endDate.toISOString()
+    if (dateRange) {
+      sessionStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({
+        startDate: dateRange.startDate ? dateRange.startDate.toISOString() : null,
+        endDate: dateRange.endDate ? dateRange.endDate.toISOString() : null
       }));
     }
   }, [dateRange]);

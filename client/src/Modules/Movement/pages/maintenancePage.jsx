@@ -110,39 +110,40 @@ function MaintenancePageDesktop() {
           </div>
 
           {/* Content Area */}
+          {/* Both panels stay mounted at all times; we just hide the inactive one
+              with CSS. Unmounting on tab switch (the old `{isOpenEvalJo && (...)}`
+              pattern) was destroying all of EvalJOFormDesktop's internal state
+              every time you left the tab - including the selected date range -
+              which is why "Anytime" reverted to "Last 30 days" and the list
+              appeared to lose its data when you came back. */}
           <div className="p-6 bg-white ">
-            {isOpenEvalJo && (
-              <div className="">
-                <EvalJOFormDesktop
-                  key={refreshKey} // ✅ Force re-render when refreshKey changes
-                  joHeaders={joHeaders}
-                  joDetails={joDetails}
-                  joRefresh={handleJoRefresh}
-                  joDetailsRefresh={handleJoDetailsRefresh}
-                  snackbar={snackbar}
-                  showToast={showToast}
-                  handleSnackbarClose={handleSnackbarClose}
-                  initialFilter={isDashboardEvaluationView ? 'Pending' : undefined}
-                  initialDatePreset={isDashboardEvaluationView ? 'all' : 'last-30'}
-                />
-              </div>
-            )}
-            {isOpenMainForm && (
-              <div className="">
-                <MaintenanceFormDesktop
-                  joHeaders={joHeaders}
-                  joDetails={joDetails}
-                  joRefresh={handleJoRefresh}
-                  joDetailsRefresh={handleJoDetailsRefresh}
-                  updateJOHeader={updateJOHeader}
-                  updateJODetails={updateJODetails}
-                  initialDatePreset={isDashboardMaintenanceView ? 'all' : 'last-30'}
-                  initialStatuses={isDashboardMaintenanceView
-                    ? dashboardMaintenanceStatuses
-                    : []}
-                />
-              </div>
-            )}
+            <div className={isOpenEvalJo ? '' : 'hidden'}>
+              <EvalJOFormDesktop
+                joHeaders={joHeaders}
+                joDetails={joDetails}
+                joRefresh={handleJoRefresh}
+                joDetailsRefresh={handleJoDetailsRefresh}
+                snackbar={snackbar}
+                showToast={showToast}
+                handleSnackbarClose={handleSnackbarClose}
+                initialFilter={isDashboardEvaluationView ? 'Pending' : undefined}
+                initialDatePreset={isDashboardEvaluationView ? 'all' : 'last-30'}
+              />
+            </div>
+            <div className={isOpenMainForm ? '' : 'hidden'}>
+              <MaintenanceFormDesktop
+                joHeaders={joHeaders}
+                joDetails={joDetails}
+                joRefresh={handleJoRefresh}
+                joDetailsRefresh={handleJoDetailsRefresh}
+                updateJOHeader={updateJOHeader}
+                updateJODetails={updateJODetails}
+                initialDatePreset={isDashboardMaintenanceView ? 'all' : 'last-30'}
+                initialStatuses={isDashboardMaintenanceView
+                  ? dashboardMaintenanceStatuses
+                  : []}
+              />
+            </div>
           </div>
         </div>
       </div>

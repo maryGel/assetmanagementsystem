@@ -30,6 +30,11 @@ export const headerTitleMap = {
 
   // Physical Count Session Pages
   "/physicalCount/session": "Session Details",
+
+  // Reports Pages
+  "/assetReports/assetSummaryReport": "Asset Bal Report",
+  "/assetReports/assetLineItemReport": "Line Item Rep",
+  "/assetReports/depreciationRep": "Depreciation Report",
   
   // System Setup Pages
   "/systemSetup/user/userProfile": "Roles and Authorizations",

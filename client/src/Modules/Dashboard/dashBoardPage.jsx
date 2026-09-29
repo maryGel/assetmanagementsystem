@@ -113,7 +113,7 @@ const openPendingTransactions = (documentType) => {
 
 function StatCard({ icon, iconBg, label, value, trend, trendLabel, loading }) {
   return (
-    <div className="flex flex-col gap-2 p-4 bg-white border border-gray-100 shadow-sm rounded-xl">
+    <div className="flex flex-col gap-2 p-4 bg-white border border-gray-300 shadow-sm rounded-xl">
       <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${iconBg}`}>
         {icon}
       </div>
@@ -139,7 +139,7 @@ function OpsCard({ icon, iconSrc, iconBg, label, value, subItems, onClick, disab
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`relative text-left flex flex-col gap-2 p-4 bg-white border border-gray-100 shadow-sm rounded-xl transition hover:shadow-md ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+      className={`relative text-left flex flex-col gap-2 p-4 bg-white border border-gray-300 shadow-sm rounded-xl transition hover:shadow-md ${disabled ? 'pointer-events-none opacity-60' : ''}`}
     >
       <div className={`flex items-center justify-center w-14 h-14 rounded-lg ${iconBg}`}>
         {iconSrc ? (
@@ -439,16 +439,24 @@ function DashboardPage(useProps) {
     }
   };
 
-  /* ---------------- Pending-doc counts (real data) ---------------- */
+  /* ---------------- Pending-doc counts  ---------------- */
   const joCount = (joHeaders || []).filter(jo => (jo.xpost === 3 || jo.xpost === 2) && jo.DISAPPROVED === 0).length;
-  // JO Evaluation: joHeaders rows still pending evaluation — posted (xpost = 1) with no eval_status yet.
-  // Uses firstDefined so this survives casing differences (Eval_Status/EvalStatus/evalStatus) and
-  // coerces xpost to a Number in case the API returns it as a string ("1" vs 1).
+
   const joEvalCount = (joHeaders || []).filter(jo => {
     const xpost = Number(firstDefined(jo, ['xpost', 'xPosted'], null));
     const evalStatus = firstDefined(jo, ['eval_status', 'Eval_Status', 'EvalStatus', 'evalStatus'], null);
     return xpost === 1 && evalStatus === null;
   }).length;
+
+  const maintenanceCount = (joHeaders || []).filter(jo => {
+    const xpost = Number(firstDefined(jo, ['xpost', 'xPosted'], null));
+    const mainstatus = jo.eval_status === 'DONE' && jo.main_stat !== 'Done';
+
+    return xpost === 1 && mainstatus
+  }).length;
+
+
+
   const trCount = (trHeaders || []).filter(tr => (tr.xpost === 3 || tr.xpost === 2) && tr.DISAPPROVED === 0).length;
   const adCount = (adHeaders || []).filter(ad => (ad.xpost === 3 || ad.xpost === 2) && ad.DISAPPROVED === 0).length;
   const aAcctCount = (assetAccHeaders || []).filter(aa => (aa.xPosted === 3 || aa.xPosted === 2) && aa.DISAPPROVED === 0).length;
@@ -636,7 +644,7 @@ function DashboardPage(useProps) {
               onClick={handleRefresh}
               disabled={isManualRefreshing || isAnyLoading}
               size="small"
-              className="bg-white border border-gray-200 shadow-sm"
+              className="bg-white border border-gray-300 shadow-sm"
             >
               <RefreshIcon
                 fontSize="small"
@@ -707,7 +715,7 @@ function DashboardPage(useProps) {
           iconSrc="/dashIcons/mechanic.png"
           // iconBg="bg-red-100"
           label="MAINTENANCE"
-          value={joEvalCount}
+          value={maintenanceCount}
           onClick={() => window.open(
             '/assetMovement/pages/maintenancePage?tab=maintenance&date=all&status=ongoing&status=not-started',
             '_blank',
