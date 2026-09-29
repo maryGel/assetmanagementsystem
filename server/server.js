@@ -31,6 +31,7 @@
   import colorsRoute from './routes/refColorRoute.js';
   import sectionsRoute from './routes/refSecRoute.js';
   import refSuppRoute from './routes/refSuppRoute.js';
+  import refSignatoryRoute from './routes/refSignRoute.js';
 
   import authRoute from './routes/authRoute.js';
   import usersRoute from './routes/usersRoute.js';
@@ -191,6 +192,7 @@
   app.use('/accessRights', accessRoute);
   app.use('/colorsRoute', colorsRoute);
   app.use('/secRoutes', sectionsRoute);
+  app.use('/refSignatory', refSignatoryRoute);
   app.use('/approvalRoute', approvalRoute);
   app.use('/jo_hRoute', jo_hRoute);
   app.use('/jo_dRoute', jo_dRoute);

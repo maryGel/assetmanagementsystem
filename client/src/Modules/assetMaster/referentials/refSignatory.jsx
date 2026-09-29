@@ -11,7 +11,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { IconButton, ThemeProvider, TextField, TablePagination, Snackbar, Alert, Dialog} from '@mui/material';
 
 // Custom hooks
-import { useRefEmployees} from '../../../hooks/refEmployee';
+import { useRefSignatories} from '../../../hooks/refSignatory';
 import { useEditableTable } from '../../../Utils/useEditableTable';
 
 // Table utils
@@ -20,21 +20,18 @@ import useColumnWidths from '../../../Utils/customTable';
 
 
 // ----------------------------------------------------------------------------
-//           E M  P L O Y E E  L I S T   C O M P O N E N T
+//           S I G N A T O R Y  L I S T   C O M P O N E N T
 // ----------------------------------------------------------------------------
 
-// Null-safe trim
-const norm = (v) => (v ?? '').toString().trim();
-
-export default function RefEmployee({ openTab, useProps }) {
+export default function RefSignatory({ openTab, useProps }) {
   const {
-    refEmployees,
-    createEmployee,
-    updateEmployee,
-    deleteEmployee,
+    refSignatories,
+    createSignatory,
+    updateRefSignatory,
+    deleteRefSignatory,
     loading,
     error,
-  } = useRefEmployees(useProps);
+  } = useRefSignatories(useProps);
 
   const { handleResizeMouseDown, theaderStyle, tbodyStyle } = useColumnWidths();
 
@@ -57,8 +54,8 @@ export default function RefEmployee({ openTab, useProps }) {
 
   // ---- Sync API data to table ----
   useEffect(() => {
-    syncData(refEmployees || []);
-  }, [refEmployees]); // eslint-disable-line react-hooks/exhaustive-deps
+    syncData(refSignatories || []);
+  }, [refSignatories]);
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -72,10 +69,10 @@ export default function RefEmployee({ openTab, useProps }) {
 
     const newRow = {
       id: `tmp-${crypto.randomUUID()}`,
-      Emp_No: '',
-      Emp_FName: '',
-      Emp_MName: '',
-      Emp_LName: '',
+      xModule: '',
+      xLabel: '',
+      xName: '',
+      xPosition: '',
       isNew: true,
     };
 
@@ -95,40 +92,41 @@ export default function RefEmployee({ openTab, useProps }) {
   const handleSave = async () => {
       if (!editedRow) return;
 
-      const empNo = norm(editedRow.Emp_No);
-      const empFName = norm(editedRow.Emp_FName);
-
-      const isEmpty = !empNo && !empFName;
+      const isEmpty = !editedRow.xModule.trim() && !editedRow.xLabel.trim();
 
       if (isEmpty) {
         setConfirmDeleteEmptyOpen(true);
         return;
       }
 
-      if (!empNo || !empFName) {
-        showSnackbar('Please fill in required field: Employee Code/Name', 'error');
+      if (!editedRow.xModule?.trim() || !editedRow.xLabel?.trim()) {
+        showSnackbar('Please fill in required field: Signatory ', 'error');
         return;
       }
 
-      // Only the employee number must be unique (names can legitimately repeat)
       const isDuplicate = data.some(row =>
-        String(row.id) !== String(editedRow.id) &&
-        norm(row.Emp_No).toLowerCase() === empNo.toLowerCase()
+        row.id !== editedRow.id &&
+        (row.xModule.trim().toLowerCase() === editedRow.xModule.trim().toLowerCase() ||
+            row.xLabel.trim().toLowerCase() === editedRow.xLabel.trim().toLowerCase() ||
+            row.xName.trim().toLowerCase() === editedRow.xName.trim().toLowerCase() ||
+            row.xPosition.trim().toLowerCase() === editedRow.xPosition.trim().toLowerCase() 
+        )
       );
 
       if (isDuplicate) {
-        showSnackbar('Employee Code already exists!', 'error');
+        showSnackbar('Signatory already exists!', 'error');
         return;
       }
 
       // Execute Saving
       try {
         if (editedRow.isNew) {
-          await createEmployee(editedRow.Emp_No, editedRow.Emp_FName, editedRow.Emp_MName, editedRow.Emp_LName);
-          showSnackbar('New Employee has been created!');
+          const tempId = editedRow.id;
+          await createSignatory(editedRow.xModule, editedRow.xLabel, editedRow.xName, editedRow.xPosition);
+          showSnackbar('New Signatory has been created!');
         
         } else {
-          await updateEmployee(editedRow.id, editedRow.Emp_No, editedRow.Emp_FName, editedRow.Emp_MName, editedRow.Emp_LName);
+          await updateSignatory(editedRow.id, editedRow.xModule, editedRow.xLabel);
           showSnackbar('Changes has been saved!');
         }
 
@@ -145,11 +143,11 @@ export default function RefEmployee({ openTab, useProps }) {
 
     try {
       if (!editedRow.isNew) {
-        await deleteEmployee(editedRow.id);
+        await deleteSignatory(editedRow.id);
       }
 
       cancelEdit();
-      showSnackbar('Employee has been removed!');
+      showSnackbar('Signatory has been removed!');
     } catch (err) {
       showSnackbar('Delete failed: ' + err.message, 'error');
     }
@@ -162,7 +160,7 @@ export default function RefEmployee({ openTab, useProps }) {
   };
 
   // ... Disabling Save button if new row is empty ...
-  const isNewRowEmpty = editedRow?.isNew && !norm(editedRow.Emp_No) && !norm(editedRow.Emp_FName) && !norm(editedRow.Emp_MName) && !norm(editedRow.Emp_LName);
+  const isNewRowEmpty = editedRow?.isNew && !editedRow.xModule.trim() && !editedRow.xLabel.trim() && !editedRow.xName.trim() && !editedRow.xPosition.trim();
 
   // ---- F i l t e r  &   P a g i n a t i o n ----
 
@@ -187,13 +185,11 @@ export default function RefEmployee({ openTab, useProps }) {
     setSortConfig({ key: columnKey, direction });
   };
 
-  const q = searchQuery.toLowerCase();
   const filteredData = data.filter(item =>
     item.id === editingRowId ||
-    (item.Emp_No ?? '').toLowerCase().includes(q) ||
-    (item.Emp_FName ?? '').toLowerCase().includes(q) ||
-    (item.Emp_MName ?? '').toLowerCase().includes(q) ||
-    (item.Emp_LName ?? '').toLowerCase().includes(q)
+    item.xModule?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.xLabel?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.xPosition?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const paginatedRows = filteredData.slice(
@@ -202,11 +198,11 @@ export default function RefEmployee({ openTab, useProps }) {
   );
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error loading Employee data</div>;
+  if (error) return <div>Error loading Signatory data</div>;
 
   return (
     <> 
-      {openTab === 'Employee List' &&
+      {openTab === 'Assign Signatory' &&
         <ThemeProvider theme={customTheme}>
           <div className="w-auto h-full p-4 bg-white shadow-lg rounded-xl">
 
@@ -238,7 +234,7 @@ export default function RefEmployee({ openTab, useProps }) {
 
             {/* Title + Buttons */}
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-lg font-semibold text-gray-800">List of Employees</h1>
+              <h1 className="text-lg font-semibold text-gray-800">List of Signatories</h1>
               <div className="flex space-x-1">
                 {/* Save */}
                 {editingRowId !== null && (
@@ -288,65 +284,65 @@ export default function RefEmployee({ openTab, useProps }) {
                 {/* ... Table Header ... */}
                   <thead>
                     <tr className="bg-gray-100 border-b">
-                      {/* Employee ID */}
+                      {/* Module */}
                       <th
                         className="relative p-2 font-semibold text-left border-r border-gray-200 cursor-pointer"
-                        onClick={() => handleSort('Emp_No')}
+                        onClick={() => handleSort('xModule')}
                         style={theaderStyle('Code')}
                       >
                         <div className='flex justify-between'>
-                          <span className='mr-2'>Employee Code</span>
-                          <RenderSortIcon columnKey='Emp_No'  sortConfig={sortConfig} /> 
+                          <span className='mr-2'>Module</span>
+                          <RenderSortIcon columnKey='xModule'  sortConfig={sortConfig} /> 
                           <div
-                            onMouseDown={(e) => handleResizeMouseDown('Emp_No', e)}
+                            onMouseDown={(e) => handleResizeMouseDown('xModule', e)}
                             style={resizeColumn }
                             title="Resize column"
                           />
                         </div>
                       </th>
-                       {/* First Name */}
+                       {/* Label */}
                       <th
                         className="relative p-2 font-semibold text-left border-r border-gray-200 cursor-pointer"
-                        onClick={() => handleSort('Emp_FName')}
+                        onClick={() => handleSort('xLabel')}
                         style={theaderStyle('Code')}
                       >
                         <div className='flex justify-between'>
-                          <span className='mr-2'> First Name </span>
-                          <RenderSortIcon columnKey='Emp_FName'  sortConfig={sortConfig} /> 
+                          <span className='mr-2'> Label </span>
+                          <RenderSortIcon columnKey='xLabel'  sortConfig={sortConfig} /> 
                           <div
-                            onMouseDown={(e) => handleResizeMouseDown('Emp_FName', e)}
+                            onMouseDown={(e) => handleResizeMouseDown('xLabel', e)}
                             style={resizeColumn }
                             title="Resize column"
                           />
                         </div>
                       </th>
-                      {/* Middle Name */}
+                      {/* Signatory Name */}
                       <th
                         className="relative p-2 font-semibold text-left border-r border-gray-200 cursor-pointer"
-                        onClick={() => handleSort('Emp_MName')}
-                        style={theaderStyle('Code')}
+                        onClick={() => handleSort('xName')}
+                        style={theaderStyle('Name')}
                       >
                         <div className='flex justify-between'>
-                          <span className='mr-2'>Middle Name</span>
-                          <RenderSortIcon columnKey='Emp_MName'  sortConfig={sortConfig} /> 
+                          <span className='mr-2'>Signatory/Name</span>
+                          <RenderSortIcon columnKey='xName'  sortConfig={sortConfig} /> 
                           <div
-                            onMouseDown={(e) => handleResizeMouseDown('Emp_MName', e)}
+                            onMouseDown={(e) => handleResizeMouseDown('xName', e)}
                             style={resizeColumn }
                             title="Resize column"
                           />
                         </div>
                       </th>
-                      {/* Last Name */}
+                      {/* Position */}
                        <th
                         className="relative p-2 font-semibold text-left border-r border-gray-200 cursor-pointer"
-                        onClick={() => handleSort('Emp_LName')}
+                        onClick={() => handleSort('xPosition')}
                         style={theaderStyle('Code')}
                       >
                         <div className='flex justify-between'>
-                          <span className='mr-2'> Last Name </span>
-                          <RenderSortIcon columnKey='Emp_LName'  sortConfig={sortConfig} /> 
+                          <span className='mr-2'> Position </span>
+                          <RenderSortIcon columnKey='xPosition'  sortConfig={sortConfig} /> 
                           <div
-                            onMouseDown={(e) => handleResizeMouseDown('Emp_LName', e)}
+                            onMouseDown={(e) => handleResizeMouseDown('xPosition', e)}
                             style={resizeColumn }
                             title="Resize column"
                           />
@@ -360,49 +356,49 @@ export default function RefEmployee({ openTab, useProps }) {
                   <tbody>
                     {paginatedRows.map(row => (
                       <tr key={row.id} className={`border-b ${editingRowId === row.id ? 'bg-blue-100' : 'hover:bg-gray-50'}`}>
-                        {/* Employee Number */}
-                        <td className="p-1 pl-2" style={tbodyStyle('Emp_No')}>
+                        {/* Signatory Number */}
+                        <td className="p-1 pl-2" style={tbodyStyle('xModule')}>
                           {editingRowId === row.id 
                             ? <input
                                   type="text"
-                                  value={row.Emp_No}
-                                  onChange={(e) => updateCell(row.id, 'Emp_No', e.target.value)}
+                                  value={row.xModule}
+                                  onChange={(e) => updateCell(row.id, 'xModule', e.target.value)}
                                   className="w-full p-1 border-b"
                               />
-                            : row.Emp_No}
+                            : row.xModule}
                         </td>
                         {/* First Name */}
-                        <td className="p-1 pl-2" style={tbodyStyle('Emp_FName')}>
+                        <td className="p-1 pl-2" style={tbodyStyle('xLabel')}>
                           {editingRowId === row.id 
                           ? <input
                               type="text"
-                              value={row.Emp_FName}
-                              onChange={(e) => updateCell(row.id, 'Emp_FName', e.target.value)}
+                              value={row.xLabel}
+                              onChange={(e) => updateCell(row.id, 'xLabel', e.target.value)}
                               className="w-full p-1 border-b"
                             />
-                          : row.Emp_FName}
+                          : row.xLabel}
                         </td>
                         {/* Middle Name */}
-                        <td className="p-1 pl-2" style={tbodyStyle('Emp_MName')}>
+                        <td className="p-1 pl-2" style={tbodyStyle('xName')}>
                           {editingRowId === row.id 
                           ? <input
                               type="text"
-                              value={row.Emp_MName}
-                              onChange={(e) => updateCell(row.id, 'Emp_MName', e.target.value)}
+                              value={row.xName}
+                              onChange={(e) => updateCell(row.id, 'xName', e.target.value)}
                               className="w-full p-1 border-b"
                             />
-                          : row.Emp_MName}
+                          : row.xName}
                         </td>
                         {/* Last Name */}
-                        <td className="p-1 pl-2" style={tbodyStyle('Emp_LName')}>
+                        <td className="p-1 pl-2" style={tbodyStyle('xPosition')}>
                           {editingRowId === row.id 
                           ? <input
                               type="text"
-                              value={row.Emp_LName}
-                              onChange={(e) => updateCell(row.id, 'Emp_LName', e.target.value)}
+                              value={row.xPosition}
+                              onChange={(e) => updateCell(row.id, 'xPosition', e.target.value)}
                               className="w-full p-1 border-b"
                             />
-                          : row.Emp_LName}
+                          : row.xPosition}
                         </td>
                         {/* Edit Button */}
                         <td className="p-1 pl-2 text-center">
@@ -419,7 +415,7 @@ export default function RefEmployee({ openTab, useProps }) {
 
                 <TablePagination
                   component="div"
-                  count={filteredData.length}
+                  count={data.length}
                   rowsPerPage={rowsPerPage}
                   page={page}
                   onPageChange={(e, p) => setPage(p)}

@@ -10,6 +10,7 @@ import RefColor from '../referentials/refColor';
 import RefSection from '../referentials/refSection';
 import RefSupplier from '../referentials/refSupplier';
 import RefEmployee from '../referentials/refEmployee';
+import RefSignatory from '../referentials/refSignatory';
 
 function ReferentialPage() {
 
@@ -56,7 +57,9 @@ function ReferentialPage() {
           <RefEmployee
             openTab = {openTab}
           />
-
+          <RefSignatory
+            openTab = {openTab}
+          />
         </div>
       </div>
   );

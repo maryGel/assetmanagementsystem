@@ -1,101 +1,95 @@
-// hooks/refEmployeeegory.js
-import { useState, useEffect } from 'react';
-import { api } from '../api/axios'
+// hooks/refEmployee.js
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../api/axios';
 
+// Every row MUST have a unique `id`. Your DB column may be `ID` (uppercase),
+// so map it here once and use this everywhere.
+const normalize = (item, index) => ({
+  ...item,
+  id: item.id ?? item.ID ?? `temp-${index}`,
+});
 
-
-// 1. UPDATED HOOK SIGNATURE
 export const useRefEmployees = (useProps, deps = []) => {
   const [refEmployees, setRefEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-// Get all categories
-  useEffect(() => {
-    const getRefEmployees = async () => {
-        try {
-        setLoading(true);
-        setError(null);
-        
-       
-        const response = await api.get('/refEmployee');       
-        const data = response.data;
-        
-        if (!Array.isArray(data)) {
-          throw new Error('Expected array but got: ' + typeof data);
-        }
-        
-        const dataWithID = data.map((item, index) => ({
-          ...item,
-          id: item.id || `temp-${index}`,
-          Emp_No: item.Emp_No,
-          Emp_FName: item.Emp_FName,
-          Emp_MName: item.Emp_MName,
-          Emp_LName: item.Emp_LName
-        }));
-        
-        setRefEmployees(dataWithID);
-        
-      } catch (error) {
-        setError(error.response?.data?.error || error.message || 'Failed to fetch brands');
-      } finally {
-        setLoading(false);
+  // Fetch all employees (used for the initial load and for refresh)
+  const fetchEmployees = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get('/refEmployee');
+      const data = response.data;
+
+      if (!Array.isArray(data)) {
+        throw new Error('Expected array but got: ' + typeof data);
       }
-    };
-    
-  getRefEmployees();    
+
+      setRefEmployees(data.map(normalize));
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch employees');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  
+  useEffect(() => {
+    fetchEmployees().catch(() => {}); // error state is already set
+  }, [fetchEmployees]);
+
   // Create employee
-  const createEmployee = async (Emp_No = '', Emp_FName = '', Emp_MName = '', Emp_LName = '') => {
+  const createEmployee = async (Emp_No = '', Emp_FName, Emp_MName, Emp_LName) => {
     try {
       setActionLoading(true);
       setError(null);
 
-      const response = await api.post('/api/refEmployee', { Emp_No, Emp_FName, Emp_MName, Emp_LName});
+      const response = await api.post('/refEmployee', { Emp_No, Emp_FName, Emp_MName, Emp_LName });
 
       const created = {
         id: response.data.id,
         Emp_No: response.data.Emp_No,
         Emp_FName: response.data.Emp_FName,
         Emp_MName: response.data.Emp_MName,
-        Emp_LName: response.data.Emp_LName
-      }
+        Emp_LName: response.data.Emp_LName,
+      };
 
       setRefEmployees(prev => [...prev, created]);
-      return created
-    
-    } catch (error) {
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to create employee';
+      return created;
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to create employee';
       setError(errorMsg);
       throw new Error(errorMsg);
-
     } finally {
       setActionLoading(false);
     }
   };
 
   // Update employee
-  const updateEmployee = async (id, Emp_No, Emp_FName, Emp_MName, Emp_LName) => {
+  const updateEmployee = async (id, Emp_No = '', Emp_FName, Emp_MName, Emp_LName) => {
     try {
       setActionLoading(true);
       setError(null);
 
-      const response = await api.put(`/api/refEmployee/${id}`, { Emp_No, Emp_FName, Emp_MName, Emp_LName });
-      // Update the local state
+      const response = await api.put(`/refEmployee/${id}`, { Emp_No, Emp_FName, Emp_MName, Emp_LName });
 
+      // Only update the row that was edited (previously this matched every row)
       setRefEmployees(prev =>
-        prev.map(item => item.id ? {...item, Emp_No, Emp_FName, Emp_MName, Emp_LName} : item))
+        prev.map(item =>
+          String(item.id) === String(id)
+            ? { ...item, Emp_No, Emp_FName, Emp_MName, Emp_LName }
+            : item
+        )
+      );
 
       return response.data;
-
-    } catch (error) {
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to update employee';
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to update employee';
       setError(errorMsg);
       throw new Error(errorMsg);
-
     } finally {
       setActionLoading(false);
     }
@@ -105,36 +99,18 @@ export const useRefEmployees = (useProps, deps = []) => {
   const deleteEmployee = async (id) => {
     try {
       setActionLoading(true);
-      const response = await api.delete(`/api/refEmployee/${id}`);
+      setError(null);
 
-      setRefEmployees(prev => prev.filter(item => item.id != id));
-      
+      const response = await api.delete(`/refEmployee/${id}`);
+      setRefEmployees(prev => prev.filter(item => String(item.id) !== String(id)));
+
       return response.data;
-
-    } catch (error) {
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to delete employee';
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to delete employee';
       setError(errorMsg);
       throw new Error(errorMsg);
     } finally {
       setActionLoading(false);
-    }
-  };
-
-    // Refresh categories (Centralized Fetching Logic)
-  const refreshEmployee = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await api.get('/api/refEmployee');      
-      setRefEmployees(response.data);
-      
-    } catch (error) {
-      setError(error.response?.data?.error || error.message || 'Failed to fetch categories');
-      throw error;
-
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -146,6 +122,6 @@ export const useRefEmployees = (useProps, deps = []) => {
     createEmployee,
     updateEmployee,
     deleteEmployee,
-    refreshEmployee,
+    refreshEmployee: fetchEmployees,
   };
 };

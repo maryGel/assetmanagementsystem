@@ -30,17 +30,17 @@ router.get('/', (req, res) => {
 });
 
 // GET single employee by ID
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
+router.get('/:ID', (req, res) => {
+  const { ID } = req.params;
   
   db.getConnection((err, connection) => {
     if (err) {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    const sql = 'SELECT * FROM refemployee WHERE id = ?';
+    const sql = 'SELECT * FROM refemployee WHERE ID = ?';
     
-    connection.query(sql, [id], (error, results) => {
+    connection.query(sql, [ID], (error, results) => {
       connection.release();
       
       if (error) {
@@ -60,7 +60,7 @@ router.get('/:id', (req, res) => {
 // POST create new employee
 router.post('/', (req, res) => {
   const { Emp_No, Emp_FName, Emp_MName, Emp_LName  } = req.body;
-  // console.log('POST /api/refCat - Creating employee:', {xCode, employee });
+  console.log('POST /api/refEmp - Creating employee:', {Emp_No, Emp_FName, Emp_MName, Emp_LName });
   
   if (!Emp_No) {
     return res.status(400).json({ error: 'Employee Number is required' });
@@ -84,7 +84,7 @@ router.post('/', (req, res) => {
       
       res.json({ 
         message: 'employee created successfully', 
-        id: result.insertId,
+        ID: result.insertID,
             Emp_No: Emp_No,
             Emp_FName: Emp_FName || '',
             Emp_MName: Emp_MName || '',
@@ -95,10 +95,10 @@ router.post('/', (req, res) => {
 });
 
 // PUT update employee
-router.put('/:id', (req, res) => {
-  const { id } = req.params;
+router.put('/:ID', (req, res) => {
+  const { ID } = req.params;
   const { Emp_No, Emp_FName, Emp_MName, Emp_LName  } = req.body;
-  // console.log(`PUT /api/refCat/${id} - Updating employee to:`, {xCode, employee});
+  // console.log(`PUT /refEmployee/${ID} - Updating employee to:`, {Emp_No, Emp_FName, Emp_MName, Emp_LName});
   
   if (!Emp_No) {
     return res.status(400).json({ error: 'Employee Number is required' });
@@ -109,8 +109,8 @@ router.put('/:id', (req, res) => {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    const sql = 'UPDATE refemployee SET Emp_No = ?, Emp_FName = ?, Emp_MName = ?, Emp_LName = ? WHERE id = ?';
-    const params = [Emp_No, Emp_FName || '', Emp_MName || '', Emp_LName || '', id];
+    const sql = 'UPDATE refemployee SET Emp_No = ?, Emp_FName = ?, Emp_MName = ?, Emp_LName = ? WHERE ID = ?';
+    const params = [Emp_No, Emp_FName, Emp_MName, Emp_LName || '', ID];
 
     connection.query(sql, params, (error, result) => {
       connection.release();
@@ -129,16 +129,16 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE employee
-router.delete('/:id', (req, res) => {
-  const { id } = req.params;
-  // console.log(`DELETE /api/refCat/${id} - Deleting employee`);
+router.delete('/:ID', (req, res) => {
+  const { ID } = req.params;
+  // console.log(`DELETE /api/refCat/${ID} - Deleting employee`);
   
   db.getConnection((err, connection) => {
     if (err) {
       return res.status(500).json({ error: 'Database connection failed' });
     }
     
-    connection.query('DELETE FROM refemployee WHERE id = ?', [id], (error, result) => {
+    connection.query('DELETE FROM refemployee WHERE ID = ?', [ID], (error, result) => {
       connection.release();
       
       if (error) {
