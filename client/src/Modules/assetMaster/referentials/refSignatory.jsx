@@ -7,12 +7,15 @@ import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DownloadIcon from '@mui/icons-material/Download';
+import Autocomplete from '@mui/material/Autocomplete';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { IconButton, ThemeProvider, TextField, TablePagination, Snackbar, Alert, Dialog} from '@mui/material';
 
 // Custom hooks
 import { useRefSignatories} from '../../../hooks/refSignatory';
 import { useEditableTable } from '../../../Utils/useEditableTable';
+import { transTypes } from '../../../Utils/moduleList';
 
 // Table utils
 import { customTheme, resizeColumn, RenderSortIcon, RenderDialog } from '../../../Utils/customTable';
@@ -27,8 +30,9 @@ export default function RefSignatory({ openTab, useProps }) {
   const {
     refSignatories,
     createSignatory,
-    updateRefSignatory,
-    deleteRefSignatory,
+    updateSignatory,
+    deleteSignatory,
+    refreshSignatories,
     loading,
     error,
   } = useRefSignatories(useProps);
@@ -106,9 +110,9 @@ export default function RefSignatory({ openTab, useProps }) {
 
       const isDuplicate = data.some(row =>
         row.id !== editedRow.id &&
-        (row.xModule.trim().toLowerCase() === editedRow.xModule.trim().toLowerCase() ||
-            row.xLabel.trim().toLowerCase() === editedRow.xLabel.trim().toLowerCase() ||
-            row.xName.trim().toLowerCase() === editedRow.xName.trim().toLowerCase() ||
+        (row.xModule.trim().toLowerCase() === editedRow.xModule.trim().toLowerCase() &&
+            row.xLabel.trim().toLowerCase() === editedRow.xLabel.trim().toLowerCase() &&
+            row.xName.trim().toLowerCase() === editedRow.xName.trim().toLowerCase() &&
             row.xPosition.trim().toLowerCase() === editedRow.xPosition.trim().toLowerCase() 
         )
       );
@@ -126,7 +130,7 @@ export default function RefSignatory({ openTab, useProps }) {
           showSnackbar('New Signatory has been created!');
         
         } else {
-          await updateSignatory(editedRow.id, editedRow.xModule, editedRow.xLabel);
+          await updateSignatory(editedRow.id, editedRow.xModule, editedRow.xLabel, editedRow.xName, editedRow.xPosition);
           showSnackbar('Changes has been saved!');
         }
 
@@ -189,6 +193,7 @@ export default function RefSignatory({ openTab, useProps }) {
     item.id === editingRowId ||
     item.xModule?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.xLabel?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.xName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.xPosition?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -268,6 +273,21 @@ export default function RefSignatory({ openTab, useProps }) {
                   size="small" sx={{ border: 1 }}
                 >
                   <AddIcon />
+                </IconButton>
+
+               {/* Refresh Button */}
+                <IconButton
+                  title='Refresh Data'
+                  onClick={() => {
+                    refreshSignatories();
+                    setSearchQuery( "");
+                    setPage(0);
+                  }}
+                  disabled={loading}
+                  size="small"
+                  sx={{ border: 1 }}
+                >
+                  <RefreshIcon />
                 </IconButton>
 
                 {/* Download */}
@@ -358,14 +378,19 @@ export default function RefSignatory({ openTab, useProps }) {
                       <tr key={row.id} className={`border-b ${editingRowId === row.id ? 'bg-blue-100' : 'hover:bg-gray-50'}`}>
                         {/* Signatory Number */}
                         <td className="p-1 pl-2" style={tbodyStyle('xModule')}>
-                          {editingRowId === row.id 
-                            ? <input
-                                  type="text"
-                                  value={row.xModule}
-                                  onChange={(e) => updateCell(row.id, 'xModule', e.target.value)}
-                                  className="w-full p-1 border-b"
+                           {editingRowId === row.id? (
+                              <Autocomplete
+                                value={row.xModule || ''}
+                                options={transTypes}
+                                onChange={(e, newValue) => {
+                                  updateCell(row.id, 'xModule', newValue || "")
+                                }}
+                                className="w-full p-1 border-b"
+                                renderInput={(params) => (<TextField {...params} size="small" />)}
                               />
-                            : row.xModule}
+                            ) : (
+                              row.xModule
+                            )}
                         </td>
                         {/* First Name */}
                         <td className="p-1 pl-2" style={tbodyStyle('xLabel')}>

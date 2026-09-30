@@ -10,6 +10,7 @@ import LineItemReportTable, { buildColumns, exportValue } from '../lineItemRepor
 import DownloadIcon from '@mui/icons-material/Download';
 import WorkOrderDialog from '../../Movement/maintenance/workOrderDialog';
 import { useJO_h} from '../../../hooks/useJO_h';
+import { transTypes } from '../../../Utils/moduleList';
 
 // Each of these maps to its own line-item table/API on the backend
 // (Job Order -> jo_d, Transfer Order Form -> tr_d, Disposal Form -> ad_d,
@@ -17,13 +18,7 @@ import { useJO_h} from '../../../hooks/useJO_h';
 // Every one of those tables names its document-number column differently, so
 // the /lineItemReport endpoint is expected to normalize it to a single `DocNo`
 // field (and set `DocType` to one of the labels below) when it joins them in.
-const transTypes = [
-  'Job Order',
-  'Transfer Order Form',
-  'Disposal Form',
-  'Asset Accountability Form',
-  'Lost Asset Form',
-];
+
 const statuses = ['Pending JO', 'Ongoing Repair', 'For Repair Outsource', 'For Repair Inhouse', 'For Disposal', 'Disposed', 'Borrowed/Issues', 'Lost Asset'];
 const emptyFilters = {
   docNo: [], docType: [], assetGroup: [], category: [], itemClass: [], activeOnly: 'all', status: [],

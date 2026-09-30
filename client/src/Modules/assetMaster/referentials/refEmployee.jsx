@@ -58,7 +58,7 @@ export default function RefEmployee({ openTab, useProps }) {
   // ---- Sync API data to table ----
   useEffect(() => {
     syncData(refEmployees || []);
-  }, [refEmployees]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refEmployees]); 
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });

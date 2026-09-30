@@ -21,14 +21,9 @@ import { useDisposalApproval } from '../../../hooks/useADApproval';
 import { useAssetAccApproval } from '../../../hooks/useAssetAccApproval';
 import { useAssetLostApproval } from '../../../hooks/useAssetLostApproval';
 import { useUsers } from '../../../hooks/useUsers';
+import { transTypes } from '../../../Utils/moduleList';
 
-const transTypes = [
-  'Job Order',
-  'Transfer Order Form',
-  'Disposal Form',
-  'Asset Accountability Form',
-  'Lost Asset Form'
-];
+
 const statusOptions = [
   {status: 0, label: 'Draft'},
   {status: 3, label: 'For Approval'},

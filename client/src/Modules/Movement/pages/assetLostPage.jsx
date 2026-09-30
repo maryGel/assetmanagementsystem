@@ -266,7 +266,7 @@ const handleEmployeeChange = (event, newValue) => {
 
   const handleSave = async () => {
     if (!state.createALHeader?.AAFNo) {
-      alert('Asset Lost number is required');
+      alert('Lost Asset number is required');
       return;
     }
     if (!state.createALHeader?.Dep) {
@@ -395,12 +395,12 @@ const handleEmployeeChange = (event, newValue) => {
       
       if (bulkActionType === 'approve') {
         if (result.data?.isFinalApproval) {
-          showToast(`Asset Lost fully approved!`, 'success');
+          showToast(`Lost Asset fully approved!`, 'success');
         } else {
           showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
         }
       } else {
-        showToast(`Asset Lost rejected successfully`, 'success');
+        showToast(`Lost Asset rejected successfully`, 'success');
       }
       
     // Force refresh the data
@@ -484,7 +484,7 @@ const handleEmployeeChange = (event, newValue) => {
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
           title="Confirm Save"
-          text="Are you sure you want to save this Asset Lost? Please review all information before saving."
+          text="Are you sure you want to save this Lost Asset? Please review all information before saving."
           cancelText="Cancel"
           confirmText="Save"
           cancel={closeSaveDialog}
@@ -520,7 +520,7 @@ const handleEmployeeChange = (event, newValue) => {
       <Dialog open={postDialogOpen} onClose={closePostDialog}>
         <CustomDialog
           title="Confirm Post"
-          text="Would you like to post this Asset Lost now? Once posted, it will be sent for approval."
+          text="Would you like to post this Lost Asset now? Once posted, it will be sent for approval."
           cancelText="Cancel"
           confirmText="Post"
           cancel={closePostDialog}
@@ -542,8 +542,8 @@ const handleEmployeeChange = (event, newValue) => {
                 </span>
               )}
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve this Asset Lost?` 
-                : `Are you sure you want to reject this Asset Lost? This action cannot be undone.`
+                ? `Are you sure you want to approve this Lost Asset?` 
+                : `Are you sure you want to reject this Lost Asset? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
@@ -674,10 +674,10 @@ const handleEmployeeChange = (event, newValue) => {
       <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800'>
-            {state.isCreating ? 'Creating Asset Lost' : state.isEditing ? 'Editing Asset Lost' : 'Display Asset Lost'}
+            {state.isCreating ? 'Creating Lost Asset' : state.isEditing ? 'Editing Lost Asset' : 'Display Lost Asset'}
           </h1>
           <div className='flex gap-2'>
-            <span className='text-xs text-gray-500'>Last Asset Lost created :</span>
+            <span className='text-xs text-gray-500'>Last Lost Asset created :</span>
             <span className='text-xs text-gray-500'>
               {assetLostHeaders && assetLostHeaders.length > 0 
                 ? [...assetLostHeaders].sort((a, b) => {
@@ -704,7 +704,7 @@ const handleEmployeeChange = (event, newValue) => {
         </Box>
         
         <form className='mt-8'>
-          <label className='text-base font-normal text-gray-500'>Asset Lost No : </label>
+          <label className='text-base font-normal text-gray-500'>Lost Asset No : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.AAFNo || ''}</label> 
           <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
           <input 

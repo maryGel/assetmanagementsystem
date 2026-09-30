@@ -59,6 +59,7 @@ export const useRefEmployees = (useProps, deps = []) => {
 
       setRefEmployees(prev => [...prev, created]);
       return created;
+      
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message || 'Failed to create employee';
       setError(errorMsg);

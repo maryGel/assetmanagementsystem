@@ -408,7 +408,7 @@ export default function RefItemClass({useProps, openTab,}) {
                         row.itemClass
                       )}
                     </td>
-                    {/* itemClass Asset Group column */}
+                    {/* itemClass Asset category column */}
                     <td className='p-1 pl-2'style={tbodyStyle('category')} >
                     {editingRowId === row.id? (
                         <Autocomplete

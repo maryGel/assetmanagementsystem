@@ -1,4 +1,4 @@
-// hooks/refsignatoryegory.js
+// hooks/refSignatoryegory.js
 import { useState, useEffect } from 'react';
 import { api } from '../api/axios'
 
@@ -6,7 +6,7 @@ import { api } from '../api/axios'
 
 // 1. UPDATED HOOK SIGNATURE
 export const useRefSignatories = (useProps, deps = []) => {
-  const [refSignatories, setrefSignatories] = useState([]);
+  const [refSignatories, setRefSignatories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -35,7 +35,7 @@ export const useRefSignatories = (useProps, deps = []) => {
           xPosition: item.xPosition
         }));
         
-        setrefSignatories(dataWithID);
+        setRefSignatories(dataWithID);
         
       } catch (error) {
         setError(error.response?.data?.error || error.message || 'Failed to fetch brands');
@@ -54,7 +54,7 @@ export const useRefSignatories = (useProps, deps = []) => {
       setActionLoading(true);
       setError(null);
 
-      const response = await api.post('/api/refsignatory', { xModule, xLabel, xName, xPosition});
+      const response = await api.post('/refSignatory', { xModule, xLabel, xName, xPosition});
 
       const created = {
         id: response.data.id,
@@ -64,7 +64,7 @@ export const useRefSignatories = (useProps, deps = []) => {
         xPosition: response.data.xPosition
       }
 
-      setrefSignatories(prev => [...prev, created]);
+      setRefSignatories(prev => [...prev, created]);
       return created
     
     } catch (error) {
@@ -83,11 +83,11 @@ export const useRefSignatories = (useProps, deps = []) => {
       setActionLoading(true);
       setError(null);
 
-      const response = await api.put(`/api/refsignatory/${id}`, { xModule, xLabel, xName, xPosition });
+      const response = await api.put(`/refSignatory/${id}`, { xModule, xLabel, xName, xPosition });
       // Update the local state
 
-      setrefSignatories(prev =>
-        prev.map(item => item.id ? {...item, xModule, xLabel, xName, xPosition} : item))
+      setRefSignatories(prev =>
+        prev.map(item => item.id === id ? {...item, xModule, xLabel, xName, xPosition} : item))
 
       return response.data;
 
@@ -105,9 +105,9 @@ export const useRefSignatories = (useProps, deps = []) => {
   const deleteSignatory = async (id) => {
     try {
       setActionLoading(true);
-      const response = await api.delete(`/api/refsignatory/${id}`);
+      const response = await api.delete(`/refSignatory/${id}`);
 
-      setrefSignatories(prev => prev.filter(item => item.id != id));
+      setRefSignatories(prev => prev.filter(item => item.id != id));
       
       return response.data;
 
@@ -126,8 +126,8 @@ export const useRefSignatories = (useProps, deps = []) => {
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/api/refsignatory');      
-      setrefSignatories(response.data);
+      const response = await api.get('/refSignatory');      
+      setRefSignatories(response.data);
       
     } catch (error) {
       setError(error.response?.data?.error || error.message || 'Failed to fetch signatories');
