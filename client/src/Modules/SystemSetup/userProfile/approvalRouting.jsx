@@ -67,33 +67,22 @@ function collectAllCodes(nodes) {
         A P P R O V A L    C O M P O N E N T
   --------------------------------------------------*/}
 
-// MULTI_APP is a single pipe-delimited string of APP_CODE values from
-// ref_approval on user0000inv, e.g. "jo_hod|ad_hod|ad_dof". The unique
-// identifier for each leaf row is its APP_CODE (NOT the tree node's
-// internal `id`, which is the ref_approval row's primary key and is
-// only used for TreeView expand/collapse bookkeeping).
+
 export default function ApprovalRouting({ isEditing, selectedUser, isCreating, formData, onUserChange }) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState([]);
 
-  const { refApprovals, loading, error } = useApproval();
+  const { transformApproval, loading, error } = useApproval();
 
-  const treeData = useMemo(() => refApprovals || [], [refApprovals]);
+  const treeData = useMemo(() => transformApproval || [], [transformApproval]);
   const allNodeIds = useMemo(() => collectAllIds(treeData), [treeData]);
   const allCodes = useMemo(() => collectAllCodes(treeData), [treeData]);
 
-  // While editing, the draft lives in formData (kept in sync via
-  // onUserChange as boxes are ticked). When not editing, fall back to
-  // the persisted value on selectedUser so the list shows real saved
-  // state read-only.
   const rawMultiApp = isEditing
     ? (formData?.MULTI_APP ?? '')
     : (selectedUser?.MULTI_APP ?? '');
 
-  // Approval routing can only be assigned once the user is flagged as an
-  // Approver. While editing, read the live draft value from formData (kept
-  // in sync via the Approver checkbox in UserInfo); otherwise fall back to
-  // the persisted value on selectedUser.
+
   const isApprover = isEditing
     ? Number(formData?.Approver) === 1
     : Number(selectedUser?.Approver) === 1;

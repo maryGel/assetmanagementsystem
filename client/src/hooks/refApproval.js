@@ -30,9 +30,39 @@ const normalize = (item, index) => ({
 
 export const useApproval= () => {
   const [refApprovals, setRefApprovals] = useState([]);
+  const [transformApproval, setTransformApproval] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+    // GET all Approvals
+  useEffect(() => {
+    const getTransformApproval = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+                
+        const response = await api.get('/approvalRoute');       
+        const data = response.data;
+        
+        if (!Array.isArray(data)) {
+          throw new Error('Expected array but got: ' + typeof data);
+        }
+        
+
+        const transformedData = transformApprovalData(data)
+        
+        setTransformApproval(transformedData);
+        
+      } catch (error) {
+        setError(error.response?.data?.error || error.message || 'Failed to fetch brands');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getTransformApproval();
+  }, []);
 
 
   // Fetch all approval hierarchy (used for the initial load and for refresh)
@@ -154,6 +184,7 @@ export const useApproval= () => {
   };
 
   return {
+    transformApproval,
     refApprovals,
     loading,
     error,
