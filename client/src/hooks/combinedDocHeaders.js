@@ -45,7 +45,7 @@ export const combinedDocHeaders = (useProps) => {
     
     const trTrans = (trHeaders || []).map(tr => ({ 
       transNo: tr.TR_No, 
-      type: 'Transfer Order Form', 
+      type: 'Transfer', 
       status: tr.xpost, 
       rejected: tr.DISAPPROVED, 
       date: tr.xDate, 
@@ -57,7 +57,7 @@ export const combinedDocHeaders = (useProps) => {
     
     const adTrans = (adHeaders || []).map(ad => ({ 
       transNo: ad.AD_No, 
-      type: 'Disposal Form', 
+      type: 'Disposal', 
       status: ad.xpost, 
       rejected: ad.DISAPPROVED, 
       date: ad.xDate, 
@@ -68,7 +68,7 @@ export const combinedDocHeaders = (useProps) => {
     
     const aaTrans = (assetAccHeaders || []).map(aa => ({ 
       transNo: aa.AAFNo, 
-      type: 'Asset Accountability Form', 
+      type: 'Asset Accountability', 
       status: aa.xPosted, 
       rejected: aa.DISAPPROVED, 
       date: aa.xDate, 
@@ -79,7 +79,7 @@ export const combinedDocHeaders = (useProps) => {
     
     const alTrans = (assetLostHeaders || []).map(al => ({ 
       transNo: al.AAFNo, 
-      type: 'Lost Asset Form', 
+      type: 'Lost Asset', 
       status: al.xPosted, 
       rejected: al.DISAPPROVED, 
       date: al.xDate, 

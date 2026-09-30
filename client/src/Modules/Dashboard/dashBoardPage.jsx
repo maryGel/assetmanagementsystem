@@ -729,7 +729,7 @@ function DashboardPage(useProps) {
           // iconBg="bg-purple-100"
           label="TRANSFERS"
           value={trCount}
-          onClick={() => openPendingTransactions('Transfer Order Form')}
+          onClick={() => openPendingTransactions('Transfer')}
           disabled={!!activePage}
           loading={trLoading}
         />
@@ -738,7 +738,7 @@ function DashboardPage(useProps) {
           // iconBg="bg-green-100"
           label="BORROW / ISSUE"
           value={aAcctCount}
-          onClick={() => openPendingTransactions('Asset Accountability Form')}
+          onClick={() => openPendingTransactions('Asset Accountability')}
           disabled={!!activePage}
           loading={accLoading}
         />
@@ -747,7 +747,7 @@ function DashboardPage(useProps) {
           // iconBg="bg-orange-100"
           label="DISPOSALS"
           value={adCount}
-          onClick={() => openPendingTransactions('Disposal Form')}
+          onClick={() => openPendingTransactions('Disposal')}
           disabled={!!activePage}
           loading={adLoading}
         />
@@ -756,7 +756,7 @@ function DashboardPage(useProps) {
           // iconBg="bg-red-100"
           label="LOST ASSETS"
           value={aLostCount}
-          onClick={() => openPendingTransactions('Lost Asset Form')}
+          onClick={() => openPendingTransactions('Lost Asset')}
           disabled={!!activePage}
           loading={aLostLoading}
         />

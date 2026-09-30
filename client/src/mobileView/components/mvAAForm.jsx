@@ -455,7 +455,7 @@ function MvAAForm({
               ))
             ) : (
               <div className='text-sm italic text-center text-gray-500'>
-                No items found for this Asset Accountability Form.
+                No items found for this Asset Accountability.
               </div>
             )}
           </div>

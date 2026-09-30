@@ -41,13 +41,13 @@ function openDocumentPage(row) {
   switch (row.docType) {
     case 'Job Order':
       return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
-    case 'Transfer Order Form':
+    case 'Transfer':
       return window.open(`/assetMovement/pages/TRFormPage?docId=${transNo}`, '_blank');
-    case 'Disposal Form':
+    case 'Disposal':
       return window.open(`/assetMovement/pages/ADFormPage?docId=${transNo}`, '_blank');
-    case 'Asset Accountability Form':
+    case 'Asset Accountability':
       return window.open(`/assetMovement/pages/AAFormPage?docId=${transNo}`, '_blank');
-    case 'Lost Asset Form':
+    case 'Lost Asset':
       return window.open(`/assetMovement/pages/ALFormPage?docId=${transNo}`, '_blank');
     default:
       return;

@@ -246,7 +246,7 @@ const refreshData = useCallback(async () => {
 
   const handleSave = async () => {
     if (!state.createADHeader?.AD_No) {
-      alert('Disposal Form number is required');
+      alert('Disposal number is required');
       return;
     }
     if (!state.createADHeader?.Department && !state.createADHeader?.Department_Code) {
@@ -375,12 +375,12 @@ const refreshData = useCallback(async () => {
       
       if (bulkActionType === 'approve') {
         if (result.data?.isFinalApproval) {
-          showToast(`Disposal Form fully approved!`, 'success');
+          showToast(`Disposal fully approved!`, 'success');
         } else {
           showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
         }
       } else {
-        showToast(`Disposal Form rejected successfully`, 'success');
+        showToast(`Disposal rejected successfully`, 'success');
       }
       
     // Force refresh the data
@@ -464,7 +464,7 @@ const refreshData = useCallback(async () => {
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
           title="Confirm Save"
-          text="Are you sure you want to save this Disposal Form? Please review all information before saving."
+          text="Are you sure you want to save this Disposal? Please review all information before saving."
           cancelText="Cancel"
           confirmText="Save"
           cancel={closeSaveDialog}
@@ -500,7 +500,7 @@ const refreshData = useCallback(async () => {
       <Dialog open={postDialogOpen} onClose={closePostDialog}>
         <CustomDialog
           title="Confirm Post"
-          text="Would you like to post this Disposal Form now? Once posted, it will be sent for approval."
+          text="Would you like to post this Disposal now? Once posted, it will be sent for approval."
           cancelText="Cancel"
           confirmText="Post"
           cancel={closePostDialog}
@@ -522,8 +522,8 @@ const refreshData = useCallback(async () => {
                 </span>
               )}
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve this Disposal Form?` 
-                : `Are you sure you want to reject this Disposal Form? This action cannot be undone.`
+                ? `Are you sure you want to approve this Disposal?` 
+                : `Are you sure you want to reject this Disposal? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
@@ -654,10 +654,10 @@ const refreshData = useCallback(async () => {
       <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800'>
-            {state.isCreating ? 'Creating Disposal Form' : state.isEditing ? 'Editing Disposal Form' : 'Display Disposal Form'}
+            {state.isCreating ? 'Creating Disposal' : state.isEditing ? 'Editing Disposal' : 'Display Disposal'}
           </h1>
           <div className='flex flex-wrap gap-2'>
-            <span className='text-xs text-gray-500'>Last Disposal Form created :</span>
+            <span className='text-xs text-gray-500'>Last Disposal created :</span>
             <span className='text-xs text-gray-500'>
               {adHeaders && adHeaders.length > 0 
                 ? [...adHeaders].sort((a, b) => {
@@ -684,7 +684,7 @@ const refreshData = useCallback(async () => {
         </Box>
         
         <form className='mt-8'>
-          <label className='text-base font-normal text-gray-500'>Disposal Form No : </label>
+          <label className='text-base font-normal text-gray-500'>Disposal No : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.AD_No || ''}</label> 
           <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
           <input 

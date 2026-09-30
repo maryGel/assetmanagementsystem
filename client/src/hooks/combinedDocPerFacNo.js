@@ -71,22 +71,22 @@ export const useCombinedDocPerFacNo = (facNo, useProps) => {
     }));
 
     const trTrans = matchedAssetRows(trDetails, getTrNo, trHeaderByNo).map((h) => ({
-      transNo: h.TR_No, type: 'Transfer Order Form', status: h.xpost,
+      transNo: h.TR_No, type: 'Transfer', status: h.xpost,
       rejected: h.DISAPPROVED, date: h.xDate, Remarks: h.Remarks,
     }));
 
     const adTrans = matchedAssetRows(adDetails, getAdNo, adHeaderByNo).map((h) => ({
-      transNo: h.AD_No, type: 'Disposal Form', status: h.xpost,
+      transNo: h.AD_No, type: 'Disposal', status: h.xpost,
       rejected: h.DISAPPROVED, date: h.xDate, Remarks: h.Remarks,
     }));
 
     const aaTrans = matchedAssetRows(assetAccDetails, getAafNo, accHeaderByNo).map((h) => ({
-      transNo: h.AAFNo, type: 'Asset Accountability Form', status: h.xPosted,
+      transNo: h.AAFNo, type: 'Asset Accountability', status: h.xPosted,
       rejected: h.DISAPPROVED, date: h.xDate, Remarks: h.Remarks,
     }));
 
     const alTrans = matchedAssetRows(assetLostDetails, getAafNo, alostHeaderByNo).map((h) => ({
-      transNo: h.AAFNo, type: 'Lost Asset Form', status: h.xPosted,
+      transNo: h.AAFNo, type: 'Lost Asset', status: h.xPosted,
       rejected: h.DISAPPROVED, date: h.xDate, Remarks: h.Remarks,
     }));
 

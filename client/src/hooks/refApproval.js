@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import { api } from '../api/axios'
 
 
@@ -23,6 +23,11 @@ function transformApprovalData(apiData) {
   });
 }
 
+const normalize = (item, index) => ({
+  ...item,
+  id: item.id ?? item.ID ?? `temp-${index}`,
+});
+
 export const useApproval= () => {
   const [refApprovals, setRefApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,49 +35,46 @@ export const useApproval= () => {
   const [actionLoading, setActionLoading] = useState(false);
 
 
-  // GET all Approvals
-  useEffect(() => {
-    const getRefApprovals = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-                
-        const response = await api.get('/approvalRoute');       
-        const data = response.data;
-        
-        if (!Array.isArray(data)) {
-          throw new Error('Expected array but got: ' + typeof data);
-        }
-        
+  // Fetch all approval hierarchy (used for the initial load and for refresh)
+  const fetchApprovalHierarchy = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const transformedData = transformApprovalData(data)
-        
-        setRefApprovals(transformedData);
-        
-      } catch (error) {
-        setError(error.response?.data?.error || error.message || 'Failed to fetch brands');
-      } finally {
-        setLoading(false);
+      const response = await api.get('/approvalRoute');
+      const data = response.data;
+
+      if (!Array.isArray(data)) {
+        throw new Error('Expected array but got: ' + typeof data);
       }
-    };
 
-    getRefApprovals();
+      setRefApprovals(data.map(normalize));
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to fetch approval hierarchy');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchApprovalHierarchy().catch(() => {}); 
+  }, [fetchApprovalHierarchy]);
+
   // Create Approval
-  const createApproval = async (APP_CODE ='', MODULE ) => {
+  const createApproval = async (APP_CODE ='', MODULE, APP_LEVEL, SIGNATORY ) => {
     try {
       setActionLoading(true);
       setError(null);
       
-      const response = await api.post('/approvalRoute', { APP_CODE, MODULE });
+      const response = await api.post('/approvalRoute', { APP_CODE, MODULE, APP_LEVEL, SIGNATORY });
       
       const created = {
-        id: response.data.id,
+        id: response.data.ID,
         APP_CODE: response.data.APP_CODE,
         MODULE: response.data.MODULE,
-        APP_LEVEL: item.APP_LEVEL,
-        SIGNATORY: item.SIGNATORY
+        APP_LEVEL: response.data.APP_LEVEL,
+        SIGNATORY: response.data.SIGNATORY
       }
 
       setRefApprovals(prev => [...prev, created]);      
@@ -89,16 +91,16 @@ export const useApproval= () => {
   };
 
   // Update MODULE - UPDATED TO SEND CORRECT FIELDS
-  const updateApproval = async (id,  APP_CODE = '', MODULE) => {
+  const updateApproval = async (id,  APP_CODE = '', MODULE,  APP_LEVEL, SIGNATORY ) => {
     try {
       setActionLoading(true);
       
-      const response = await api.put(`/approvalRoute/${id}`, { APP_CODE, MODULE });
+      const response = await api.put(`/approvalRoute/${id}`, {  APP_CODE, MODULE, APP_LEVEL, SIGNATORY });
       
       // Update local state
       setRefApprovals(prev => 
         prev.map(item => 
-          item.id == id ? { ...item, APP_CODE, MODULE} : item
+          String(item.id) === String(id) ? { ...item,  APP_CODE, MODULE, APP_LEVEL, SIGNATORY } : item
         )
       );
       
@@ -121,7 +123,7 @@ export const useApproval= () => {
       const response = await api.delete(`/approvalRoute/${id}`);
       
       // Update local state
-      setRefApprovals(prev => prev.filter(item => item.id != id));
+      setRefApprovals(prev => prev.filter(item => item.ID != id));
       
       return response.data;
 
@@ -134,8 +136,8 @@ export const useApproval= () => {
     }
   };
 
-  // Refresh brands
-  const refreshRefApprovals = async () => {
+  // Refresh approvals
+  const refreshApprovals = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -144,7 +146,7 @@ export const useApproval= () => {
       setRefApprovals(response.data);
 
     } catch (error) {
-      setError(error.response?.data?.error || error.message || 'Failed to fetch brands');
+      setError(error.response?.data?.error || error.message || 'Failed to fetch approvals');
       throw error;
     } finally {
       setLoading(false);
@@ -159,7 +161,7 @@ export const useApproval= () => {
     createApproval,
     updateApproval,
     deleteApproval,
-    refreshRefApprovals,
+    refreshApprovals,
   };
 };
 

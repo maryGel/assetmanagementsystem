@@ -277,7 +277,7 @@ function MVAssetLostPage({
               <>
                 <div className='grid-cols-1 py-2'>
                   <div className='flex items-center justify-between px-4 text-sm font-semibold tracking-wide'>
-                    <span>Lost Asset Form</span>
+                    <span>Lost Asset</span>
                     <div className='flex'>
                       <button 
                         onClick={handleOptionsOpen}

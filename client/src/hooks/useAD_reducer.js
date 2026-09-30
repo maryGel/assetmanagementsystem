@@ -8,7 +8,7 @@ import { useAD_d } from './useAD_d';
 import { api } from '../api/axios';
 
 const initialState = {
-  // Disposal Form View State
+  // Disposal View State
   selectedAD: null,
   adDetails: [],
   adItemsLimit: 10,
@@ -309,7 +309,7 @@ function adReducer(state, action) {
         adDetails: action.payload?.newADNo ? state.createADDetails: null,
         snackbar: {
           open: true,
-          message: action.payload?.message || 'Disposal Form saved successfully!',
+          message: action.payload?.message || 'Disposal saved successfully!',
           severity: 'success',
         },
       };
@@ -418,7 +418,7 @@ export const useADData = (onSaveSuccess) => {
       console.error('AD_No is missing');
       dispatch({
         type: 'ERROR',
-        payload: 'Disposal Form number is required'
+        payload: 'Disposal number is required'
       });
       return;
     }
@@ -516,7 +516,7 @@ export const useADData = (onSaveSuccess) => {
         type: 'SAVE_SUCCESS',
         payload: {
           newADNo: newADNo,
-          message: `Disposal Form ${newADNo} created successfully!`
+          message: `Disposal ${newADNo} created successfully!`
         }
       });
 
@@ -547,7 +547,7 @@ export const useADData = (onSaveSuccess) => {
       console.error('AD_No is missing');
       dispatch({
         type: 'ERROR',
-        payload: 'Disposal Form number is required'
+        payload: 'Disposal number is required'
       });
       return;
     }
@@ -594,7 +594,7 @@ export const useADData = (onSaveSuccess) => {
         type: 'SAVE_SUCCESS',
         payload: {
           newADNo: state.createADHeader.AD_No,
-          message: `Disposal Form ${state.createADHeader.AD_No} updated successfully!`
+          message: `Disposal ${state.createADHeader.AD_No} updated successfully!`
         }
       });
       

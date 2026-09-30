@@ -144,8 +144,8 @@ export const useAssetAccApproval = () => {
   }, []);
 
   /**
-   * Post a Asset Accountability Form for approval (update xPosted to 3 only)
-   * @param {string} AAFNo - Asset Accountability Form number
+   * Post a Asset Accountability for approval (update xPosted to 3 only)
+   * @param {string} AAFNo - Asset Accountability number
    * @returns {Promise} Post result
    */
   const postAssetAcc = async (AAFNo) => {
@@ -165,8 +165,8 @@ export const useAssetAccApproval = () => {
       };
       
     } catch (err) {
-      console.error('Post Asset Accountability Form error:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to post Asset Accountability Form for approval';
+      console.error('Post Asset Accountability error:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to post Asset Accountability for approval';
       setError(errorMessage);
       setLoading(false);
       return { 
@@ -177,7 +177,7 @@ export const useAssetAccApproval = () => {
   };
 
   /**
-   * Check if Asset Accountability Form can be posted for approval
+   * Check if Asset Accountability can be posted for approval
    * @param {Object} docStatus - Document status object
    * @returns {Object} Post availability
    */

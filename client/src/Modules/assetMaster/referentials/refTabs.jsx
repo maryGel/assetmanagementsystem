@@ -126,7 +126,7 @@ export default function RefTabs({handleOpenTab}){
               {[
                 'Employee List',
                 'Assign Signatory',
-                'Configure Approval Matrix',
+                'Approval Hierarchy',
               ].map((item) => (
                 <ListItemButton
                   key={item}

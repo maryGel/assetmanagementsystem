@@ -11,6 +11,7 @@ import RefSection from '../referentials/refSection';
 import RefSupplier from '../referentials/refSupplier';
 import RefEmployee from '../referentials/refEmployee';
 import RefSignatory from '../referentials/refSignatory';
+import RefAppHierarchy from '../referentials/approvalHierarchy';
 
 function ReferentialPage() {
 
@@ -58,6 +59,9 @@ function ReferentialPage() {
             openTab = {openTab}
           />
           <RefSignatory
+            openTab = {openTab}
+          />
+          <RefAppHierarchy
             openTab = {openTab}
           />
         </div>

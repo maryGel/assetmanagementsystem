@@ -17,10 +17,10 @@ export const useAllApprovalLevels = () => {
   // Create a map of document types to their getTotalLevels functions
   const approvalHooksMap = {
     'Job Order': jobOrderApproval,
-    'Transfer Order Form': trApproval,
-    'Disposal Form': disposalApproval,
-    'Asset Accountability Form': assetAccApproval,
-    'Lost Asset Form': assetLostApproval,
+    'Transfer': trApproval,
+    'Disposal': disposalApproval,
+    'Asset Accountability': assetAccApproval,
+    'Lost Asset': assetLostApproval,
   };
 
   /**

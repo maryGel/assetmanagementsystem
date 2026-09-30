@@ -1,6 +1,6 @@
 // Utils/printAssetAccountability.js
 //
-// Builds a professional, print-ready Asset Accountability Form document and
+// Builds a professional, print-ready Asset Accountability document and
 // opens it in a new browser tab/window so the user can preview and print
 // (or "Save as PDF") it via the native browser print dialog.
 //
@@ -516,7 +516,7 @@ export function generateAAPrintHTML({
           </div>
         </div>
         <div class="doc-title">
-          <h1>ASSET ACCOUNTABILITY FORM</h1>
+          <h1>Asset Accountability</h1>
           <div class="aa-no">No. ${escapeHtml(aaNo) || '—'}</div>
         </div>
       </div>
@@ -604,7 +604,7 @@ export function generateAAPrintHTML({
 }
 
 /**
- * Opens a new tab containing the printable Asset Accountability Form and,
+ * Opens a new tab containing the printable Asset Accountability and,
  * once the content has finished loading, focuses it so the user's next
  * action (or the "Print / Save as PDF" button in the toolbar) triggers the
  * print dialog.
@@ -621,7 +621,7 @@ export function openAAPrintPreview(options = {}) {
   if (!printWindow) {
     // Pop-up blocked
     // eslint-disable-next-line no-alert
-    alert('Please allow pop-ups for this site to preview and print the Asset Accountability Form.');
+    alert('Please allow pop-ups for this site to preview and print the Asset Accountability.');
     return;
   }
 

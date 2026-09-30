@@ -284,7 +284,7 @@ function MvTRForm({
     };
     
     const getAppLogByTRNo = (TR_No) => {
-        return approvalLogs?.filter(log => (log.TRNO === TR_No) && log.Module === 'Transfer (Internal)') || [];
+        return approvalLogs?.filter(log => (log.TRNO === TR_No) && log.Module === 'Transfer') || [];
     };
 
     // Sort the filteredTR array by date (latest first)
@@ -340,7 +340,7 @@ function MvTRForm({
           onConfirm={handleBulkAction}
           actionType={bulkActionType}
           itemCount={selectedTR.length}
-          itemName="Transfer (Internal)"
+          itemName="Transfer"
           loading={bulkLoading}
           remarks={bulkRemarks}
           onRemarksChange={setBulkRemarks}

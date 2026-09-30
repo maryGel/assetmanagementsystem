@@ -114,7 +114,7 @@ export const useTRApproval = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await axios.get(`/trApproval/total-levels?module=${encodeURIComponent('Transfer (Internal)')}`, {
+      const response = await axios.get(`/trApproval/total-levels?module=${encodeURIComponent('Transfer')}`, {
         signal: controller.signal,
         timeout: 10000,
         headers: {

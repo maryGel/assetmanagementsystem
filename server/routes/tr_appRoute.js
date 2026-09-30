@@ -42,8 +42,8 @@ router.put('/approve/:TR_No', (req, res) => {
       }
 
       try {
-        // 1. Get approval configuration for Transfer (Internal) module
-        const approvalConfig = await getApprovalConfig(connection, 'Transfer (Internal)');
+        // 1. Get approval configuration for Transfer module
+        const approvalConfig = await getApprovalConfig(connection, 'Transfer');
         
         if (approvalConfig.length === 0) {
           throw new Error('No approval configuration found for this module');
@@ -60,7 +60,7 @@ router.put('/approve/:TR_No', (req, res) => {
         const currentDoc = await getCurrentApprovalStatus(connection, cleanDocNo, sql);
         
         // 3. Get the latest approved level from logs (only Approved or Confirmed)
-        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Transfer (Internal)');
+        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Transfer');
         
         // Determine the next level to approve
         const nextLevel = appLevel || (currentApprovedLevel + 1);
@@ -141,7 +141,7 @@ router.put('/approve/:TR_No', (req, res) => {
         const xUser = userInfo ? `${userInfo.user} - ${userInfo.lname}, ${userInfo.fname}` : String(approved);
         
         await new Promise((resolve, reject) => {
-          connection.query(insertLogSql, [cleanDocNo, 'Transfer (Internal)', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
+          connection.query(insertLogSql, [cleanDocNo, 'Transfer', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
             if (error) reject(error);
             else resolve();
           });
@@ -204,7 +204,7 @@ router.put('/approve/:TR_No', (req, res) => {
 });
 
 /**
- * Reject a Transfer (Internal)
+ * Reject a Transfer
  */
 
 router.put('/reject/:TR_No', (req, res) => {
@@ -239,8 +239,8 @@ router.put('/reject/:TR_No', (req, res) => {
       }
 
       try {
-        // 1. Get approval configuration for Transfer (Internal) module
-        const approvalConfig = await getApprovalConfig(connection, 'Transfer (Internal)');
+        // 1. Get approval configuration for Transfer module
+        const approvalConfig = await getApprovalConfig(connection, 'Transfer');
         
         if (approvalConfig.length === 0) {
           throw new Error('No approval configuration found for this module');
@@ -256,7 +256,7 @@ router.put('/reject/:TR_No', (req, res) => {
         const currentDoc = await getCurrentApprovalStatus(connection, cleanDocNo, sql);
         
         // 3. Get the latest approved level from logs (only Approved or Confirmed)
-        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Transfer (Internal)');
+        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Transfer');
         
         // Determine the level being rejected
         const nextLevel = appLevel || (currentApprovedLevel + 1);
@@ -331,7 +331,7 @@ router.put('/reject/:TR_No', (req, res) => {
         const xUser = userInfo ? `${userInfo.user} - ${userInfo.lname}, ${userInfo.fname}` : String(approved);
         
         await new Promise((resolve, reject) => {
-          connection.query(insertLogSql, [cleanDocNo, 'Transfer (Internal)', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
+          connection.query(insertLogSql, [cleanDocNo, 'Transfer', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
             if (error) reject(error);
             else resolve();
           });

@@ -5,11 +5,11 @@ import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
 // Auto-numbering fields shown in the Advanced Setup section.
 // label -> DB column on user0002inv
 const AUTO_NUMBER_FIELDS = [
-  { label: 'Job Order Form', field: 'XJONum' },
-  { label: 'Transfer Order Form', field: 'XTRNum' },
-  { label: 'Asset Disposal Form', field: 'XADNum' },
-  { label: 'Asset Accountability Form', field: 'XAANum' },
-  { label: 'Lost Asset Form', field: 'XALNum' },
+  { label: 'Job Order', field: 'XJONum' },
+  { label: 'Transfer', field: 'XTRNum' },
+  { label: 'Asset Disposal', field: 'XADNum' },
+  { label: 'Asset Accountability', field: 'XAANum' },
+  { label: 'Lost Asset', field: 'XALNum' },
   { label: 'Work Order Form', field: 'AutoWO' },
 ];
 

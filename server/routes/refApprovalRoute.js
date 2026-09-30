@@ -4,7 +4,7 @@ import { db } from '../server.js';
 const router = express.Router();
 
 
-// GET all Sections
+// GET all approvals
 router.get('/', ( req, res ) => {
 
   db.getConnection((err, connection) => {
@@ -24,16 +24,16 @@ router.get('/', ( req, res ) => {
   })
 })
 
-// Get single section
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
+// Get single approval
+router.get('/:ID', (req, res) => {
+  const { ID } = req.params;
 
   db.getConnection((err, connection) => {
     if(err) {
       return res.status(500).json({error: 'Database connection failed'});
     }
 
-    const sql = 'SELECT * FROM ref_approval WHERE id = ?';
+    const sql = 'SELECT * FROM ref_approval WHERE ID = ?';
 
     connection.query(sql, [id], (error, result) => {
       connection.release();
@@ -50,12 +50,12 @@ router.get('/:id', (req, res) => {
 });
 
 
-// Post create new Section
+// Post create new approval
 router.post('/',(req,res) => {
   const { APP_CODE, MODULE, APP_LEVEL, SIGNATORY } = req.body;
 
   if(!MODULE){
-    return res.status(400).json({error: 'Section Code is required'})
+    return res.status(400).json({error: 'approval Code is required'})
   }
 
   db.getConnection((error, connection) => {
@@ -64,7 +64,7 @@ router.post('/',(req,res) => {
     }
 
     const sql = 'INSERT INTO ref_approval (APP_CODE, MODULE, APP_LEVEL, SIGNATORY) VALUES (?,?,?,?)';
-    const params = [APP_CODE, MODULE, APP_LEVEL, SIGNATORY || '']
+    const params = [APP_CODE, MODULE, APP_LEVEL, SIGNATORY]
 
     connection.query(sql, params, (error, result) => {
       connection.release();
@@ -74,23 +74,25 @@ router.post('/',(req,res) => {
       }
 
       res.json({
-        message: 'New Brand has been successfully created',
+        message: 'New approval has been successfully created',
         id: result.insertId,
         APP_CODE,
-        MODULE
+        MODULE,
+        APP_LEVEL,
+        SIGNATORY
       });
     });
   });
 });
 
 
-// PUT update Section
-router.put('/:id', (req, res) => {
-  const { id } = req.params;
-  const { APP_CODE, MODULE, APP_LEVEL, SIGNATORY } = req.body;
+// PUT update approval
+router.put('/:ID', (req, res) => {
+  const { ID } = req.params;
+  const {  APP_CODE, MODULE,  APP_LEVEL, SIGNATORY } = req.body;
 
-  if(!MODULE){
-    return res.status(400).json({error: 'Brand name is required'})
+  if(!APP_CODE || !MODULE ||  !APP_LEVEL || !SIGNATORY){
+    return res.status(400).json({error: 'All fields are required'})
   }
 
   db.getConnection((error, connection) => {
@@ -99,8 +101,8 @@ router.put('/:id', (req, res) => {
       return res.status(500).json({error: ' Database connection failed'});
     }
 
-    const sql = 'UPDATE ref_approval SET APP_CODE = ?, MODULE = ?, APP_LEVEL = ?, SIGNATORY = ? where id = ?';
-    const params = [APP_CODE, MODULE, APP_LEVEL, SIGNATORY || '']
+    const sql = 'UPDATE ref_approval SET APP_CODE = ?,  MODULE = ?,  APP_LEVEL = ?, SIGNATORY = ? where ID = ?';
+    const params = [ APP_CODE, MODULE,  APP_LEVEL, SIGNATORY || '', ID];
 
     connection.query(sql, params, (error, result) => {
       connection.release();
@@ -118,17 +120,19 @@ router.put('/:id', (req, res) => {
   });
 });
 
-//Delete brand
+//Delete approval
 
-router.delete('/:id', (req,res) => {
-  const { id } = req.params;
+router.delete('/:ID', (req,res) => {
+  const { ID } = req.params;
 
   db.getConnection((error, connection) => {
     if(error) {
       return res.status(500).json({error: 'Database connection failed'});
     }
 
-    connection.query('Delete from ref_approval where id = ?', [id], (error, result) => {
+    const sql = 'DELETE FROM ref_approval WHERE id = ?';
+
+    connection.query(sql, [ID], (error, result) => {
       connection.release();
 
       if(error){
@@ -136,7 +140,7 @@ router.delete('/:id', (req,res) => {
       }
 
       if(result.affectedRows === 0){
-        return res.status(404).json({ error: 'Brand not found'});
+        return res.status(404).json({ error: 'approval not found'});
       }
 
       res.json({message: 'Approval has been deleted successfully'});

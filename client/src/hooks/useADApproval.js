@@ -156,8 +156,8 @@ export const useDisposalApproval = () => {
   };
 
    /**
-   * Post a Disposal Form for approval (update xpost to 3 only)
-   * @param {string} AD_No - Disposal Form number
+   * Post a Disposal for approval (update xpost to 3 only)
+   * @param {string} AD_No - Disposal number
    * @returns {Promise} Post result
    */
   const postDisposal = async (AD_No) => {
@@ -177,8 +177,8 @@ export const useDisposalApproval = () => {
       };
       
     } catch (err) {
-      console.error('Post Disposal Form error:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to post Disposal Form for approval';
+      console.error('Post Disposal error:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to post Disposal for approval';
       setError(errorMessage);
       setLoading(false);
       return { 
@@ -189,7 +189,7 @@ export const useDisposalApproval = () => {
   };
 
   /**
-   * Check if Disposal Form can be posted for approval
+   * Check if Disposal can be posted for approval
    * @param {Object} docStatus - Document status object
    * @returns {Object} Post availability
    */

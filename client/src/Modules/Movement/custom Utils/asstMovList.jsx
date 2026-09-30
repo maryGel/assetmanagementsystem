@@ -18,7 +18,7 @@ export const assetMovList= [
     title: 'Job Order',
     link: '/assetMovement/pages/JOFormPage',
     imgSrc: '/icons/menu_icons/joborder.png',
-    headerTitle: 'Job Order Form',
+    headerTitle: 'Job Order',
   },
   {
     id: 4,

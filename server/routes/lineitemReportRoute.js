@@ -21,13 +21,13 @@ const addInFilter = (filters, params, column, value) => {
 const lineItemUnion = `(
   SELECT 'Job Order' AS DocType, jo.JO_No AS DocNo, jo.FAC_NO AS LinkFacNo FROM jo_d jo
   UNION ALL
-  SELECT 'Transfer Order Form', tr.TR_No, tr.FAC_NO FROM tr_d tr
+  SELECT 'Transfer', tr.TR_No, tr.FAC_NO FROM tr_d tr
   UNION ALL
-  SELECT 'Disposal Form', ad.AD_No, ad.FAC_NO FROM ad_d ad
+  SELECT 'Disposal', ad.AD_No, ad.FAC_NO FROM ad_d ad
   UNION ALL
-  SELECT 'Asset Accountability Form', aa.AAFNo, aa.ItemNo FROM assestaccd aa
+  SELECT 'Asset Accountability', aa.AAFNo, aa.ItemNo FROM assestaccd aa
   UNION ALL
-  SELECT 'Lost Asset Form', al.AAFNo, al.ItemNo FROM assetlostd al
+  SELECT 'Lost Asset', al.AAFNo, al.ItemNo FROM assetlostd al
 ) li`;
 
 router.get('/', (req, res) => {

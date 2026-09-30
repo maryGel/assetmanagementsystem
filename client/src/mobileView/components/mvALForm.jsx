@@ -302,7 +302,7 @@ function MvALForm({
   if (isLoading || approvalLoading) return (
     <div className="flex flex-col items-center justify-center py-8">
       <CircularProgress />
-      <span className="mt-3 text-sm text-gray-500">Loading Lost Asset Forms...</span>
+      <span className="mt-3 text-sm text-gray-500">Loading Lost Assets...</span>
     </div>
   );
   
@@ -457,7 +457,7 @@ function MvALForm({
                     ))
                   ) : (
                     <div className='text-sm italic text-center text-gray-500'>
-                      No items found for this Lost Asset Form.
+                      No items found for this Lost Asset.
                     </div>
                   )}
                 </div>

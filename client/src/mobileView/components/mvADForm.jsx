@@ -506,7 +506,7 @@ function MvADForm({
               <div className='sticky top-0 px-6 py-4 bg-white border-b rounded-t-2xl'>
                 <div className='flex items-center justify-between'>
                   <div>
-                    <h3 className='text-lg font-semibold text-gray-900'>Disposal Form Approval</h3>
+                    <h3 className='text-lg font-semibold text-gray-900'>Disposal Approval</h3>
                     <p className='text-sm text-gray-500'>{header.AD_No}</p>
                     {nextLevel && (
                         <p className='mt-1 text-xs text-blue-600'>
