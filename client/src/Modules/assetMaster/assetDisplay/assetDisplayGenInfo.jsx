@@ -5,7 +5,13 @@ import {
   Autocomplete,
   TextField
 } from '@mui/material';
-import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
+import {
+  getAutocompleteSx,
+  fieldClass,
+  staticFieldClass,
+  staticTextClass,
+  fieldLabelClass
+} from '../../../Utils/autocompleteStyles';
 // Custom Hooks
 import { useRefUom } from '../../../hooks/refUom';
 import { useRefItemClass } from '../../../hooks/refClass';
@@ -24,20 +30,6 @@ import { useSuppliers } from '../../../hooks/refSupp';
 // ---------------------------------------------------------------------------
 const sectionCardClass = 'py-6 shadow-sm border border-slate-200 rounded-lg bg-white min-w-0';
 const sectionHeaderClass = 'block pl-5 mb-4 pb-2 border-b border-slate-100 text-blue-800 text-[clamp(0.85rem,0.7rem+0.6vw,1.125rem)] font-medium';
-const fieldLabelClass = 'p-2 pl-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500 whitespace-nowrap';
-
-const fieldValueClass = (isEditing) =>
-  `w-auto min-w-0 flex-1 px-2.5 py-1.5 rounded text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${
-    isEditing
-      ? 'border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400'
-      : 'border border-transparent bg-transparent text-slate-600'
-  }`;
-
-// Fields that are never editable here (Category/Location come from
-// transfer documents, not this form) get a distinct muted-card look so it
-// reads as "locked", not just "currently disabled".
-const staticFieldClass =
-  'w-full min-w-0 flex-1 px-2.5 py-1.5 rounded text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] border border-slate-200 bg-slate-50 text-slate-500';
 
 export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFieldChange }) {
   const { uomData } = useRefUom(useProps);
@@ -81,10 +73,10 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
               <TextField {...params} sx={getAutocompleteSx(isEditing)} />
             )}
           />
-          <span className='p-2 pl-10 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500'>Quantity:</span>
+          <span className='p-2 pl-10 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-slate-600'>Quantity:</span>
           <input
             type='text'
-            className={fieldValueClass(isEditing) + ' max-w-[8rem]'}
+            className={fieldClass(isEditing) + ' max-w-[8rem]'}
             value={asset.balance_unit}
             disabled={!isEditing}
             onChange={(e) => onFieldChange('balance_unit', e.target.value)}
@@ -124,7 +116,7 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
           <span className={fieldLabelClass}>Serial Number:</span>
           <input
             type='text'
-            className={fieldValueClass(isEditing)}
+            className={fieldClass(isEditing)}
             value={asset.serialNo}
             disabled={!isEditing}
             readOnly={!isEditing}
@@ -144,7 +136,7 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
           <span className={fieldLabelClass}>Reference:</span>
           <input
             type='text'
-            className={fieldValueClass(isEditing)}
+            className={fieldClass(isEditing)}
             value={asset.ReferenceNo}
             disabled={!isEditing}
             readOnly={!isEditing}
@@ -208,10 +200,10 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
             )}
           />
 
-          <span className={fieldLabelClass}>Assigned to:</span>
+          <span className={fieldLabelClass}>Holder:</span>
           <input
             type='text'
-            className={fieldValueClass(isEditing)}
+            className={fieldClass(isEditing)}
             value={asset.Holder || ''}
             disabled={!isEditing}
             readOnly={!isEditing}
@@ -219,20 +211,20 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
           />
 
           <span className={fieldLabelClass}>Warranty:</span>
-          <div className='flex items-center gap-2 flex-cols-[minmax(4rem,6rem)_minmax(4rem,6rem)]'>
-            <span className='text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500 whitespace-nowrap'>From</span>
+          <div className='flex items-center gap-2'>
+            <span className='text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-slate-600 whitespace-nowrap'>From</span>
             <input
               type='date'
-              className={fieldValueClass(isEditing)}
+              className={fieldClass(isEditing)}
               value={asset.StartDate || ''}
               disabled={!isEditing}
               readOnly={!isEditing}
               onChange={(e) => onFieldChange('StartDate', e.target.value)}
             />
-            <span className='text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500 whitespace-nowrap'>to</span>
+            <span className='text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-slate-600 whitespace-nowrap'>to</span>
             <input
               type='date'
-              className={fieldValueClass(isEditing)}
+              className={fieldClass(isEditing)}
               value={asset.EndDate || ''}
               disabled={!isEditing}
               readOnly={!isEditing}
@@ -245,16 +237,16 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
         <span className={sectionHeaderClass}>Physical Count Details</span>
         <div className='grid grid-cols-[minmax(10rem,14rem)_minmax(15rem,1fr)] min-w-0 mt-2 mb-8 mr-5 gap-y-3 gap-x-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] pr-8'>
           <span className={fieldLabelClass}>Last physical count on:</span>
-          <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>12/31/2024</span>
+          <span className={staticTextClass}>12/31/2024</span>
           <span className={fieldLabelClass}>Inventory count sheet:</span>
           <input type='text' className={staticFieldClass} value={asset.PC_BATCH || ''} disabled readOnly />
           <span className={fieldLabelClass}>Inventory note:</span>
-          <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>Needs to evaluate for repair</span>
+          <span className={staticTextClass}>Needs to evaluate for repair</span>
           <span className={fieldLabelClass}>Counted by:</span>
-          <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] text-gray-500'>Andrea</span>
+          <span className={staticTextClass}>Andrea</span>
           <div className='flex items-center ml-2'>
             <Checkbox />
-            <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-gray-500'>Flag for Deletion</span>
+            <span className='p-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-slate-600'>Flag for Deletion</span>
           </div>
         </div>
       </div>

@@ -517,13 +517,13 @@ function SearchTransactions(useProps) {
           )}
           sx={{ width: '15rem', marginRight: '1rem', flex: '1 1 200px', minWidth: 180, maxWidth: 280  }}
         />   
-        
+{/*         
         <TextField
           label="Created by"
           id="outlined-size-small"
           defaultValue=""
           size="small"
-        />     
+        />      */}
       </form>
       <div className='flex w-full h-auto gap-2 p-2 pr-5 ml-auto bg-gray-100 place-content-end'>
         <CustomBtn variant='goBtn' iconType='go' onClick={handleGoClick}>

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // MUI
-import { Snackbar, Alert, Button } from '@mui/material';
+import { Snackbar, Alert, IconButton, Tooltip } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddAPhotoIcon from '@mui/icons-material/AddAPhoto';
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 
 // Custom Utils
@@ -55,6 +57,7 @@ const mapAssetToForm = (source = {}) => ({
   ReferenceNo: source.ReferenceNo || '',
   Brand: source.Brand || '',
   serialNo: source.serialNo || '',
+  suppName: source.suppName || '',
   Color: source.Color || '',
   StartDate: source.StartDate || '',
   EndDate: source.EndDate || '',
@@ -62,6 +65,8 @@ const mapAssetToForm = (source = {}) => ({
   balance_unit: source.balance_unit ?? '',
   AAmount: source.AAmount ?? '',
   Percent: source.Percent ?? '',
+  Depreciation: source.Depreciation ?? '',
+  AccuDep: source.AccuDep ?? '',
   Abre: source.Abre ?? '',
   Holder: source.Holder || '',
   Picpath: source.Picpath || '',
@@ -93,6 +98,11 @@ export default function AssetMasterDisplay() {
   const [isEditing, setIsEditing] = useState(false);
   const [pictureFile, setPictureFile] = useState(null);
   const [picturePreview, setPicturePreview] = useState('');
+  // true = the saved picture is marked for removal (applied when Save is clicked)
+  const [removePicture, setRemovePicture] = useState(false);
+  // Last Picpath confirmed by a save. singleAsset isn't refreshed after a save,
+  // so Cancel would otherwise bring back a picture that was just removed/replaced.
+  const savedPicpathRef = useRef(undefined);
   const [saveError, setSaveError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -113,6 +123,7 @@ export default function AssetMasterDisplay() {
 
   useEffect(() => {
     if (singleAsset) {
+      savedPicpathRef.current = undefined;
       setAssetData(mapAssetToForm(singleAsset));
     }
   }, [singleAsset]);
@@ -142,12 +153,17 @@ export default function AssetMasterDisplay() {
     try {
       setSaveError(null);
       const payload = prepareAssetPayload(asset);
+      // Sent as JSON when there's no new file; a new file always replaces the old one
+      if (removePicture && !pictureFile) payload.removePicture = true;
+
       const result = await updateAsset(asset.FacNO, payload, pictureFile);
-      if (pictureFile && result.Picpath) {
-        setAssetData((prev) => ({ ...prev, Picpath: result.Picpath }));
-        setPictureFile(null);
-        setPicturePreview('');
-      }
+
+      const savedPicpath = result?.Picpath || '';
+      savedPicpathRef.current = savedPicpath;
+      setAssetData((prev) => ({ ...prev, Picpath: savedPicpath }));
+      setPictureFile(null);
+      setPicturePreview('');
+      setRemovePicture(false);
       showSnackbar('Changes have been saved successfully.');
       setIsEditing(false);
     } catch (error) {
@@ -159,7 +175,12 @@ export default function AssetMasterDisplay() {
     setIsEditing(false);
     setPictureFile(null);
     setPicturePreview('');
-    if (singleAsset) setAssetData(mapAssetToForm(singleAsset));
+    setRemovePicture(false);
+    if (singleAsset) {
+      const reverted = mapAssetToForm(singleAsset);
+      if (savedPicpathRef.current !== undefined) reverted.Picpath = savedPicpathRef.current;
+      setAssetData(reverted);
+    }
   };
 
   const handlePictureChange = (event) => {
@@ -174,7 +195,20 @@ export default function AssetMasterDisplay() {
 
     setSaveError(null);
     setPictureFile(file);
+    setRemovePicture(false); // a new photo replaces the saved one
     setPicturePreview(URL.createObjectURL(file));
+    event.target.value = ''; // lets the same file be picked again after discarding it
+  };
+
+  // Delete button: first discards a newly chosen (unsaved) photo; if there is
+  // none, marks the saved photo for removal on the next Save.
+  const handleRemovePicture = () => {
+    if (pictureFile) {
+      setPictureFile(null);
+      setPicturePreview('');
+      return;
+    }
+    if (asset.Picpath) setRemovePicture(true);
   };
 
   // Re-fetches the currently displayed asset. Disabled while editing so it
@@ -187,6 +221,9 @@ export default function AssetMasterDisplay() {
   const handleCreateNew = () => {
     navigate('/assetFolder/createAsset');
   };
+
+  const displayedPicture = picturePreview || (removePicture ? '' : asset.Picpath);
+  const canRemovePicture = !!pictureFile || (!!asset.Picpath && !removePicture);
 
   if (isLoadingSingle) return <p className="p-5">Loading asset...</p>;
   if (error) return <p className="p-5 text-red-600">Error loading asset data.</p>;
@@ -282,7 +319,7 @@ export default function AssetMasterDisplay() {
 
         {/* ... F i e l d s ... */}
 
-        <div className=''>
+        <div >
           <div className='flex items-center gap-2 p-3 pl-16 font-medium tracking-wide bg-white border rounded-md shadow-md text-[clamp(0.8rem,0.65rem+0.6vw,1.05rem)] shadow-slate-300 border-slate-300 text-slate-800'>
             <span>Asset Number: {asset.FacNO}</span>
           </div>
@@ -322,28 +359,51 @@ export default function AssetMasterDisplay() {
             </div>
 
             {/* Column 2: Display Photo */}
-            <div className='flex justify-center items-start p-2 flex-1 basis-48 min-w-[9rem] max-w-[9rem] sm:min-w-[10rem] sm:max-w-[10rem] md:min-w-[12rem] md:max-w-xs lg:min-w-[14rem] lg:max-w-sm xl:min-w-[16rem] xl:max-w-md'>
-              {picturePreview || asset.Picpath ? (
+            <div className='grid justify-center items-start p-5 basis-48 min-w-[9rem] max-w-[9rem] sm:min-w-[10rem] sm:max-w-[10rem] md:min-w-[12rem] md:max-w-xs lg:min-w-[14rem] lg:max-w-sm xl:min-w-[16rem] xl:max-w-md'>
+              {displayedPicture ? (
                 <img
                   className='w-full h-auto max-w-[7rem] rounded border border-slate-200 object-contain sm:max-w-[8rem] md:max-w-[12rem] lg:max-w-[14rem] xl:max-w-[16rem]'
-                  src={picturePreview || asset.Picpath}
+                  src={displayedPicture}
                   alt={`Photo of ${asset.FacName || 'asset'}`}
                 />
               ) : (
                 <div className='flex items-center justify-center w-full px-3 text-xs text-center border border-dashed rounded min-h-28 border-slate-300 text-slate-400'>
-                  No image uploaded
+                  {removePicture ? 'Image will be removed on save' : 'No image uploaded'}
                 </div>
               )}
               {isEditing && (
-                <Button component="label" size="small" sx={{ mt: 1, textTransform: 'none' }}>
-                  {pictureFile ? 'Choose another image' : 'Change image'}
-                  <input
-                    hidden
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handlePictureChange}
-                  />
-                </Button>
+                <div className='flex items-center justify-center gap-1 mt-2'>
+                  <Tooltip title={displayedPicture ? 'Change photo' : 'Upload photo'}>
+                    <IconButton
+                      component="label"
+                      size="small"
+                      color="primary"
+                      aria-label={displayedPicture ? 'Change photo' : 'Upload photo'}
+                    >
+                      <AddAPhotoIcon fontSize="small" />
+                      <input
+                        hidden
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handlePictureChange}
+                      />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={pictureFile ? 'Discard new photo' : 'Remove photo'}>
+                    {/* span lets the tooltip work while the button is disabled */}
+                    <span>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={handleRemovePicture}
+                        disabled={!canRemovePicture}
+                        aria-label={pictureFile ? 'Discard new photo' : 'Remove photo'}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </div>
               )}
             </div>
           </div>

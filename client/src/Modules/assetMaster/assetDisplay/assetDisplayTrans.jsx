@@ -74,8 +74,8 @@ export default function AssetDisplayTrans({ facNo }) {
   }, [transactions]);
 
   return (
-    <div className='w-full min-w-0 px-10'>
-      <div className='pt-5 pb-5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] shadow-sm shadow-slate-200 min-w-0'>
+    <div className='w-full min-w-0'>
+      <div className='text-[clamp(0.72rem,0.55rem+0.6vw,1rem)]min-w-0'>
         {/*
           Fill available width with a minWidth floor instead of a fixed
           rem width, matching the other display tables. minWidth: 0 on the
@@ -105,7 +105,7 @@ export default function AssetDisplayTrans({ facNo }) {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
                       <CircularProgress size={20} />
                       <Typography variant="body2">Loading transactions...</Typography>
@@ -114,7 +114,7 @@ export default function AssetDisplayTrans({ facNo }) {
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 2 }}>
                     <Typography variant="body2" color="error">
                       Failed to load transaction history.
                     </Typography>
@@ -122,7 +122,7 @@ export default function AssetDisplayTrans({ facNo }) {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 2 }}>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                       No transactions found for this asset.
                     </Typography>

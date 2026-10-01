@@ -293,14 +293,26 @@ const JOLineItems = ({
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
         <TextField
           size="small"
-          placeholder="Search Asset No., Asset Name, Description, Work Details..."
+          placeholder="Search asset details..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          sx={{ width: 480, maxWidth: '100%' }}
+          sx={{ 
+            // Responsive widths based on screen sizes
+            width: {
+              xs: '100%',      // Mobile screens
+              sm: 350,         // Tablets (iPad)
+              md: 450,         // Laptops / Desktops
+              lg: 600,         // Large monitors
+            },
+            maxWidth: '100%',
+            '& .MuiInputBase-input': {
+              padding: '12px 14px',
+            }
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
+                <SearchIcon fontSize="medium" />
               </InputAdornment>
             ),
             endAdornment: searchText ? (
@@ -310,12 +322,14 @@ const JOLineItems = ({
                   aria-label="Clear search"
                   onClick={() => setSearchText('')}
                 >
-                  <ClearIcon fontSize="small" />
+                  <ClearIcon fontSize="medium" />
                 </IconButton>
               </InputAdornment>
             ) : null
           }}
         />
+
+
         {searchText.trim() && (
           <Typography variant="body2" color="text.secondary">
             Showing {displayedItems.length} of {currentJOItems?.length || 0}

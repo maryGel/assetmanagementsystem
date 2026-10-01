@@ -223,14 +223,14 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
           )}
           sx={{ flex: '1 1 200px', minWidth: 180, maxWidth: 280 }}
         />   
-        
+{/*         
         <TextField
           label="Created by"
           id="outlined-size-small"
           defaultValue=""
           size="small"
           sx={{ flex: '1 1 160px', minWidth: 160, maxWidth: 220 }}
-        />     
+        />      */}
       </form>
       
       <div className="flex flex-wrap w-full h-auto gap-2 p-2 pr-5 ml-auto bg-gray-100 place-content-end">

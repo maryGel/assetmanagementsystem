@@ -440,8 +440,14 @@ const updateAsset = (req, res) => {
     EndDate,
     ReferenceNo,
     Remarks,
+    removePicture,
     // splitAsset
   } = req.body;
+
+  // JSON bodies send a boolean, multipart bodies send a string. A newly uploaded
+  // file always wins over a removal request.
+  const shouldRemovePicture =
+    !req.file && (removePicture === true || removePicture === 'true' || removePicture === '1');
 
   if (!facNo) {
     if (req.file) fs.unlink(req.file.path, () => {});
@@ -472,7 +478,7 @@ const updateAsset = (req, res) => {
       EndDate = ?,
       ReferenceNo = ?,
       Remarks = ?,
-      Picpath = COALESCE(?, Picpath)
+      Picpath = CASE WHEN ? = 1 THEN NULL ELSE COALESCE(?, Picpath) END
 
     WHERE FacNO = ?
   `;
@@ -500,6 +506,7 @@ const updateAsset = (req, res) => {
     EndDate || null,
     ReferenceNo || null,
     Remarks || null,
+    shouldRemovePicture ? 1 : 0,
     req.file ? `/uploads/asset-images/${req.file.filename}` : null,
     // splitAsset ?? 0,
     facNo
@@ -533,8 +540,10 @@ const updateAsset = (req, res) => {
         return res.status(404).json({ error: 'Asset not found' });
       }
 
-      const Picpath = req.file ? `/uploads/asset-images/${req.file.filename}` : oldPicpath;
-      if (req.file && oldPicpath?.startsWith('/uploads/asset-images/')) {
+      const Picpath = req.file
+        ? `/uploads/asset-images/${req.file.filename}`
+        : (shouldRemovePicture ? null : oldPicpath);
+      if ((req.file || shouldRemovePicture) && oldPicpath?.startsWith('/uploads/asset-images/')) {
         fs.unlink(path.join(assetImageDir, path.basename(oldPicpath)), () => {});
       }
 
