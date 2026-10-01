@@ -127,7 +127,7 @@ export const useAssetMasterData = () => {
         const response = await api.get('/itemlist', { 
           params: {
             fetchAll: true,
-            columns: 'FacNO,FacName,CATEGORY,ItemClass,Department,ItemLocation,xStatus,AAmount,Abre,serialNo,AssetGrpCode'
+            columns: 'FacNO,FacName,CATEGORY,ItemClass,Department,ItemLocation,xStatus,AAmount,Abre,serialNo,AssetGrpCode,Unit,Brand,StartDate,EndDate'
           },
           timeout: 30000
         });

@@ -129,6 +129,29 @@ router.put('/approve/:JO_No', (req, res) => {
               else resolve(result);
             });
           });
+
+          // 9b. Flag every asset on this JO as waiting for evaluation
+          const assetRows = await new Promise((resolve, reject) => {
+            connection.query(
+              'SELECT DISTINCT FAC_NO FROM jo_d WHERE JO_No = ?',
+              [cleanDocNo],
+              (error, rows) => (error ? reject(error) : resolve(rows))
+            );
+          });
+
+          const facNos = assetRows
+            .map(r => (r.FAC_NO || '').trim())
+            .filter(f => f !== '' && f.toLowerCase() !== 'n');
+
+          if (facNos.length > 0) {
+            await new Promise((resolve, reject) => {
+              connection.query(
+                `UPDATE itemlist SET xxStats = ? WHERE FacNO IN (?)`,
+                ['For JO Evaluation', facNos],
+                (error, result) => (error ? reject(error) : resolve(result))
+              );
+            });
+          }
         }
         
         // 10. Create approval log with appropriate STAT value

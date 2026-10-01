@@ -172,6 +172,15 @@ router.put('/evaluate/:JO_No', (req, res) => {
 
           if (updateDetailResult.affectedRows > 0) {
             updatedItemsCount++;
+
+            // Mirror the evaluation result on the asset itself
+            await new Promise((resolve, reject) => {
+              connection.query(
+                'UPDATE itemlist SET xxStats = ? WHERE FacNO = ?',
+                [eval_status, selectedItem.FAC_NO],
+                (error, result) => (error ? reject(error) : resolve(result))
+              );
+            });
           } else {
             updateErrors.push(`Failed to update item with FAC_NO: ${selectedItem.FAC_NO}`);
           }

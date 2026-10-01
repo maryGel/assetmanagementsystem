@@ -104,7 +104,7 @@ export default function RefAppHierarchy({ openTab, useProps }) {
       }
 
       if (!editedRow.MODULE?.trim() || !editedRow.APP_CODE?.trim()) {
-        showSnackbar('Please fill in required field: Signatory ', 'error');
+        showSnackbar('Please fill in all fields ', 'error');
         return;
       }
 
@@ -118,7 +118,7 @@ export default function RefAppHierarchy({ openTab, useProps }) {
       );
 
       if (isDuplicate) {
-        showSnackbar('Signatory already exists!', 'error');
+        showSnackbar('Approval Hierarchy already exists!', 'error');
         return;
       }
 

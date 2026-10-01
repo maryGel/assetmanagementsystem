@@ -863,12 +863,12 @@ const refreshData = useCallback(async () => {
               )}
             <Box className='mt-2 '>
               <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
-                <div className='flex items-center min-w-[280px] gap-3'>
+                <div className='flex items-center min-w-[300px] gap-3'>
                   <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Department :</label>
                   <Autocomplete
                     variant='body2'
                     disabled={isReadOnly}
-                    className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                    className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[200px] max-w-sm`}
                     size = 'small'
                     options= {departments} 
                     value={currentHeader?.Department_Code || currentHeader?.Department  || '' }

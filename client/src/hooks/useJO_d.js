@@ -77,6 +77,8 @@ export const useJO_d = () => {
             ItemLocation: item.ItemLocation || '',
             xDate: item.xDate || null,
             xpost: item.xpost || 0,
+            StartDate: item.StartDate || null,
+            EndDate: item.EndDate || null,
             eval_status: item.eval_status || '',        // IMPORTANT: Include this
             eval_remarks: item.eval_remarks || '',      // IMPORTANT: Include this
             disposal_reason: item.disposal_reason || '',

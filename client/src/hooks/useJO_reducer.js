@@ -169,11 +169,13 @@ function joReducer(state, action) {
             xpost: 0,
             UOM: '',
             brand: '',
-            serialNo: '',
+            serialno: '',
             workDet: '',
             TargetDate: '',
             Status: 'OPEN',
             ItemLocation: '',
+            StartDate: '',
+            EndDate: '',
             },
         ],
         hasUnsavedChanges: false,
@@ -197,11 +199,13 @@ function joReducer(state, action) {
         xpost: 0,
         UOM: '',
         brand: '',
-        serialNo: '',
+        serialno: '',
         workDet: '',
         TargetDate: '',
         Status: 'OPEN',
         ItemLocation: '',
+        StartDate: '',
+        EndDate: '',
       };
 
       return {
@@ -432,24 +436,6 @@ export const useJOData = (onSaveSuccess) => {
     dispatch({ type: 'SAVE_START' });
 
     try {
-      // const safeDate = (dateString) => {
-      //   if (!dateString) return null;
-        
-      //   // If it's already in YYYY-MM-DD format, return as is
-      //   if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      //     return dateString;
-      //   }
-        
-      //   const date = new Date(dateString);
-      //   if (isNaN(date.getTime())) return null;
-        
-      //   // Use UTC to avoid timezone shift
-      //   const year = date.getUTCFullYear();
-      //   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      //   const day = String(date.getUTCDate()).padStart(2, '0');
-        
-      //   return `${year}-${month}-${day}`;
-      // };
       
       const { id, ...headerData } = state.createJOHeader;
       // IMPORTANT: Only format the date if it's a new creation
@@ -480,7 +466,11 @@ export const useJOData = (onSaveSuccess) => {
           xDate: safeDate(cleanItem.xDate),
           TargetDate: cleanItem.TargetDate ? safeDate(cleanItem.TargetDate) : null,
           qty: Number(cleanItem.qty) || 1,
+          // UOM: cleanItem.UOM || '',
+          // serialno: cleanItem.serialno || '',
           xpost: 0,
+          // StartDate: cleanItem.StartDate ? safeDate(cleanItem.StartDate) : null,
+          // EndDate: cleanItem.EndDate ? safeDate(cleanItem.EndDate) : null,
         };
       });
       
@@ -598,11 +588,12 @@ export const useJOData = (onSaveSuccess) => {
         return {
           ...cleanItem,
           JO_No: state.createJOHeader.JO_No,
-          // DON'T transform dates - they're already in correct format
-          xDate: cleanItem.xDate,  // Send exactly as is
-          TargetDate: cleanItem.TargetDate,  // Send exactly as is
+          xDate: cleanItem.xDate,  
+          TargetDate: cleanItem.TargetDate,  
           qty: Number(cleanItem.qty) || 1,
           xpost: cleanItem.xpost || 0,
+          StartDate: cleanItem.StartDate,  // Send exactly as is
+          EndDate: cleanItem.EndDate,      // Send exactly as is
         };
       });
       
@@ -722,8 +713,10 @@ export const useJOData = (onSaveSuccess) => {
       TargetDate: '',
       Status: 'OPEN',
       brand: '',
-      serialNo: '',
+      serialno: '',
       ItemLocation: '',
+      StartDate: '',
+      EndDate: '',
       xDate: today,
       xpost: 0,
     };

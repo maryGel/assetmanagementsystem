@@ -215,94 +215,15 @@ const ADLineItems = ({
                 hover
               >
                 {/* DELETE */}
-                <TableCell sx={{ minWidth: 300 }}>
-                  {(isReadOnly) ? (
-                    <Box
-                      sx={{
-                        border: '1px solid rgba(0, 0, 0, 0.23)',
-                        borderRadius: '4px',
-                        padding: '8.5px 14px',
-                        backgroundColor: '#f5f5f5',
-                        minHeight: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          borderColor: 'rgba(0, 0, 0, 0.23)',
-                        },
-                      }}
-                    >
-                      <Link       
-                        component="button"
-                        underline="hover"
-                        onClick={() => handleSelectItem(row.FAC_NO)}
-                        sx={{
-                          textAlign: "left",
-                          fontWeight: 500,
-                          width: '100%',
-                        }}
-                      >
-                        {row.FAC_NO}
-                      </Link>
-                    </Box>
-                  ) : (
-                    <Autocomplete
-                      options={assetOptions}
-                      loading={!assetsLoaded && isLoading}
-                      filterOptions={filterOptions}
-                      value={
-                        assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
-                      }
-                      onChange={(event, newValue) => {
-                        handleAssetSelect(row.id, newValue);
-                      }}
-                      getOptionLabel={(option) => {
-                        if (!option) return '';
-                        if (typeof option === 'string') return option;
-                        return `${option.FacNO} - ${option.FacName}`;
-                      }}
-                      isOptionEqualToValue={(option, value) => {
-                        if (!value) return false;
-                        const optionFacNO = String(option?.FacNO || '');
-                        const valueFacNO = String(value?.FacNO || value || '');
-                        return optionFacNO === valueFacNO;
-                      }}
-                      renderOption={(props, option) => (
-                        <li {...props}>
-                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                            <Typography variant="body2">
-                              <strong>{option.FacName}</strong>
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {option.FacNO}
-                            </Typography>
-                          </Box>
-                        </li>
-                      )}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          size="small"
-                          placeholder="Search Asset..."
-                          sx={{
-                            '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                          }}
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {!assetsLoaded && isLoading && (
-                                  <CircularProgress size={16} />
-                                )}
-                                {params.InputProps.endAdornment}
-                              </>
-                            )
-                          }}
-                        />
-                      )}
-                      disabled={isReadOnly}
-                    />
-                  )}
+                <TableCell>
+                  <IconButton
+                    color="error"
+                    size="small"
+                    disabled={isReadOnly}
+                    onClick={() =>handleDeleteClick(row.id)}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
                 </TableCell>
                 {/* ASSET NO */}
                 <TableCell sx={{ minWidth: 300 }}>

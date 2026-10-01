@@ -31,7 +31,7 @@ const STATUS_STYLES = {
 };
 
 const StatusBadge = ({ status }) => {
-  const label = status ? String(status).trim() : 'Unknown';
+  const label = status ? String(status).trim() : 'Available';
   const style = STATUS_STYLES[label.toUpperCase()] || 'bg-slate-100 text-slate-600 border-slate-300';
   return (
     <span className={`inline-block px-3 py-1 rounded-full border font-semibold tracking-wide text-[clamp(0.68rem,0.55rem+0.4vw,0.8rem)] ${style}`}>
@@ -302,18 +302,18 @@ export default function AssetMasterDisplay() {
                 column silently truncating the label or input.
               */}
               <div className='m-3 space-y-3 rounded border border-slate-100 bg-slate-50 p-4 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] shadow-sm sm:ml-6'>
-                <div className='flex min-w-0 items-center gap-3'>
-                  <span className='w-28 shrink-0 text-gray-500'>Asset Name:</span>
+                <div className='flex items-center min-w-0 gap-3'>
+                  <span className='text-gray-500 w-28 shrink-0'>Asset Name:</span>
                   <input type="text" className={`min-w-0 flex-1 rounded px-2 py-1.5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.FacName || ''} readOnly={!isEditing} onChange={(e) => handleChange('FacName', e.target.value)} />
                 </div>
 
-                <div className='flex min-w-0 items-center gap-3'>
-                  <span className='w-28 shrink-0 text-gray-500'>Description:</span>
+                <div className='flex items-center min-w-0 gap-3'>
+                  <span className='text-gray-500 w-28 shrink-0'>Description:</span>
                   <input type="text" className={`min-w-0 flex-1 rounded px-2 py-1.5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.Description || ''} readOnly={!isEditing} onChange={(e) => handleChange('Description', e.target.value)} />
                 </div>
 
-                <div className='flex min-w-0 items-center gap-3'>
-                  <span className='w-28 shrink-0 text-gray-500'>Status:</span>
+                <div className='flex items-center min-w-0 gap-3'>
+                  <span className='text-gray-500 w-28 shrink-0'>Status:</span>
                   <div>
                     <StatusBadge status={asset.xxStats} />
                   </div>
@@ -330,7 +330,7 @@ export default function AssetMasterDisplay() {
                   alt={`Photo of ${asset.FacName || 'asset'}`}
                 />
               ) : (
-                <div className='flex min-h-28 w-full items-center justify-center rounded border border-dashed border-slate-300 px-3 text-center text-xs text-slate-400'>
+                <div className='flex items-center justify-center w-full px-3 text-xs text-center border border-dashed rounded min-h-28 border-slate-300 text-slate-400'>
                   No image uploaded
                 </div>
               )}

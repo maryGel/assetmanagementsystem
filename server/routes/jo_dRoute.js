@@ -86,8 +86,9 @@ router.post('/', (req, res) => {
     // Process each item
     const sql = `INSERT INTO jo_d (
       JO_No, FAC_NO, FAC_name, qty, xDate, xpost, 
-      UOM, brand, serialNo, workDet, targetDate, Status, ItemLocation
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      UOM, brand, serialno, workDet, targetDate, Status, ItemLocation,
+      StartDate, EndDate
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
     const promises = items.map((item) => {
       const {
@@ -99,11 +100,13 @@ router.post('/', (req, res) => {
         xpost,
         UOM,
         brand,
-        serialNo,
+        serialno,
         workDet,
         TargetDate,
         Status,
         ItemLocation,
+        StartDate,
+        EndDate,
       } = item;
       
       const values = [
@@ -115,11 +118,13 @@ router.post('/', (req, res) => {
         xpost !== undefined ? xpost : 0,
         UOM || '',
         brand || '',
-        serialNo || '',
+        serialno || '',
         workDet || '',
         formatDate(TargetDate),
         Status || 'OPEN',
         ItemLocation || '',
+        formatDate(StartDate),
+        formatDate(EndDate)
       ];
       
       return new Promise((resolve, reject) => {
@@ -181,7 +186,7 @@ router.put('/:joNo', (req, res) => {
       // Insert new details - INCLUDE ALL FIELDS
       const insertSql = `INSERT INTO jo_d (
         JO_No, FAC_NO, FAC_name, qty, UOM, workDet, TargetDate, Status, 
-        brand, serialNo, ItemLocation, xDate, xpost, 
+        brand, serialno, ItemLocation, xDate, xpost, StartDate, EndDate,
         eval_status, eval_remarks, disposal_reason, Main_Status, Main_Remarks
       ) VALUES ?`;
       
@@ -195,10 +200,12 @@ router.put('/:joNo', (req, res) => {
         detail.TargetDate || null,
         detail.Status || 'OPEN',
         detail.brand || '',
-        detail.serialNo || '',
+        detail.serialno || '',
         detail.ItemLocation || '',
         detail.xDate || null,
         detail.xpost || 0,
+        detail.StartDate || null,
+        detail.EndDate || null,
         detail.eval_status || '',          // Added - preserve eval_status
         detail.eval_remarks || '',         // Added - preserve eval_remarks
         detail.disposal_reason || '',      // Added - preserve disposal_reason
@@ -206,14 +213,40 @@ router.put('/:joNo', (req, res) => {
         detail.Main_Remarks || ''
       ]);
       
-      connection.query(insertSql, [values], (err, insertResult) => {
-        connection.release();
-        
+      connection.query(insertSql, [values], async (err, insertResult) => {
         if (err) {
+          connection.release();
           console.error('Error inserting details:', err);
           return res.status(500).json({ error: 'Error inserting details', details: err.message });
         }
-        
+
+        // Maintenance update: asset status = "<eval_status> | <Main_Status>".
+        // eval_status is the value set at evaluation. Rows still at the default
+        // 'OPEN' (maintenance hasn't touched them) or without an evaluation are skipped.
+        try {
+          for (const detail of details) {
+            const facNo = (detail.FAC_NO || '').trim();
+            const evalStatus = (detail.eval_status || '').trim();
+            const mainStatus = (detail.Main_Status || '').trim();
+
+            if (!facNo || facNo.toLowerCase() === 'n') continue;
+            if (!evalStatus || !mainStatus || mainStatus.toUpperCase() === 'OPEN') continue;
+
+            await new Promise((resolve, reject) => {
+              connection.query(
+                'UPDATE itemlist SET xxStats = ? WHERE FacNO = ?',
+                [`${evalStatus} | ${mainStatus}`, facNo],
+                (error, result) => (error ? reject(error) : resolve(result))
+              );
+            });
+          }
+        } catch (statErr) {
+          connection.release();
+          console.error('Error updating itemlist xxStats:', statErr);
+          return res.status(500).json({ error: 'Details saved but asset status update failed', details: statErr.message });
+        }
+
+        connection.release();
         res.json({ 
           success: true, 
           message: 'JO details updated successfully',
