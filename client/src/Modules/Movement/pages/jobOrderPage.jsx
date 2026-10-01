@@ -560,7 +560,7 @@ const refreshData = useCallback(async () => {
   console.log('Button config:', buttonConfig);
     
   return (
-    <>
+    <div className=' w-full min-w-0 max-w-[2000px] mx-auto p-3'>
       {/* Save Confirmation Dialog */}
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
@@ -803,15 +803,15 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+      <div className='p-10 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
           <h1 className='text-sm font-bold text-gray-800 '>{
             state.isCreating ? 'Creating Job Order' : state.isEditing ? 'Editing Job Order' : 'Display Job Order'
           }
           </h1>
           <div className='flex flex-wrap gap-2'>
-            <text className='text-xs text-gray-500'>Last JO created :</text>
-            <text className='text-xs text-gray-500'>
+            <text className='text-sm text-gray-500'>Last JO created :</text>
+            <text className='text-sm text-gray-500'>
                   {/* Get the latest JO from joHeaders */}
                   {joHeaders && joHeaders.length > 0 
                     ? [...joHeaders].sort((a, b) => {
@@ -822,8 +822,8 @@ const refreshData = useCallback(async () => {
                     : '---'}
 
             </text>
-            <text className='text-xs text-gray-500'>Created on:</text>
-            <text className='text-xs text-gray-500'>
+            <text className='text-sm text-gray-500'>Created on:</text>
+            <text className='text-sm text-gray-500'>
                     {joHeaders && joHeaders.length > 0 
                     ? (() => {
                         const latest = [...joHeaders].sort((a, b) => {
@@ -861,6 +861,16 @@ const refreshData = useCallback(async () => {
                   (Next approval level {nextLevel}/{totalLevels})
                 </label>
               )}
+            <div className='flex items-center pt-3 min-w-[240px] gap-3'>
+              <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Requested by : </label>
+              <input
+                type="text"
+                disabled
+                className="flex-1 min-w-[120px] text-base "
+                value={currentHeader?.requested_by || userName}
+                onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
+              />
+            </div>
             <Box className='mt-2 '>
               <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
                 <div className='flex items-center min-w-[300px] gap-3'>
@@ -894,16 +904,6 @@ const refreshData = useCallback(async () => {
                         sx={getAutocompleteSx(state.isEditing || state.isCreating)}
                       />              
                     )} 
-                  />
-                </div>
-                <div className='flex items-center  min-w-[240px] gap-3'>
-                  <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Requested by : </label>
-                  <input
-                    type="text"
-                    disabled
-                    className="flex-1 min-w-[120px] text-base font-semibold text-gray-500"
-                    value={currentHeader?.requested_by || userName}
-                    onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
                   />
                 </div>
               </div>
@@ -952,6 +952,6 @@ const refreshData = useCallback(async () => {
         </div>
       </ThemeProvider>
 
-    </>
+    </div>
   )
 }

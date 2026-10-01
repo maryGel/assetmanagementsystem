@@ -25,10 +25,10 @@ function MaintenancePageDesktop() {
   const [isOpenEvalJo, setIsOpenEvalJo] = useState(() => !isDashboardMaintenanceView);
   const [isOpenMainForm, setIsOpenMainForm] = useState(() => isDashboardMaintenanceView);
   
-  // ✅ Add a refresh key to force re-render
+  // Add a refresh key to force re-render
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // ✅ Create wrapper functions that force re-render
+  // Create wrapper functions that force re-render
   const handleJoRefresh = useCallback(async () => {
     await joRefresh();
     setRefreshKey(prev => prev + 1);
@@ -49,14 +49,14 @@ function MaintenancePageDesktop() {
     setIsOpenMainForm(true);
   };
 
-    // ✅ MUI Snackbar state
+    // MUI Snackbar state
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'info'
   });
 
-  // ✅ FIXED: Simple showToast without premature closing
+  // FIXED: Simple showToast without premature closing
   const showToast = useCallback((message, severity = 'info') => {
     console.log('📢 showToast called with:', { message, severity });
     setSnackbar({ 
@@ -66,7 +66,7 @@ function MaintenancePageDesktop() {
     });
   }, []);
 
-  // ✅ Handle snackbar close
+  // Handle snackbar close
   const handleSnackbarClose = (event, reason) => {
     console.log('🔚 Snackbar close triggered, reason:', reason);
     if (reason === 'clickaway') {

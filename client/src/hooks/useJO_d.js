@@ -73,7 +73,7 @@ export const useJO_d = () => {
             TargetDate: item.TargetDate || null,
             Status: item.Status || 'OPEN',
             brand: item.brand || '',
-            serialNo: item.serialNo || '',
+            serialno: item.serialno ?? item.serialNo ?? '',
             ItemLocation: item.ItemLocation || '',
             xDate: item.xDate || null,
             xpost: item.xpost || 0,
@@ -104,6 +104,26 @@ export const useJO_d = () => {
         setIsLoading(false);
     }
 }, [getJODetails]);
+
+    // Maintenance update: only touches maintenance columns, never deletes rows
+    const updateMaintenanceDetails = useCallback(async (joNo, items) => {
+        try {
+            setError(null);
+            const response = await api.put(
+                `/jo_dRoute/${encodeURIComponent(joNo)}/maintenance`,
+                items
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error updating maintenance details:', error);
+            setError(
+                error.response?.data?.error ||
+                error.message ||
+                'Failed to update maintenance details'
+            );
+            throw error;
+        }
+    }, []);
 
     // Create JO details (bulk insert)
     const createJODetails = useCallback(async (detailsData) => {
@@ -140,6 +160,7 @@ export const useJO_d = () => {
       error,
       joDetailsRefresh : getJODetails,
       updateJODetails,
+      updateMaintenanceDetails,
       createJODetails,
       getJODetailsByJO
     }

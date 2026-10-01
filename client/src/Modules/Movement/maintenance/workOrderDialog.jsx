@@ -19,9 +19,9 @@ import { useJO_woe } from '../../../hooks/useJO_woe';
 export const getStatusColor = (status) => {
   switch (status) {
     case 'Completed':
-    case 'Done':
       return 'bg-green-100 text-green-700';
     case 'Ongoing':
+    case 'In Progress':
       return 'bg-blue-100 text-blue-700';
     case 'For Disposal':
       return 'bg-red-100 text-red-700';
@@ -59,7 +59,22 @@ const safeParseNumber = (value) => {
 
 // jo_d rows -> work-order line items, optionally pre-populated with expenses
 // keyed by FAC_NO (used in edit mode once jo_woe expenses are fetched).
+// Line-item statuses: OPEN (shown as "Open"), In Progress, For Disposal, Completed.
+// Rows saved before this change hold ONGOING / DONE, so map them on load.
+const normalizeItemStatus = (status) => {
+  const value = String(status || '').trim().toUpperCase();
+  if (value === '' || value === 'OPEN') return 'OPEN';
+  if (value === 'ONGOING' || value === 'IN PROGRESS') return 'In Progress';
+  if (value === 'DONE' || value === 'COMPLETED') return 'Completed';
+  if (value === 'FOR DISPOSAL') return 'For Disposal';
+  return status;
+};
+const getItemStatusLabel = (status) => (!status || status === 'OPEN' ? 'Open' : status);
+
 const buildItemsFromDetails = (details, expensesByFacNo = {}) => (details || []).map((detail) => ({
+  // Keep the full jo_d row so a save can write back every column the
+  // maintenance UI doesn't edit (brand, serialno, location, dates, xpost...).
+  original: detail,
   FAC_NO: detail.FAC_NO,
   FAC_name: detail.FAC_name,
   qty: detail.qty || 1,
@@ -68,7 +83,7 @@ const buildItemsFromDetails = (details, expensesByFacNo = {}) => (details || [])
   evaluation: detail.eval_status,
   evalremarks: detail.eval_remarks,
   reasonForDisposal: detail.disposal_reason || '',
-  status: detail.Main_Status || 'OPEN',
+  status: normalizeItemStatus(detail.Main_Status),
   woRemarks: detail.Main_Remarks || '',
   expenses: expensesByFacNo[detail.FAC_NO] || [],
 }));
@@ -110,16 +125,15 @@ export default function WorkOrderDialog({
   joDetails,
   joHeaders = [],
   updateJOHeader,
-  updateJODetails: updateJODetailsProp,
+  updateJODetails: _updateJODetailsProp, // kept for caller compatibility; maintenance saves use updateMaintenanceDetails
   joDetailsRefresh: joDetailsRefreshProp,
   joRefresh,
   onSaved,
 }) {
   const resolvedMode = mode || (jo?.workNo ? 'edit' : 'create');
 
-  const { getJODetailsByJO, updateJODetails: updateJODetailsInternal, joDetailsRefresh: joDetailsRefreshInternal } = useJO_d();
+  const { getJODetailsByJO, updateMaintenanceDetails, joDetailsRefresh: joDetailsRefreshInternal } = useJO_d();
   const { fetchWorkOrderWithExpenses, createWorkOrderExpense, updateWorkOrderExpense, deleteWorkOrderExpense, generateExpenseId } = useJO_woe();
-  const updateJODetails = updateJODetailsProp || updateJODetailsInternal;
   const joDetailsRefresh = joDetailsRefreshProp || joDetailsRefreshInternal;
 
   const [isInitializing, setIsInitializing] = useState(false);
@@ -224,9 +238,9 @@ export default function WorkOrderDialog({
 
   const validateWorkOrder = () => {
     if (workOrderData.maintenanceStatus === 'Completed') {
-      const allItemsValid = workOrderData.items.every((item) => item.status === 'For Disposal' || item.status === 'DONE');
+      const allItemsValid = workOrderData.items.every((item) => item.status === 'For Disposal' || item.status === 'Completed');
       if (!allItemsValid) {
-        setValidationError('To mark as Completed, all items must be either "For Disposal" or "Done". Please update all item statuses first.');
+        setValidationError('To mark as Completed, all items must be either "For Disposal" or "Completed". Please update all item statuses first.');
         return false;
       }
     }
@@ -241,8 +255,8 @@ export default function WorkOrderDialog({
 
     setWorkOrderData({ ...workOrderData, items: updatedItems });
 
-    const hasOngoingItem = updatedItems.some((item) => item.status === 'ONGOING');
-    const allItemsCompleted = updatedItems.every((item) => item.status === 'DONE' || item.status === 'For Disposal');
+    const hasOngoingItem = updatedItems.some((item) => item.status === 'In Progress');
+    const allItemsCompleted = updatedItems.every((item) => item.status === 'Completed' || item.status === 'For Disposal');
 
     let newOverallStatus = workOrderData.maintenanceStatus;
     if (hasOngoingItem) {
@@ -265,9 +279,9 @@ export default function WorkOrderDialog({
   const handleOverallStatusChange = (event) => {
     const newStatus = event.target.value;
     if (newStatus === 'Completed') {
-      const allItemsValid = workOrderData.items.every((item) => item.status === 'For Disposal' || item.status === 'DONE');
+      const allItemsValid = workOrderData.items.every((item) => item.status === 'For Disposal' || item.status === 'Completed');
       if (!allItemsValid) {
-        setValidationError('Cannot mark as Completed. All items must be either "For Disposal" or "Done".');
+        setValidationError('Cannot mark as Completed. All items must be either "For Disposal" or "Completed".');
         return;
       }
     }
@@ -284,7 +298,7 @@ export default function WorkOrderDialog({
     setOpenDisposalDialog(false);
     setDisposalReason('');
 
-    const allItemsCompleted = updatedItems.every((item) => item.status === 'For Disposal' || item.status === 'DONE');
+    const allItemsCompleted = updatedItems.every((item) => item.status === 'For Disposal' || item.status === 'Completed');
     if (allItemsCompleted) {
       setWorkOrderData((prev) => ({ ...prev, maintenanceStatus: 'Completed' }));
     }
@@ -295,26 +309,18 @@ export default function WorkOrderDialog({
     const headerUpdateData = { workNo: workOrderData.workNo, wo_date: workOrderData.woDate, main_stat: dbStatus };
     await updateJOHeader(workOrderData.joNo, headerUpdateData);
 
-    const detailsUpdateData = items.map((item) => ({
+    // Only the maintenance columns are sent; the route UPDATEs those columns on
+    // the existing rows, so brand, serialno, dates, xpost, etc. are never touched.
+    const maintenanceUpdates = items.map((item) => ({
+      id: item.original?.id,
       FAC_NO: item.FAC_NO || '',
-      FAC_name: item.FAC_name || '',
-      qty: item.qty || 1,
-      UOM: item.uom || '',
-      workDet: item.detailsOfWork || '',
-      TargetDate: null,
       Status: item.status || 'OPEN',
-      brand: '',
-      serialNo: '',
-      ItemLocation: '',
-      xDate: null,
-      xpost: 0,
-      eval_status: item.evaluation || '',
-      eval_remarks: item.evalremarks || '',
-      disposal_reason: item.disposalReason || '',
       Main_Status: item.status || 'OPEN',
-      Main_Remarks: item.woRemarks,
+      Main_Remarks: item.woRemarks || '',
+      // reasonForDisposal is what was loaded from jo_d; disposalReason is what was typed this session
+      disposal_reason: item.disposalReason ?? item.reasonForDisposal ?? '',
     }));
-    await updateJODetails(workOrderData.joNo, detailsUpdateData);
+    await updateMaintenanceDetails(workOrderData.joNo, maintenanceUpdates);
 
     await Promise.all([joRefresh?.(), joDetailsRefresh?.(), onSaved?.()]);
   };
@@ -341,12 +347,12 @@ export default function WorkOrderDialog({
     }
   };
 
-  // Sets every non-disposal item to DONE and the overall status to Completed.
+  // Sets every non-disposal item to Completed and the overall status to Completed.
   // Kept for parity with the original form; no button currently calls it
   // there either, so it's exported/available but not wired to UI here.
   const handleFinishJO = async () => {
-    const updatedItems = workOrderData.items.map((item) => ({ ...item, status: item.status === 'For Disposal' ? 'For Disposal' : 'DONE' }));
-    const allItemsCompleted = updatedItems.every((item) => item.status === 'For Disposal' || item.status === 'DONE');
+    const updatedItems = workOrderData.items.map((item) => ({ ...item, status: item.status === 'For Disposal' ? 'For Disposal' : 'Completed' }));
+    const allItemsCompleted = updatedItems.every((item) => item.status === 'For Disposal' || item.status === 'Completed');
     if (!allItemsCompleted) {
       setValidationError('Unable to finish JO. Some items are not in a valid state.');
       return;
@@ -528,7 +534,7 @@ export default function WorkOrderDialog({
               </div>
 
               {workOrderData.maintenanceStatus === 'Completed' && (
-                <Alert severity="info" className="mb-4">All items must be either "For Disposal" or "Done" to keep this status.</Alert>
+                <Alert severity="info" className="mb-4">All items must be either "For Disposal" or "Completed" to keep this status.</Alert>
               )}
 
               <div className="flex justify-end gap-2 mb-4">
@@ -563,7 +569,7 @@ export default function WorkOrderDialog({
                     ) : (
                       paginatedWOItems.map((item, index) => {
                         const actualIndex = woItemsPage * woItemsRowsPerPage + index;
-                        const isExpenseEnabled = item.status === 'OPEN' || item.status === 'ONGOING' || item.status === 'DONE' || (item.evaluation && item.evaluation.trim() !== '');
+                        const isExpenseEnabled = item.status === 'OPEN' || item.status === 'In Progress' || item.status === 'Completed' || (item.evaluation && item.evaluation.trim() !== '');
 
                         return (
                           <TableRow
@@ -574,10 +580,10 @@ export default function WorkOrderDialog({
                             <TableCell>
                               <FormControl size="small" disabled={isSaving || isOverallCompleted || !item.evaluation?.trim()} fullWidth onClick={(e) => e.stopPropagation()}>
                                 <Select value={item.status || 'OPEN'} onChange={(e) => handleItemStatusChange(actualIndex, e.target.value)} sx={{ minWidth: 120 }}>
-                                  <MenuItem value="OPEN">OPEN</MenuItem>
-                                  <MenuItem value="ONGOING">ONGOING</MenuItem>
-                                  <MenuItem value="For Disposal">FOR DISPOSAL</MenuItem>
-                                  <MenuItem value="DONE">DONE</MenuItem>
+                                  <MenuItem value="OPEN">Open</MenuItem>
+                                  <MenuItem value="In Progress">In Progress</MenuItem>
+                                  <MenuItem value="For Disposal">For Disposal</MenuItem>
+                                  <MenuItem value="Completed">Completed</MenuItem>
                                 </Select>
                               </FormControl>
                             </TableCell>
@@ -646,7 +652,7 @@ export default function WorkOrderDialog({
                         <span className="font-medium">Asset No:</span> {workOrderData.items[selectedItemIndex].FAC_NO}
                         <span className="ml-4">
                           <span className="font-medium">Status:</span>
-                          <Chip label={workOrderData.items[selectedItemIndex].status || 'OPEN'} size="small" className={`ml-2 ${getStatusColor(workOrderData.items[selectedItemIndex].status || 'OPEN')}`} />
+                          <Chip label={getItemStatusLabel(workOrderData.items[selectedItemIndex].status)} size="small" className={`ml-2 ${getStatusColor(workOrderData.items[selectedItemIndex].status || 'OPEN')}`} />
                         </span>
                       </div>
                       <span className="text-sm font-medium text-gray-600">

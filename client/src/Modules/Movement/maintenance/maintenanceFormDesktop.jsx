@@ -38,7 +38,7 @@ const normalizeMaintenanceStatus = (status) => {
     const value = String(status || '').trim().toLowerCase();
     if (value === 'ongoing') return 'Ongoing';
     if (value === 'not-started' || value === 'not started' || value === '') return 'Not Started';
-    if (value === 'done' || value === 'completed') return 'Completed';
+    if (value === 'Completed' || value === 'completed') return 'Completed';
     return status;
 };
 
@@ -186,7 +186,7 @@ function MaintenanceFormDesktop({
         if (keyword) {
             filtered = filtered.filter(jo => {
                 const status = jo.main_stat || "Not Started";
-                const displayStatus = status === 'Done' ? 'Completed' : status;
+                const displayStatus = status === 'Completed' ? 'Completed' : status;
                 return (
                     jo.JO_No?.toLowerCase().includes(keyword) ||
                     jo.Department_Code?.toLowerCase().includes(keyword) ||
@@ -445,7 +445,7 @@ function MaintenanceFormDesktop({
                                       <TableCell className="px-4 py-3">
                                           <span className={`
                                               px-2 py-1 text-xs font-medium rounded-full
-                                              ${jo.main_stat === 'Done' 
+                                              ${jo.main_stat === 'Completed' || jo.main_stat === 'Done'
                                                   ? 'bg-green-100 text-green-700'
                                                   : jo.main_stat === 'Ongoing'
                                                   ? 'bg-blue-100 text-blue-700'

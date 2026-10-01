@@ -157,6 +157,101 @@ router.post('/', (req, res) => {
   });
 });
 
+// YYYY-MM-DD passthrough; anything else (e.g. ISO timestamps from GET) -> local YYYY-MM-DD
+const toSqlDate = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/**
+ * Maintenance update: changes ONLY the maintenance columns of existing jo_d rows.
+ * Nothing is deleted or re-inserted, so every other column (known or not) is untouched.
+ * Then mirrors "<eval_status> | <Main_Status>" onto itemlist.xxStats.
+ */
+router.put('/:joNo/maintenance', (req, res) => {
+  const joNo = decodeURIComponent(req.params.joNo)
+    .replace(/\u00A0/g, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
+  const items = req.body;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Body must be a non-empty array of items' });
+  }
+
+  db.getConnection((err, connection) => {
+    if (err) return res.status(500).json({ error: 'DB connection error' });
+
+    const run = (sql, params) => new Promise((resolve, reject) => {
+      connection.query(sql, params, (error, result) => (error ? reject(error) : resolve(result)));
+    });
+
+    connection.beginTransaction(async (txErr) => {
+      if (txErr) {
+        connection.release();
+        return res.status(500).json({ error: 'Failed to start transaction' });
+      }
+
+      try {
+        let updated = 0;
+
+        for (const item of items) {
+          const setSql = `UPDATE jo_d
+            SET Status = ?, Main_Status = ?, Main_Remarks = ?, disposal_reason = ?`;
+          const setParams = [
+            item.Status || 'OPEN',
+            item.Main_Status || 'OPEN',
+            item.Main_Remarks || '',
+            item.disposal_reason || ''
+          ];
+
+          let result;
+          if (item.id !== undefined && item.id !== null && item.id !== '') {
+            result = await run(`${setSql} WHERE JO_No = ? AND id = ?`, [...setParams, joNo, item.id]);
+          } else {
+            result = await run(`${setSql} WHERE JO_No = ? AND FAC_NO = ?`, [...setParams, joNo, item.FAC_NO]);
+          }
+          updated += result.affectedRows;
+        }
+
+        // Asset status = "<eval_status> | <Main_Status>", using what is stored in jo_d
+        const rows = await run(
+          'SELECT FAC_NO, eval_status, Main_Status FROM jo_d WHERE JO_No = ?',
+          [joNo]
+        );
+        for (const r of rows) {
+          const facNo = (r.FAC_NO || '').trim();
+          const evalStatus = (r.eval_status || '').trim();
+          const mainStatus = (r.Main_Status || '').trim();
+          if (!facNo || facNo.toLowerCase() === 'n') continue;
+          if (!evalStatus || !mainStatus || mainStatus.toUpperCase() === 'OPEN') continue;
+          await run('UPDATE itemlist SET xxStats = ? WHERE FacNO = ?', [`${evalStatus} | ${mainStatus}`, facNo]);
+        }
+
+        connection.commit((commitErr) => {
+          if (commitErr) {
+            return connection.rollback(() => {
+              connection.release();
+              res.status(500).json({ error: 'Failed to commit transaction' });
+            });
+          }
+          connection.release();
+          res.json({ success: true, updatedCount: updated });
+        });
+      } catch (error) {
+        console.error('Maintenance update error:', error);
+        connection.rollback(() => {
+          connection.release();
+          res.status(500).json({ error: 'Maintenance update failed', details: error.message });
+        });
+      }
+    });
+  });
+});
+
 // Update JO details 
 router.put('/:joNo', (req, res) => {
   const joNo = req.params.joNo;
@@ -197,15 +292,15 @@ router.put('/:joNo', (req, res) => {
         detail.qty || 1,
         detail.UOM || '',
         detail.workDet || '',
-        detail.TargetDate || null,
+        toSqlDate(detail.TargetDate),
         detail.Status || 'OPEN',
         detail.brand || '',
         detail.serialno || '',
         detail.ItemLocation || '',
-        detail.xDate || null,
+        toSqlDate(detail.xDate),
         detail.xpost || 0,
-        detail.StartDate || null,
-        detail.EndDate || null,
+        toSqlDate(detail.StartDate),
+        toSqlDate(detail.EndDate),
         detail.eval_status || '',          // Added - preserve eval_status
         detail.eval_remarks || '',         // Added - preserve eval_remarks
         detail.disposal_reason || '',      // Added - preserve disposal_reason
