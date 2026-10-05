@@ -9,7 +9,7 @@ import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 // Custom Utils
 import { CustomBtn } from '../../../Utils/groupbtns';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { assetMasterFields, prepareAssetPayload } from '../../assetMaster/createAsset/assetMasterFields';
+import { assetMasterFields, prepareAssetPayload, getAllValidationErrors, requiredFields} from '../../assetMaster/createAsset/assetMasterFields';
 // Components
 import AssetDisplayTabs from '../assetDisplay/assetDisplayTabs';
 
@@ -149,6 +149,8 @@ export default function AssetMasterDisplay() {
     }));
   };
 
+
+
   const handleSave = async () => {
     try {
       setSaveError(null);
@@ -157,6 +159,19 @@ export default function AssetMasterDisplay() {
       if (removePicture && !pictureFile) payload.removePicture = true;
 
       const result = await updateAsset(asset.FacNO, payload, pictureFile);
+
+      // Validate all required fields before saving
+      const validationErrors = getAllValidationErrors(asset, requiredFields);
+      if (validationErrors.length) {
+        setSaveError(`Validation errors: ${validationErrors.join(', ')}`);
+        return;
+      }
+      
+      // quantity must be greater than 0
+      if (asset.balance_unit <= 0) {
+        setSaveError('Quantity must be greater than 0.');
+        return;
+      }
 
       const savedPicpath = result?.Picpath || '';
       savedPicpathRef.current = savedPicpath;
@@ -321,7 +336,7 @@ export default function AssetMasterDisplay() {
 
         <div >
           <div className='flex items-center gap-2 p-3 pl-16 font-medium tracking-wide bg-white border rounded-md shadow-md text-[clamp(0.8rem,0.65rem+0.6vw,1.05rem)] shadow-slate-300 border-slate-300 text-slate-800'>
-            <span>Asset Number: {asset.FacNO}</span>
+            <span>Asset Number : {asset.FacNO}</span>
           </div>
 
           {/*
@@ -340,12 +355,12 @@ export default function AssetMasterDisplay() {
               */}
               <div className='m-3 space-y-3 rounded border border-slate-100 bg-slate-50 p-4 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] shadow-sm sm:ml-6'>
                 <div className='flex items-center min-w-0 gap-3'>
-                  <span className='text-gray-500 w-28 shrink-0'>Asset Name:</span>
+                  <span className='text-gray-500 w-28 shrink-0'>Asset Name: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span> </span>
                   <input type="text" className={`min-w-0 flex-1 rounded px-2 py-1.5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.FacName || ''} readOnly={!isEditing} onChange={(e) => handleChange('FacName', e.target.value)} />
                 </div>
 
                 <div className='flex items-center min-w-0 gap-3'>
-                  <span className='text-gray-500 w-28 shrink-0'>Description:</span>
+                  <span className='text-gray-500 w-28 shrink-0'>Description: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
                   <input type="text" className={`min-w-0 flex-1 rounded px-2 py-1.5 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] transition-colors ${isEditing ? 'border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400' : 'border border-transparent bg-transparent text-slate-600'}`} disabled={!isEditing} value={asset.Description || ''} readOnly={!isEditing} onChange={(e) => handleChange('Description', e.target.value)} />
                 </div>
 

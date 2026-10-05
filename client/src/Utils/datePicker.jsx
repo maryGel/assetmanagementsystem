@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 // MUI
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -83,7 +83,12 @@ const BASE_OPTIONS = [
   { id: 'custom', label: 'Custom Range' }
 ];
 
-const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30', includeAllPeriods = false }) => {
+// "Anytime" is the only "no date filter" option. 'all' was an older duplicate
+// of it, so any leftover 'all' (e.g. an old bookmarked link) maps to 'anytime'.
+const normalizePreset = (preset) => (preset === 'all' ? 'anytime' : preset);
+
+const HistoryDatePicker = ({ onDateRangeChange, initialPreset: rawInitialPreset = 'anytime' }) => {
+  const initialPreset = normalizePreset(rawInitialPreset);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(initialPreset);
   const [startDate, setStartDate] = useState(null);
@@ -105,10 +110,7 @@ const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30', inclu
     onDateRangeChangeRef.current = onDateRangeChange;
   }, [onDateRangeChange]);
 
-  const options = useMemo(() => [
-    ...(includeAllPeriods ? [{ id: 'all', label: 'All Periods' }] : []),
-    ...BASE_OPTIONS
-  ], [includeAllPeriods]);
+  const options = BASE_OPTIONS;
 
   const safeOnDateRangeChange = useCallback((range) => {
     const handler = onDateRangeChangeRef.current;
@@ -119,9 +121,7 @@ const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30', inclu
   // parent actually passes a different initialPreset (e.g. dashboard deep link).
   // It must NOT depend on anything that changes when the user picks an option.
   useEffect(() => {
-    const label = initialPreset === 'all'
-      ? 'All Periods'
-      : BASE_OPTIONS.find(opt => opt.id === initialPreset)?.label;
+    const label = BASE_OPTIONS.find(opt => opt.id === initialPreset)?.label;
 
     setSelectedOption(initialPreset);
     setDateRange({ startDate: '', endDate: '' });

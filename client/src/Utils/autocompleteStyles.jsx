@@ -17,7 +17,7 @@ const FIELD_RADIUS = 6;                  // px
 const FIELD_PADDING_X = 12;              // px
 const FIELD_FONT_SIZE = 'clamp(0.72rem, 0.55rem + 0.6vw, 1rem)';
 
-const VIEW = { bg: '#f8fafc', border: '#e2e8f0', hover: '#e2e8f0', text: '#475569' };
+const VIEW = { bg: '', border: '#e2e8f0', hover: '#e2e8f0', text: '#475569' };
 const EDIT = { bg: '#ffffff', border: '#cbd5e1', hover: '#94a3b8', focus: '#3b82f6', text: '#1e293b' };
 
 // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ const fieldBase =
   'text-[clamp(0.72rem,0.55rem+0.6vw,1rem)]';
 
 const fieldView =
-  'border-slate-200 bg-slate-50 text-slate-600 cursor-default ' +
+  'border-slate-200 bg-transparent text-slate-600 cursor-default ' +
   '[-webkit-text-fill-color:#475569] disabled:opacity-100';
 
 const fieldEdit =

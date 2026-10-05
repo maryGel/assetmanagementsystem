@@ -269,7 +269,7 @@ function MvDisposalPage({
                             }`}
                           >
                             <TuneIcon fontSize='small' />
-                            <span className='text-xs'>Filter</span>
+                            <span className='text-xs'>Date</span>
                           </button>
                           <button 
                             onClick={handleRefresh}

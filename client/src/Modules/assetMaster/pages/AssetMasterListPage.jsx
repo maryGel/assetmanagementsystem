@@ -62,13 +62,13 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
   });
 
   // Debug logging
-  useEffect(() => {
-    console.log('=== PARENT DEBUG ===');
-    console.log('allAssets count:', allAssets?.length);
-    console.log('assets count (filtered result):', assets?.length);
-    console.log('total from server:', total);
-    console.log('current filters:', filters);
-  }, [allAssets, assets, total, filters]);
+  // useEffect(() => {
+  //   console.log('=== PARENT DEBUG ===');
+  //   console.log('allAssets count:', allAssets?.length);
+  //   console.log('assets count (filtered result):', assets?.length);
+  //   console.log('total from server:', total);
+  //   console.log('current filters:', filters);
+  // }, [allAssets, assets, total, filters]);
 
   const handleGoClick = () => {
     const selectedAssetNos = draftSelectedAssets.map(asset => asset.FacNO);

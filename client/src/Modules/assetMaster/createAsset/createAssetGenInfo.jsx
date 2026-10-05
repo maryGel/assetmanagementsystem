@@ -94,22 +94,20 @@ export default function CreateAssetGenInfo({
             label={'Serial Number'}
             sx={{ width: '30rem' }}
             margin="normal"
-            value={asset.serialNo || ''}
             onChange={(e) => handleInputChange('serialNo', e.target.value)}
           />
 
           <Autocomplete
+            key="Brand"
+            id="brand-autocomplete"
             options={brandOptions}
             sx={{ width: '25rem', marginTop: '1rem' }}
             margin="normal"
-            value={brandOptions.find((brand) => brand.id === asset.BrandID) ?? null}
+            value={brandOptions.find((brand) => brand.BrandName === asset.Brand) ?? null}
             getOptionLabel={(brand) => `${brand.BrandID} - ${brand.BrandName} `}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             onChange={(_, brand) =>
-              updateAssetData({
-                BrandID: brand?.id ?? '',
-                Brand: brand?.BrandName ?? ''
-              })
+              handleInputChange('Brand', brand?.BrandName ?? '')
             }
             renderInput={(params) => <TextField {...params} label="Brand" />}
           />
@@ -126,7 +124,8 @@ export default function CreateAssetGenInfo({
           getOptionLabel={(supplier) => `${supplier.suppID} - ${supplier.suppName} `}
           value={supplierOptions.find((supplier) => supplier.suppName === asset.suppName) ?? null}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          onChange={(_, supplier) => handleInputChange('suppName', supplier?.suppName ?? '')}
+          onChange={(_, supplier) => 
+            handleInputChange('suppName', supplier?.suppName ?? '')}
           renderInput={(params) => (
               <TextField {...params} label="Supplier" placeholder="Supplier" />
             )}

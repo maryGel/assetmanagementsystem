@@ -17,7 +17,7 @@ import { getAutocompleteSx,
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
-import DateDisplay from '../../../Utils/formatDateForInput';
+
 
 
 // Custom Hooks
@@ -104,7 +104,7 @@ export default function JOFormPage(useProps) {
   const [rowToDelete, setRowToDelete] = useState(null)
   const [totalLevels, setTotalLevels] = useState(3);
   const [refreshKey, setRefreshKey] = useState(0); // Used to trigger refresh
-  
+
   // Add this with your other state declarations
   const [localSnackbar, setLocalSnackbar] = useState({
     open: false,
@@ -266,7 +266,30 @@ const refreshData = useCallback(async () => {
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
   
   const handleHeaderChange = (field, value) => {
-    updateHeaderField(field,value)
+    if (field === 'Department_Code') {
+      const prev = currentHeader?.Department_Code || currentHeader?.Department || '';
+      const hasAssets = (currentJOItems || []).some(r => r.FAC_NO);
+
+      if (prev && prev !== value && hasAssets) {
+        const ok = window.confirm(
+          'Changing the department will clear the selected assets. Continue?'
+          
+        );
+        if (ok) {
+          showToast('Department changed. All selected assets have been cleared.', 'info');
+        } else return;
+
+         
+
+        (currentJOItems || []).forEach(row => {
+          ['FAC_NO','FAC_name','qty','UOM','brand','serialno',
+          'ItemLocation','StartDate','EndDate'].forEach(f =>
+            updateDetailRow(row.id, f, '')
+          );
+        });
+      }
+    }
+    updateHeaderField(field, value);
   };
 
   const handleCreate = () => {
@@ -294,40 +317,52 @@ const refreshData = useCallback(async () => {
   const handleSave = async () => {
     // Validate header fields
     if (!state.createJOHeader?.JO_No) {
-      alert('Job Order number is required');
+      showToast('Job Order number is required');
       return;
     }
     
     if (!state.createJOHeader?.Department && !state.createJOHeader?.Department_Code) {
-      alert('Please select a department');
+      showToast('Please select a department');
       return;
     }
     
     if (!state.createJOHeader?.Sector_name) {
-      alert('Please select a maintenance service');
+      showToast('Please select a maintenance service');
+      return;
+    }
+
+    if (!state.createJOHeader?.Remarks) {  
+      showToast('Remarks field is required');
       return;
     }
     
     // Validate details
+    if (!state.createJODetails?.find(item => item.FAC_NO )) {
+      showToast('Please select an asset number');
+      return;
+    }
+
     if (!state.createJODetails || state.createJODetails.length === 0) {
-      alert('Please add at least one item');
+      showToast('Please add at least one item');
+      return;
+    }
+
+    if (!state.createJODetails?.find(item => item.workDet )) {
+      showToast('Please provide work details for all items');
       return;
     }
     
     if (!state.createJODetails?.find(item => item.TargetDate )) {
-      alert('Please provide Target Date for all items');
+      showToast('Please provide Target Date for all items');
       return;
     }
     
-    if (!state.createJODetails?.find(item => item.workDet )) {
-      alert('Please provide work details for all items');
-      return;
-    }
+
 
     // Check for empty required fields in details
     const invalidRows = state.createJODetails.filter(row => !row.FAC_NO);
     if (invalidRows.length > 0) {
-      alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
+      showToast(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
       return;
     }
     
@@ -626,8 +661,8 @@ const refreshData = useCallback(async () => {
                 </span>
               )}
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve this Transfer Form?` 
-                : `Are you sure you want to reject this Transfer Form? This action cannot be undone.`
+                ? `Are you sure you want to approve this Job Order: ${baseHeader?.JO_No} ?` 
+                : `Are you sure you want to reject this Job Order: ${baseHeader?.JO_No} ? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
@@ -720,7 +755,7 @@ const refreshData = useCallback(async () => {
         )}
         
         {/* Edit Button */}
-        {!state.isEditing && !state.isCreating && copyDocNo && (
+        {!state.isEditing && !state.isCreating && currentHeader?.xpost === 0 && (
           <CustomBtn
             variant='editBtn'
             iconType='edit'
@@ -826,7 +861,7 @@ const refreshData = useCallback(async () => {
                     : '---'}
 
             </text>
-            <text className='text-sm text-gray-500'>Created on:</text>
+            <text className='text-sm text-gray-500'>Document Date:</text>
             <text className='text-sm text-gray-500'>
                     {joHeaders && joHeaders.length > 0 
                     ? (() => {
@@ -845,9 +880,9 @@ const refreshData = useCallback(async () => {
         <form className='mt-8'>
             <label className='text-base font-normal text-gray-500 '>Job Order No : </label>
             <label className='pl-3 text-base font-semibold text-gray-800 '>{currentHeader?.JO_No || ''}</label> 
-            <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
+            <label className='pl-10 text-base font-normal text-gray-500'>Document Date : </label>
             <input 
-              className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : ' bg-white'} border border-gray-300`}
+              className={`ml-5 p-2 text-base rounded-lg ${!state.isEditing && !state.isCreating ? '' : ' bg-white'} border border-gray-300`}
               type='date' 
               value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10): ""} 
               disabled={isReadOnly}
@@ -872,7 +907,7 @@ const refreshData = useCallback(async () => {
                 disabled
                 className="flex-1 min-w-[120px] text-base "
                 value={currentHeader?.requested_by || userName}
-                onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
+                // onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
               />
             </div>
             <Box className='mt-2 '>
@@ -916,15 +951,15 @@ const refreshData = useCallback(async () => {
                 <label className={`pt-2 text-base text-gray-500 w-24 font-normal`}>Remarks : </label>
                 <textarea
                   id = "remarks"
-                  disabled={!state.isEditing && !state.isCreating}
+                  disabled={isReadOnly}
                   aria-label = "minimum height"
                   minRows={2}
                   value={currentHeader?.Remarks || ''}
                   onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
                   className={`${!state.isEditing && !state.isCreating 
-                    ? 'border-slate-200 bg-slate-50 text-slate-800 '
+                    ? 'border-slate-200  text-slate-800 '
                     : 'border-slate-200 bg-white text-slate-600 cursor-default ' }
-                  border rounded-md w-full text-sm font-normal text-gray-800
+                  border rounded-md w-full  font-normal text-gray-800
                   `}
                   style={{ 
                     resize: 'both',

@@ -34,7 +34,7 @@ export const assetMasterFields = {
 // Step labels for the stepper
 export const stepLabels = ['General Info', 'Capitalization Parameters', 'Upload Picture'];
 
-// Required fields for final submission
+// Required fields for final submission for asset creation
 export const requiredFields = {
   FacNO: 'Asset Number',
   FacName: 'Asset Name',
@@ -49,6 +49,18 @@ export const requiredFields = {
   Department: 'Department',
   ReferenceNo: 'Reference No.'
 };
+
+export const reqFieldsDisplayAsset = {
+  FacNO: 'Asset Number',
+  FacName: 'Asset Name',
+  Description: 'Description',
+  CATEGORY: 'Asset Category',
+  ItemClass: 'Asset Class',
+  Unit: 'Unit of measure',
+  ItemLocation: 'Location',
+  Department: 'Department',
+  ReferenceNo: 'Reference No.',
+}
 
 // Required field validations for each step
 export const stepRequiredFields = {
@@ -84,6 +96,12 @@ export const getStepValidationErrors = (step, asset, labels = requiredFields) =>
     .filter((field) => isFieldMissing(field, asset))
     .map((field) => `${labels[field] || field} is required.`);
 };
+
+export const getAllValidationErrors = (asset, labels = requiredFields ) => {
+  return Object.entries(labels)
+    .filter(([field]) => isFieldMissing(field, asset))
+    .map(([, label]) => `${label} is required`);
+}
 
 // Validate a specific step (true when there are no errors)
 export const validateStep = (step, asset) =>

@@ -43,12 +43,16 @@ function EvalJOFormDesktop({
   showToast, 
   handleSnackbarClose,
   initialFilter = 'Pending',
-  initialDatePreset = 'last-30'
+  initialDatePreset: rawInitialDatePreset = 'anytime'
 }) {
+  // "Anytime" is the single "no date filter" option; 'all' was an older
+  // duplicate of it, so treat any leftover 'all' as 'anytime'.
+  const initialDatePreset = rawInitialDatePreset === 'all' ? 'anytime' : rawInitialDatePreset;
+
   // ALL HOOKS AT THE TOP
   const [filter, setFilter] = useState(initialFilter);
   const [dateRange, setDateRange] = useState(() => {
-    if (initialDatePreset === 'all') {
+    if (initialDatePreset === 'anytime') {
       return { startDate: null, endDate: null };
     }
 
@@ -87,7 +91,7 @@ function EvalJOFormDesktop({
   // evaluation is visible, regardless of when the job order was created.
   useEffect(() => {
     setFilter(initialFilter);
-    if (initialDatePreset === 'all') {
+    if (initialDatePreset === 'anytime') {
       setDateRange({ startDate: null, endDate: null });
     }
   }, [initialFilter, initialDatePreset]);
@@ -484,7 +488,7 @@ function EvalJOFormDesktop({
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search here"
-          className="w-36 py-1.5 pl-9 pr-8 text-sm transition-colors border border-gray-300 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:w-48"
+          className="w-36 py-1.5 pl-9 pr-8 text-sm transition-colors border min-w-64 border-gray-300 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:w-48"
           autoComplete="off"
         />
         {searchQuery && (
@@ -512,7 +516,7 @@ function EvalJOFormDesktop({
         `}
       >
         <TuneIcon fontSize="small" />
-        <span>Filter</span>
+        <span>Date</span>
       </button>
       
       <button
@@ -531,7 +535,6 @@ function EvalJOFormDesktop({
       <HistoryDatePicker
         onDateRangeChange={handleDateRangeChange}
         initialPreset={initialDatePreset}
-        includeAllPeriods={initialDatePreset === 'all'}
       />
     </div>
   )}
@@ -552,7 +555,7 @@ function EvalJOFormDesktop({
               Date: <strong>
                 {dateRange?.startDate && dateRange?.endDate
                   ? `${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`
-                  : 'All Periods'}
+                  : 'Anytime'}
               </strong>
             </span>
             <span>|</span>

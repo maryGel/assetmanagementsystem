@@ -667,7 +667,7 @@ const refreshData = useCallback(async () => {
                   })[0]?.AD_No 
                 : '---'}
             </span>
-            <span className='text-xs text-gray-500'>Created on:</span>
+            <span className='text-xs text-gray-500'>Document Date:</span>
             <span className='text-xs text-gray-500'>
               {adHeaders && adHeaders.length > 0 
                 ? (() => {
@@ -686,7 +686,7 @@ const refreshData = useCallback(async () => {
         <form className='mt-8'>
           <label className='text-base font-normal text-gray-500'>Disposal No : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.AD_No || ''}</label> 
-          <label className='pl-10 text-base font-normal text-gray-500'>Created on : </label>
+          <label className='pl-10 text-base font-normal text-gray-500'>Document Date : </label>
           <input 
             className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : 'bg-white'} border border-gray-300`}
             type='date' 

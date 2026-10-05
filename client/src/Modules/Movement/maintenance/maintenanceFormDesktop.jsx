@@ -7,6 +7,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import TuneIcon from '@mui/icons-material/Tune';
+import ClearAllIcon from '@mui/icons-material/ClearAll';
+import TextField from '@mui/material/TextField';
 
 // Custom Utils
 import DateDisplay from '../../../Utils/formatDateForInput';
@@ -50,19 +52,27 @@ function MaintenanceFormDesktop({
     updateJOHeader,
     updateJODetails,
     isLoading: externalLoading = false,
-    initialDatePreset = 'last-30',
+    initialDatePreset: rawInitialDatePreset = 'this-month',
     initialStatuses = [],
 }) {
+    // "Anytime" is the single "no date filter" option; 'all' was an older
+    // duplicate of it, so treat any leftover 'all' as 'anytime'.
+    const initialDatePreset = rawInitialDatePreset === 'all' ? 'anytime' : rawInitialDatePreset;
+
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(externalLoading);
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+    const [datePickerKey, setDatePickerKey] = useState(0);
+    // Preset the date picker shows when (re)mounted. Starts as the page's
+    // preset; Clear switches it to the default (Last 30 Days).
+    const [pickerPreset, setPickerPreset] = useState(initialDatePreset);
     const [maintenanceStatuses, setMaintenanceStatuses] = useState(() =>
         initialStatuses.map(normalizeMaintenanceStatus).filter(Boolean)
     );
 
     // Date range state with localStorage persistence
     const [dateRange, setDateRange] = useState(() => {
-        if (initialDatePreset === 'all') {
+        if (initialDatePreset === 'anytime') {
             return { startDate: null, endDate: null };
         }
 
@@ -84,10 +94,11 @@ function MaintenanceFormDesktop({
     });
 
     // Dashboard links deliberately override the saved range/statuses to show
-    // maintenance needing attention across all periods.
+    // maintenance needing attention with no date restriction (Anytime).
     useEffect(() => {
         setMaintenanceStatuses(initialStatuses.map(normalizeMaintenanceStatus).filter(Boolean));
-        if (initialDatePreset === 'all') {
+        setPickerPreset(initialDatePreset);
+        if (initialDatePreset === 'anytime') {
             setDateRange({ startDate: null, endDate: null });
         }
     }, [initialDatePreset, initialStatuses]);
@@ -160,6 +171,16 @@ function MaintenanceFormDesktop({
         }
         setPage(0);
     }, []);
+
+    // Remove every filter (search + status) and put the date range back to
+    // its default (last 30 days). Bumping the key remounts the date picker so
+    // its internal preset selection resets too.
+    const handleClearFilters = () => {
+        setSearchTerm('');
+        setMaintenanceStatuses([]);
+        setSelectedJO(null);
+        setPage(0);
+    };
 
     const handleOptionsOpen = () => {
         setIsOptionsOpen((prev) => !prev);
@@ -254,20 +275,27 @@ function MaintenanceFormDesktop({
         );
     }
 
+    const getNoOfItems = (joNo) => {
+        const details = joDetails.filter(detail => detail.JO_No === joNo);
+        return details.length;
+    }
+
     return (
         <div className="flex flex-col h-full">
             {/* Header with Search and Filters */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-800">Maintenance</h3>
                 <div className="flex flex-wrap items-center gap-3">
+                    
                     <div className="relative">
                         <SearchIcon className="absolute text-gray-400 transform -translate-y-1/2 left-3 top-1/2" fontSize="small" />
                         <input
+                        
                             type="text"
                             placeholder="Search here"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-44 sm:w-56 md:w-64"
+                            className="py-2.5 pr-4 text-sm border min-w-64 border-gray-300 rounded-lg pl-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-44 sm:w-56 md:w-64"
                         />
                     </div>
                     <FormControl size="small" sx={{ minWidth: 220 }}>
@@ -297,13 +325,22 @@ function MaintenanceFormDesktop({
                             ${
                                 isOptionsOpen
                                     ? 'bg-blue-100 text-blue-600'
-                                    : 'hover:bg-gray-100 text-gray-600'
+                                    : 'hover:bg-gray-100 text-gray-600 border border-gray-300 rounded-lg'
                             }
                         `}
                     >
                         <TuneIcon fontSize="small" />
-                        <span>Filter</span>
+                        <span>Date</span>
                     </button>
+                    <button
+                        onClick={handleClearFilters}
+                        title="Clear all filters and reset the date range"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 transition-colors border border-gray-300 rounded-lg hover:bg-gray-100"
+                    >
+                        <ClearAllIcon fontSize="small" />
+                        <span>Clear</span>
+                    </button>
+
                     <button
                         onClick={() => handleCreateWorkOrder(selectedJO)}
                         disabled={
@@ -336,9 +373,9 @@ function MaintenanceFormDesktop({
             {isOptionsOpen && (
                 <div className="py-3 mt-2 border-b border-gray-200 rounded-lg bg-gray-50/80">
                     <HistoryDatePicker 
+                        key={datePickerKey}
                         onDateRangeChange={handleDateRangeChange}
-                        initialPreset={initialDatePreset}
-                        includeAllPeriods={initialDatePreset === 'all'}
+                        initialPreset={pickerPreset}
                     />
                 </div>
             )}
@@ -351,7 +388,7 @@ function MaintenanceFormDesktop({
                             Date: <strong>
                                 {dateRange?.startDate && dateRange?.endDate
                                     ? `${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`
-                                    : 'All Periods'}
+                                    : 'Anytime'}
                             </strong>
                         </span>
                         {maintenanceStatuses.length > 0 && (
@@ -383,6 +420,7 @@ function MaintenanceFormDesktop({
             {/* Main Table */}
             <div className="flex-1 mt-4 overflow-auto">
               <TableContainer component={Paper}>
+
                   <Table>
                       <TableHead className="sticky top-0 bg-gray-50">
                           <TableRow className="text-xs font-medium tracking-wider text-gray-500 uppercase border-b border-gray-200">
@@ -391,6 +429,7 @@ function MaintenanceFormDesktop({
                               <TableCell className="px-4 py-3">Department</TableCell>
                               <TableCell className="px-4 py-3">Remarks</TableCell>
                               <TableCell className="px-4 py-3">Status</TableCell>
+                              <TableCell className="px-4 py-3">Items</TableCell>
                               <TableCell className="px-4 py-3">Work Order</TableCell>
                               <TableCell className="px-4 py-3">WO Date</TableCell>
                               <TableCell className="px-4 py-3">Action</TableCell>
@@ -455,11 +494,14 @@ function MaintenanceFormDesktop({
                                               {getStatusLabel(jo.main_stat)}
                                           </span>
                                       </TableCell>
+                                      <TableCell className="flex px-4 py-3 justify-items-center">
+                                          <span className="flex px-2 py-1 text-xs font-medium rounded-full">{getNoOfItems(jo.JO_No)}</span>
+                                      </TableCell>
                                       <TableCell className="px-4 py-3">
                                           <span className="px-2 py-1 text-xs font-medium rounded-full">{jo.workNo}</span>
                                       </TableCell>
                                       <TableCell className="px-4 py-3">
-                                          <span className="px-2 py-1 text-xs font-medium rounded-full">{jo.wo_date}</span>
+                                          <span className={`px-2 py-1 text-xs font-medium  ${jo.wo_date === '0000-00-00'? 'text-transparent' : 'text-blac'}`}>{`${jo?.wo_date}`}</span>
                                       </TableCell>
                                       <TableCell className="">
                                           <Button

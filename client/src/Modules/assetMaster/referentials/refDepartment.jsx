@@ -66,7 +66,7 @@ const handleAddRow = () => {
   if (editingRowId !== null) return; // Safety block
 
   const newRow = {
-    id: `tmp-${crypto.randomUUID()}`,
+    id: `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     Department: '',
     isNew: true
   };
@@ -211,6 +211,7 @@ const handleAddRow = () => {
           <div className='flex justify-end mb-3'>
             <TextField
               label="Search"
+              disabled={editedRow}
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
               size="small"

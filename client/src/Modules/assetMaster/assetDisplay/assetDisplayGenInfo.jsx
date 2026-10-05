@@ -28,7 +28,7 @@ import { useSuppliers } from '../../../hooks/refSupp';
 // and editable fields get a visible border while read-only ones look like
 // quiet labels instead of greyed-out browser defaults.
 // ---------------------------------------------------------------------------
-const sectionCardClass = 'py-6 shadow-sm border border-slate-200 rounded-lg bg-white min-w-0';
+const sectionCardClass = 'py-6 shadow-sm border border-slate-200 rounded-lg bg-slate-50 min-w-0';
 const sectionHeaderClass = 'block pl-5 mb-4 pb-2 border-b border-slate-100 text-blue-800 text-[clamp(0.85rem,0.7rem+0.6vw,1.125rem)] font-medium';
 
 export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFieldChange }) {
@@ -54,14 +54,14 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
   }, [refSuppliers, asset.suppName]);
 
   return (
-    <div className='w-full min-w-0 px-10'>
+    <div className='w-full min-w-0 px-10 '>
       <div className={sectionCardClass}>
         {/* ..... General Information Fields ..... */}
 
         <span className={sectionHeaderClass}>General Information</span>
         {/* flex-wrap lets UOM / Quantity / Write-Off reflow instead of overflowing */}
         <div className='flex flex-wrap items-center min-w-0 gap-2 mt-2'>
-          <span className={fieldLabelClass}>UOM:</span>
+          <span className={fieldLabelClass}>Unit: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
           <Autocomplete
             disabled={!isEditing}
             sx={{ minWidth: '10rem', flex: '0 1 12rem' }}
@@ -73,7 +73,7 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
               <TextField {...params} sx={getAutocompleteSx(isEditing)} />
             )}
           />
-          <span className='p-2 pl-10 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-slate-600'>Quantity:</span>
+          <span className='p-2 pl-10 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] tracking-wider text-slate-600'>Quantity: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
           <input
             type='text'
             className={fieldClass(isEditing) + ' max-w-[8rem]'}
@@ -133,7 +133,7 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
               <TextField {...params} sx={getAutocompleteSx(isEditing)} />
             )}
           />
-          <span className={fieldLabelClass}>Reference:</span>
+          <span className={fieldLabelClass}>Reference: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span> </span>
           <input
             type='text'
             className={fieldClass(isEditing)}
@@ -168,10 +168,10 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
           matching the Costing Information / Physical Count sections below.
         */}
         <div className='grid grid-cols-[minmax(10rem,14rem)_minmax(15rem,1fr)] min-w-0 mt-2 mb-8 mr-5 gap-y-3 gap-x-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] pr-8'>
-          <span className={fieldLabelClass}>Category:</span>
+          <span className={fieldLabelClass}>Category: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
           <input type='text' className={staticFieldClass} value={asset.CATEGORY || ''} disabled readOnly />
 
-          <span className={fieldLabelClass}>Asset Class:</span>
+          <span className={fieldLabelClass}>Asset Class: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
           <Autocomplete
             disabled={!isEditing}
             size='small'
@@ -184,10 +184,10 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
             )}
           />
 
-          <span className={fieldLabelClass}>Location:</span>
+          <span className={fieldLabelClass}>Location: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
           <input type='text' className={staticFieldClass} value={asset.ItemLocation || ''} disabled readOnly />
 
-          <span className={fieldLabelClass}>Department:</span>
+          <span className={fieldLabelClass}>Department: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
           <Autocomplete
             disabled={!isEditing}
             size='small'

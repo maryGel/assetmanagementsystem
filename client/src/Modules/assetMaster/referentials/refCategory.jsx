@@ -72,7 +72,7 @@ export default function RefCategory({useProps, openTab,}) {
       if (editingRowId !== null) return; // Safety block
 
       const newRow = {
-        id: `tmp-${crypto.randomUUID()}`,
+        id: `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
         xCode: '',
         category: '',
         AssetGrpCode: '',
@@ -109,8 +109,9 @@ export default function RefCategory({useProps, openTab,}) {
 
       const isDuplicate = data.some(row =>
           row.id !== editedRow.id && (
-            row.xCode.trim().toLowerCase() === editedRow.xCode.trim().toLowerCase() ||
-            row.category.trim().toLowerCase() === editedRow.category.trim().toLowerCase()
+            row.xCode.trim().toLowerCase() === editedRow.xCode.trim().toLowerCase() &&
+            row.category.trim().toLowerCase() === editedRow.category.trim().toLowerCase() &&
+            row.AssetGrpCode.trim().toLowerCase() === editedRow.AssetGrpCode.trim().toLowerCase()
           )
       );
 
@@ -227,6 +228,7 @@ export default function RefCategory({useProps, openTab,}) {
               <div className='flex justify-end mb-3'>
                 <TextField
                   label="Search"
+                  disabled={editedRow}
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
                   size="small"

@@ -70,7 +70,7 @@ export default function RefColor({ openTab, useProps }) {
     if (editingRowId !== null) return;
 
     const newRow = {
-      id: `tmp-${crypto.randomUUID()}`,
+      id: `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       ColID: '',
       ColName: '',
       isNew: true,
@@ -221,6 +221,7 @@ export default function RefColor({ openTab, useProps }) {
             <div className="flex justify-end mb-3">
               <TextField
                 label="Search"
+                disabled={editedRow}
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
                 size="small"

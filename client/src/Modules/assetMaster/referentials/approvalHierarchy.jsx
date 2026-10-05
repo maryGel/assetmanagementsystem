@@ -72,7 +72,7 @@ export default function RefAppHierarchy({ openTab, useProps }) {
     if (editingRowId !== null) return;
 
     const newRow = {
-      id: `tmp-${crypto.randomUUID()}`,
+      id: `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       APP_CODE: '',
       MODULE: '',
       APP_LEVEL: '',
@@ -229,6 +229,7 @@ export default function RefAppHierarchy({ openTab, useProps }) {
             <div className="flex justify-end mb-3">
               <TextField
                 label="Search"
+                disabled={editedRow}
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
                 size="small"

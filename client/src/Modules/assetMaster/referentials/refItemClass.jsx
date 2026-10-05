@@ -78,7 +78,7 @@ export default function RefItemClass({useProps, openTab,}) {
     if (editingRowId !== null) return; // Safety block
 
     const newRow = {
-      id: `tmp-${crypto.randomUUID()}`,
+      id: `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       classCode: '',
       itemClass: '',
       category: '',
@@ -236,6 +236,7 @@ export default function RefItemClass({useProps, openTab,}) {
               <div className='flex justify-end mb-3'>              
                 <TextField
                   label="Search"
+                  disabled={editedRow}
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
                   size="small"

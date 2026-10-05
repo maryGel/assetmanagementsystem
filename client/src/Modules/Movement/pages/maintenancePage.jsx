@@ -127,7 +127,7 @@ function MaintenancePageDesktop() {
                 showToast={showToast}
                 handleSnackbarClose={handleSnackbarClose}
                 initialFilter={isDashboardEvaluationView ? 'Pending' : undefined}
-                initialDatePreset={isDashboardEvaluationView ? 'all' : 'last-30'}
+                initialDatePreset={isDashboardEvaluationView ? 'all' : 'anytime'}
               />
             </div>
             <div className={isOpenMainForm ? '' : 'hidden'}>
@@ -138,7 +138,7 @@ function MaintenancePageDesktop() {
                 joDetailsRefresh={handleJoDetailsRefresh}
                 updateJOHeader={updateJOHeader}
                 updateJODetails={updateJODetails}
-                initialDatePreset={isDashboardMaintenanceView ? 'all' : 'last-30'}
+                initialDatePreset={isDashboardMaintenanceView ? 'all' : 'anytime'}
                 initialStatuses={isDashboardMaintenanceView
                   ? dashboardMaintenanceStatuses
                   : []}

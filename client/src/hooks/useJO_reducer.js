@@ -111,8 +111,6 @@ function joReducer(state, action) {
   }
 
     case 'START_EDIT':
-      console.log('START_EDIT - Original xDate:', action.payload.data?.xDate);
-      console.log('START_EDIT - Date type:', typeof action.payload.data?.xDate);
       
       return {
         ...state,

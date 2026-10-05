@@ -44,7 +44,7 @@ function SearchTransactions(useProps) {
   const [draftSelectedLocation, setDraftSelectedLocation] = useState([]);
   const [draftSelectedDepartment, setDraftSelectedDepartment] = useState([]);
   const [draftStatus, setDraftStatus] = useState([]);
-  const [draftTransNo, setDraftTransNo] = useState(null);
+  const [draftTransNo, setDraftTransNo] = useState([]);
   // Table State
   const [filters, setFilters] = useState({});
   const [filteredDocuments, setFilteredDocuments] = useState([]);
@@ -242,35 +242,30 @@ function SearchTransactions(useProps) {
     console.log('filters:', filters);
     
     if (!hasSearched || !filters) {
-      console.log('📊 No filters or search not performed, clearing results');
       setFilteredDocuments([]);
       return;
     }
     
     // Make sure we're using the latest docHeaders
     let filtered = [...docHeaders];
-    console.log('📊 Starting with all documents:', filtered.length);
     
     // Filter by transaction number
-    if (filters.transNo) {
+    if (filters.transNo && filters.transNo.length > 0) {
       filtered = filtered.filter(doc => 
-        doc.transNo && doc.transNo.toLowerCase().includes(filters.transNo.toLowerCase())
+        doc.transNo && filters.transNo.includes(doc.transNo)
       );
-      console.log('📊 After transNo filter:', filtered.length);
     }
     // Filter by document type
     if (filters.type && filters.type.length > 0) {
       filtered = filtered.filter(doc => 
         doc.type && filters.type.includes(doc.type)
       );
-      console.log('📊 After type filter:', filtered.length);
     }
     // Filter by location
     if (filters.location && filters.location.length > 0) {
       filtered = filtered.filter(doc => 
         doc.Location && filters.location.includes(doc.Location)
       );
-      console.log('📊 After location filter:', filtered.length);
     }
     // Filter by department
     if (filters.department && filters.department.length > 0) {
@@ -278,24 +273,20 @@ function SearchTransactions(useProps) {
         (doc.Departmnet || doc.Department_Code) && 
         filters.department.includes(doc.Departmnet || doc.Department_Code)
       );
-      console.log('After department filter:', filtered.length);
     }
     // Filter by status
     if (filters.status && filters.status.length > 0) {
       filtered = filtered.filter(doc =>
         filters.status.includes(Number(doc.status))
       );
-      console.log('📊 After status filter:', filtered.length);
     }
     // Filter rejected
     if (filters.rejected && filters.rejected.length > 0) {
       filtered = filtered.filter(doc =>
         filters.rejected.includes(doc.rejected)
       );
-      console.log('📊 After rejected filter:', filtered.length);
     }
     
-    console.log('📊 Final filtered results:', filtered.length);
     setFilteredDocuments(filtered);
     setPage(0);
   }, [docHeaders, filters, hasSearched]);
@@ -308,7 +299,6 @@ function SearchTransactions(useProps) {
   // CRITICAL: Auto-refresh when docHeaders change (from any source)
   useEffect(() => {
     if (docHeaders.length > 0 && hasSearched) {
-      console.log('📄 Document headers updated, re-applying filters automatically');
       // Increment data version to force table re-render
       setDataVersion(prev => prev + 1);
     }
@@ -350,12 +340,13 @@ function SearchTransactions(useProps) {
   }, [docHeaders]);
 
   const handleGoClick = () => {
+    const selectedTransNos = draftTransNo.map(option => option.transNo);
     const newFilters = {
       type: draftTransType,
       location: draftSelectedLocation,
       department: draftSelectedDepartment,
       status: draftStatus.map(option => option.status),
-      transNo: draftTransNo?.transNo || ''
+      transNo: selectedTransNos
     };
     setFilters(newFilters);
     setHasSearched(true);
@@ -366,7 +357,7 @@ function SearchTransactions(useProps) {
     setDraftSelectedLocation([]);
     setDraftSelectedDepartment([]);
     setDraftStatus([]);
-    setDraftTransNo(null);
+    setDraftTransNo([]);
     setFilters({});
     setHasSearched(false);
     setSelected([]);
@@ -453,14 +444,24 @@ function SearchTransactions(useProps) {
 
       <form className="flex flex-wrap w-full h-auto gap-2 p-5">
         <Autocomplete
+          key={`transno-search-${dataVersion}`} 
+          multiple
+          limitTags={1}
           size="small"  
-          options={transactionNumbers}
+          options={transactionNumbers || []}
           value={draftTransNo}
           onChange={(e, newValue) => setDraftTransNo(newValue)}
           getOptionLabel={(option) => option?.fullLabel || ''}
           isOptionEqualToValue={(option, value) => option?.transNo === value?.transNo}
           renderInput={(params) => (
             <TextField {...params} label="Document No." placeholder="Search Document No." />
+          )}
+          renderOption={(props, option) => (
+            <li {...props} key={option.transNo}>
+              <div>
+                {option.transNo}
+              </div>
+            </li>
           )}
           sx={{ width: 300, marginRight: '1rem' }}
         />

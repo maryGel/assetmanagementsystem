@@ -20,7 +20,7 @@ export const headerTitleMap = {
   "/assetMovement/pages/ADFormPage": "Disposal Page",
   "/assetMovement/pages/AAFormPage": "Asset Accountability Page",
   "/assetMovement/pages/ALFormPage": "Lost Asset Page",
-  "/assetMovement/pages/maintenancePage": "Maintenance Page",
+  "/assetMovement/pages/maintenancePage": "JO Evaluation & Maintenance Page",
 
   // Asset Physical Count Pages
   "/assetPhysical/assetPrintQr": "Print QRcode",

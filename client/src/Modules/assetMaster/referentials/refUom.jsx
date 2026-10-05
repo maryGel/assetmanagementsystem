@@ -14,6 +14,7 @@ import { IconButton, ThemeProvider, TextField, TablePagination, Snackbar, Alert,
 // Custom hooks
 import { useRefUom } from '../../../hooks/refUom'; 
 import { useEditableTable } from '../../../Utils/useEditableTable';
+import { uuid } from '../../../Utils/uuid';
 
 // Table utilities 
 import { customTheme, resizeColumn, RenderSortIcon, RenderDialog  } from '../../../Utils/customTable';
@@ -70,7 +71,7 @@ export default function RefUom({useProps, openTab,}) {
     if (editingRowId !== null) return; // Safety block
 
     const newRow = {
-      id: `tmp-${crypto.randomUUID()}`,
+      id: `tmp-${uuid()}`,
       Unit: '',
       isNew: true
     };
@@ -223,6 +224,7 @@ export default function RefUom({useProps, openTab,}) {
           <div className="flex justify-end mb-3">
             <TextField
               label="Search"
+              disabled={editedRow}
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
               size="small"
