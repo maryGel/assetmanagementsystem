@@ -112,34 +112,35 @@ function assetReducer(state, action) {
 export const useAssetMasterData = () => {
   const [state, dispatch] = useReducer(assetReducer, initialState);
 
-  // Fetch ALL assets once when component mounts
-  useEffect(() => {
-    const fetchAllAssets = async () => {
-      try {
-        console.log('Fetching all assets for dropdown...');
-        // fetchAll=true skips LIMIT/OFFSET so every row comes back, and
-        // `columns` trims the payload to just what the dropdown/filter UI
-        // and dashboard rollups actually use — pulling every column
-        // (Picpath, Description, Remarks, suppName, etc.) on 15,000+ rows
-        // was slow enough to blow past the request timeout.
-        // timeout is bumped for this one call as a safety net; it can be
-        // removed once the trimmed payload proves consistently fast.
-        const response = await api.get('/itemlist', { 
-          params: {
-            fetchAll: true,
-            columns: 'FacNO,FacName,CATEGORY,ItemClass,Department,ItemLocation,xStatus,AAmount,Abre,serialNo,AssetGrpCode,Unit,Brand,StartDate,EndDate'
-          },
-          timeout: 30000
-        });
-        console.log('All assets fetched:', response.data.data?.length, 'of', response.data.total);
-        dispatch({ type: 'SET_ALL_ASSETS', payload: response.data.data || [] });
-      } catch (error) {
-        console.error('Error fetching all assets:', error);
-      }
-    };
-    
-    fetchAllAssets();
+  // Fetch ALL assets (used by the search dropdown). Runs on mount, and can be
+  // re-run through `refreshAllAssets` so newly created assets show up.
+  const refreshAllAssets = useCallback(async () => {
+    try {
+      console.log('Fetching all assets for dropdown...');
+      // fetchAll=true skips LIMIT/OFFSET so every row comes back, and
+      // `columns` trims the payload to just what the dropdown/filter UI
+      // and dashboard rollups actually use — pulling every column
+      // (Picpath, Description, Remarks, suppName, etc.) on 15,000+ rows
+      // was slow enough to blow past the request timeout.
+      // timeout is bumped for this one call as a safety net; it can be
+      // removed once the trimmed payload proves consistently fast.
+      const response = await api.get('/itemlist', { 
+        params: {
+          fetchAll: true,
+          columns: 'FacNO,FacName,CATEGORY,ItemClass,Department,ItemLocation,xStatus,AAmount,Abre,serialNo,AssetGrpCode,Unit,Brand,StartDate,EndDate'
+        },
+        timeout: 30000
+      });
+      console.log('All assets fetched:', response.data.data?.length, 'of', response.data.total);
+      dispatch({ type: 'SET_ALL_ASSETS', payload: response.data.data || [] });
+    } catch (error) {
+      console.error('Error fetching all assets:', error);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshAllAssets();
+  }, [refreshAllAssets]);
 
   // Fetch filtered assets when filters OR page OR pageSize changes
   const fetchAssets = useCallback(async () => {
@@ -361,6 +362,7 @@ export const useAssetMasterData = () => {
     selectAsset: asset => dispatch({ type: 'SELECT_ASSET', payload: asset }),
     
     fetchAssets,
+    refreshAllAssets,
     fetchAssetByFacN0,
     clearSingleAsset,
     createAsset,

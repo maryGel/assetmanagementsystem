@@ -72,6 +72,17 @@ const getPresetDates = (presetId) => {
   }
 };
 
+const BASE_OPTIONS = [
+  { id: 'anytime', label: 'Anytime' },
+  { id: 'today', label: 'Today' },
+  { id: 'this-month', label: 'This Month' },
+  { id: 'last-7', label: 'Last 7 Days' },
+  { id: 'last-30', label: 'Last 30 Days' },
+  { id: 'last-60', label: 'Last 60 Days' },
+  { id: 'last-90', label: 'Last 90 Days' },
+  { id: 'custom', label: 'Custom Range' }
+];
+
 const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30', includeAllPeriods = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(initialPreset);
@@ -84,43 +95,49 @@ const HistoryDatePicker = ({ onDateRangeChange, initialPreset = 'last-30', inclu
   });
   
   const dropdownRef = useRef(null);
-  const isInitialMount = useRef(true);
+
+  // Always call the parent's latest callback, but keep our own wrapper stable.
+  // Parents usually pass an inline function, which is a new function on every
+  // render. With that in an effect's dependency list, the effect re-ran after
+  // every selection and reset the picker back to the initial preset.
+  const onDateRangeChangeRef = useRef(onDateRangeChange);
+  useEffect(() => {
+    onDateRangeChangeRef.current = onDateRangeChange;
+  }, [onDateRangeChange]);
 
   const options = useMemo(() => [
     ...(includeAllPeriods ? [{ id: 'all', label: 'All Periods' }] : []),
-    { id: 'anytime', label: 'Anytime' },
-    { id: 'today', label: 'Today' },
-    { id: 'this-month', label: 'This Month' },
-    { id: 'last-7', label: 'Last 7 Days' },
-    { id: 'last-30', label: 'Last 30 Days' },
-    { id: 'last-60', label: 'Last 60 Days' },
-    { id: 'last-90', label: 'Last 90 Days' },
-    { id: 'custom', label: 'Custom Range' }
+    ...BASE_OPTIONS
   ], [includeAllPeriods]);
 
   const safeOnDateRangeChange = useCallback((range) => {
-    if (onDateRangeChange && typeof onDateRangeChange === 'function') {
-      onDateRangeChange(range);
-    }
-  }, [onDateRangeChange]);
+    const handler = onDateRangeChangeRef.current;
+    if (typeof handler === 'function') handler(range);
+  }, []);
 
-  // Initialize with default preset
+  // Apply the preset given by the parent: once on mount, and again only if the
+  // parent actually passes a different initialPreset (e.g. dashboard deep link).
+  // It must NOT depend on anything that changes when the user picks an option.
   useEffect(() => {
-    const option = options.find(opt => opt.id === initialPreset);
-    if (option && option.id !== 'custom') {
-      const [start, end] = getPresetDates(option.id);
+    const label = initialPreset === 'all'
+      ? 'All Periods'
+      : BASE_OPTIONS.find(opt => opt.id === initialPreset)?.label;
+
+    setSelectedOption(initialPreset);
+    setDateRange({ startDate: '', endDate: '' });
+
+    if (label && initialPreset !== 'custom') {
+      const [start, end] = getPresetDates(initialPreset);
       setStartDate(start);
       setEndDate(end);
-      setDisplayText(option.label);
-      // Only call on mount if it's the initial render
-      if (isInitialMount.current) {
-        safeOnDateRangeChange({ startDate: start, endDate: end });
-        isInitialMount.current = false;
-      }
+      setDisplayText(label);
+      safeOnDateRangeChange({ startDate: start, endDate: end });
     } else {
-      setDisplayText('Select Range');
+      setStartDate(null);
+      setEndDate(null);
+      setDisplayText(initialPreset === 'custom' ? 'Custom Range' : 'Select Range');
     }
-  }, [initialPreset, options, safeOnDateRangeChange]);
+  }, [initialPreset, safeOnDateRangeChange]);
 
   // Click outside handler
   useEffect(() => {

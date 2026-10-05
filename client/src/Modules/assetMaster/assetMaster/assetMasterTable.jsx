@@ -125,76 +125,77 @@ function EnhancedTableToolbar(props) {
   const { numSelected, selected, onCopyToNew, onExportCsv } = props;
 
   return (
-    <Toolbar
-      sx={[
-        {
-          pl: { sm: 2 },
-          pr: { xs: 1, sm: 1 },
-          flexWrap: 'wrap',
-          rowGap: 1,
-          justifyContent: 'end',
-        },
-        numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-        },
-      ]}
+<Toolbar
+  sx={[
+    {
+      pl: { sm: 2 },
+      pr: { xs: 1, sm: 1 },
+      flexWrap: 'wrap',
+      rowGap: 1,
+      alignItems: 'center', 
+      justifyContent: 'space-between', 
+    },
+    numSelected > 0 && {
+      bgcolor: (theme) =>
+        alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+    },
+  ]}
+>
+  {numSelected > 0 ? (
+    <Typography
+      sx={{ flex: '1 1 auto' }}
+      color="inherit"
+      variant="subtitle1"
+      component="div"
     >
-      {numSelected > 0 ? (
-        <Typography
-          sx={{ flex: '1 1 100%' }}
-          color="inherit"
-          variant="subtitle1"
-          component="div"
-        >
-          {numSelected} selected
-        </Typography>
-      ) : (
-        <Typography
-          sx={{ flex: '1 1 100%' }}
-          variant="h6"
-          id="tableTitle"
-          component="div"
-        >
-          Asset Master List
-        </Typography>
-      )}
+      {numSelected} selected
+    </Typography>
+  ) : (
+    <Typography
+      sx={{ flex: '1 1 auto' }}
+      variant="h6"
+      id="tableTitle"
+      component="div"
+    >
+      Asset Master List
+    </Typography>
+  )}
 
-      {numSelected > 1 ? 
-        <Tooltip title="Delete">
-          <IconButton>
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>      
-      :         
-        <Tooltip title="Copy to New">
-          <IconButton
-            disabled={numSelected !== 1}
-            onClick={(e) => onCopyToNew(selected[0])}
-          >
-            <FileCopyIcon />
-          </IconButton>
-        </Tooltip>
-      }
-
-      <Tooltip title="Create Asset">
+  {/* Wrap the action utility icons inside a flex box wrapper to keep them grouped nicely */}
+  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+    {numSelected > 1 ? 
+      ''     
+    :         
+      <Tooltip title="Copy to New">
         <IconButton
-          onClick={() => {
-            const path = '/assetFolder/createAsset';
-            window.open(path ,'_blank')
-          }}
+          disabled={numSelected !== 1}
+          onClick={(e) => onCopyToNew(selected[0])}
         >
-          <AddIcon />
+          <FileCopyIcon />
         </IconButton>
       </Tooltip>
+    }
 
-      <Tooltip title="Export CSV">
-        <IconButton 
-          onClick={onExportCsv}>
-          <DownloadIcon />
-        </IconButton>
-      </Tooltip>
-    </Toolbar>
+    <Tooltip title="Create Asset">
+      <IconButton
+        onClick={() => {
+          const path = '/assetFolder/createAsset';
+          window.open(path ,'_blank')
+        }}
+      >
+        <AddIcon />
+      </IconButton>
+    </Tooltip>
+
+    <Tooltip title="Export CSV">
+      <IconButton 
+        onClick={onExportCsv}>
+        <DownloadIcon />
+      </IconButton>
+    </Tooltip>
+  </div>
+</Toolbar>
+
   );
 }
 
@@ -459,7 +460,7 @@ export default function AssetMasterTable({
                     <TableCell align="left">{row.Unit}</TableCell>
                     <TableCell align="left">{row.ItemLocation}</TableCell>
                     <TableCell align="left">{row.Department}</TableCell>
-                    <TableCell align="left">{row.status}</TableCell>                    
+                    <TableCell align="left">{row.xxStats}</TableCell>                    
                   </TableRow> 
                 );
               })}

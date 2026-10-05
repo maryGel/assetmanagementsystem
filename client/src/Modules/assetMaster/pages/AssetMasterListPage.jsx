@@ -29,7 +29,9 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
     pageSize, 
     total,
     setFilters,
-    filters  
+    filters,
+    fetchAssets,
+    refreshAllAssets
   } = useAssetMasterData();
 
   const { refCategoryData } = useRefCategory(useProps);
@@ -110,6 +112,13 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
     setPage(0);
     setSelected([]);
   }
+
+  // Reload the current results (same filters, same page) plus the search
+  // dropdown's asset list, without touching what the user has typed/selected.
+  const handleRefreshClick = async () => {
+    setSelected([]); // rows may have changed, so don't keep a stale selection
+    await Promise.all([fetchAssets(), refreshAllAssets()]);
+  };
 
   // Check if there are active filters
   const hasActiveFilters = 
@@ -239,6 +248,15 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
         </CustomBtn>
         <CustomBtn variant='clearBtn' iconType='clear' onClick={handleClearClick}>
           Clear   
+        </CustomBtn>
+        <CustomBtn
+          variant='refreshBtn'
+          iconType='refresh'
+          title='Reload the current results'
+          onClick={handleRefreshClick}
+          disabled={isLoading}
+        >
+          Refresh
         </CustomBtn>
       </div>
 

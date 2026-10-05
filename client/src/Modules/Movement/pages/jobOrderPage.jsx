@@ -9,7 +9,11 @@ import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert, 
 import JobOrderTabs from '../jobOrder/jobOrderTabs';
 
 // Custom Utils
-import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
+import { getAutocompleteSx,   
+  fieldClass,
+  staticFieldClass,
+  staticTextClass,
+  fieldLabelClass } from '../../../Utils/autocompleteStyles';  
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
@@ -873,12 +877,12 @@ const refreshData = useCallback(async () => {
             </div>
             <Box className='mt-2 '>
               <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
-                <div className='flex items-center min-w-[300px] gap-3'>
+                <div className='flex items-center  min-w-[400px] gap-3'>
                   <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Department :</label>
                   <Autocomplete
                     variant='body2'
                     disabled={isReadOnly}
-                    className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[200px] max-w-sm`}
+                    className={`flex-1 min-w-[180px] max-w-sm`}
                     size = 'small'
                     options= {departments} 
                     value={currentHeader?.Department_Code || currentHeader?.Department  || '' }
@@ -894,7 +898,7 @@ const refreshData = useCallback(async () => {
                   <label className='flex-shrink-0 w-40 text-base font-normal text-gray-500'>Maintenance Service :</label>
                   <Autocomplete 
                     disabled={isReadOnly}
-                    className={`rounded-sm  ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                    className={`flex-1 min-w-[180px] max-w-sm`}              
                     size = 'small'
                     options= {sections} 
                     value={currentHeader?.Sector_name || ''}
@@ -908,8 +912,8 @@ const refreshData = useCallback(async () => {
                 </div>
               </div>
 
-              <div className='flex items-start justify-start w-full gap-10 mt-4'>
-                <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks : </label>
+              <div className='flex max-w-[1000px] justify-start w-full gap-10 mt-4'>
+                <label className={`pt-2 text-base text-gray-500 w-24 font-normal`}>Remarks : </label>
                 <textarea
                   id = "remarks"
                   disabled={!state.isEditing && !state.isCreating}
@@ -917,11 +921,15 @@ const refreshData = useCallback(async () => {
                   minRows={2}
                   value={currentHeader?.Remarks || ''}
                   onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                  className={`${!state.isEditing && !state.isCreating? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 w-full max-w-4xl`}
+                  className={`${!state.isEditing && !state.isCreating 
+                    ? 'border-slate-200 bg-slate-50 text-slate-800 '
+                    : 'border-slate-200 bg-white text-slate-600 cursor-default ' }
+                  border rounded-md w-full text-sm font-normal text-gray-800
+                  `}
                   style={{ 
                     resize: 'both',
                     padding: '.5rem',
-                    border: '1px solid #ccc',
+                    // border: '1px solid #ccc',
                     marginTop: '.5rem'
                   }}   
                 />
