@@ -60,7 +60,7 @@ const COLUMNS = [
 ];
 
 // Fields covered by the search box
-const SEARCH_FIELDS = ['FAC_NO', 'FAC_name', 'Description', 'workDet', 'eval_remarks', 'Main_Remarks'];
+const SEARCH_FIELDS = ['FAC_NO', 'FAC_name', 'Description', 'workDet', 'eval_remarks', 'Main_Remarks', 'serialno', 'brand', 'ItemLocation', 'Holder'];
 
 // Columns frozen on the left while scrolling sideways
 const FROZEN_COLS = ['action', 'FAC_NO'];
@@ -121,8 +121,6 @@ const JOLineItems = ({
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const fetchAttempted = useRef(false);
   
-
-
 
   // LOAD ASSETS
   useEffect(() => {

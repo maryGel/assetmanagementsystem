@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -17,10 +17,16 @@ import {
   Snackbar,
   Autocomplete,
   Popper,
-  Link
+  Link,
+  InputAdornment,
+  TableSortLabel,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 // Hooks
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 // Custom Utils
@@ -28,10 +34,60 @@ import { tableFieldFormat } from '../custom Utils/customLayout';
 import formatWithCommas from '../../../Utils/formatWithCommas';
 // import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
 
+// COLUMN CONFIG (width = default px width, resizable)
+const MIN_COL_WIDTH = 50;
+const COLUMNS = [
+  { id: 'action',       label: 'Action',      width: 70,  sortable: false },
+  { id: 'Orig_Department',       label: 'From Department',   width: 300, type: 'string' },
+  { id: 'FAC_NO',       label: 'Asset No.',   width: 300, type: 'string' },
+  { id: 'FAC_name',     label: 'Asset Name',  width: 300, type: 'string' },
+  { id: 'qty',          label: 'Qty',         width: 80,  type: 'number' },
+  { id: 'UOM',          label: 'UOM',         width: 110,  type: 'string' },
+  { id: 'brand',        label: 'Brand',       width: 160, type: 'string' },
+  { id: 'serialno',     label: 'Serial No',   width: 160, type: 'string' },
+  { id: 'Adate',        label: 'Acquired Date',    width: 160, type: 'date' },
+  { id: 'AAmount',      label: 'Unit Cost', width: 170, type: 'number' },
+  { id: 'Holder',       label: 'Old Holder',   width: 170, type: 'string' },
+];
+
+// Fields covered by the search box
+const SEARCH_FIELDS = ['FAC_NO', 'FAC_name', 'Description', 'serialno', 'brand', 'ItemLocation', 'Holder'];
+
+// Columns frozen on the left while scrolling sideways
+const FROZEN_COLS = ['action', 'FAC_NO'];
+
+// Normalise any date value to YYYY-MM-DD (local), or '' if empty/invalid
+const toDateStr = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const getSortValue = (row, col) => {
+  const raw = col.id === 'Status' ? (row.Status || 'OPEN') : row[col.id];
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (col.type === 'number') {
+    const n = Number(raw);
+    return Number.isNaN(n) ? null : n;
+  }
+  if (col.type === 'date') {
+    const t = new Date(raw).getTime();
+    return Number.isNaN(t) ? null : t;
+  }
+  return String(raw).toLowerCase();
+};
+
+
+// ----------------------------------------------
+// TRLineItems Component
+// ----------------------------------------------
+
 const TRLineItems = ({
   state,
   rows = [],
-  // dispatch,
+  departments,
   docStatus,
   isReadOnly,
   currentHeader,
@@ -87,10 +143,147 @@ const TRLineItems = ({
     }
   }, [allAssets]);
   
-  useEffect(() => {
-    console.log("CURRENT ROWS", currentTRItems);
-  }, [currentTRItems]);
+    // Department currently 
+  const selectedDept = String(
+    currentTRItems?.Orig_Department || ''
+  ).trim().toLowerCase();
+
+  console.log('Selected Department:', selectedDept);
+
+  const handleDetailsChange = (field, value) => {
+    updateDetailRow(field, value);
+  };
+
+
+  // Only assets that belong to the selected department
+  const deptAssetOptions = useMemo(() => {
+    if (!selectedDept) return [];   // force the user to pick a department first
+    return assetOptions.filter(
+      a => String(a.Department ?? '').trim().toLowerCase() === selectedDept
+    );
+  }, [assetOptions, selectedDept]);
+
+  // Per-row options: the filtered list, plus the row's current asset if it falls outside
+  // the filter (e.g. loading an old JO), so MUI doesn't warn and the value still displays.
+  const getRowOptions = (row) => {
+    const dept = String(row.Orig_Department || '').trim().toLowerCase();
+    const deptOptions = dept
+      ? assetOptions.filter(a => String(a.Department ?? '').trim().toLowerCase() === dept)
+      : [];
+    const current = assetOptions.find(opt => opt.FacNO === row.FAC_NO);
+    return current && !deptOptions.includes(current)
+      ? [current, ...deptOptions]
+      : deptOptions;
+  };
   
+  // SEARCH / SORT / RESIZE STATE
+  const [searchText, setSearchText] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null }); // 'asc' | 'desc' | null
+  const [colWidths, setColWidths] = useState(() =>
+    COLUMNS.reduce((acc, c) => ({ ...acc, [c.id]: c.width }), {})
+  );
+
+  // Optional column groups (hidden by default)
+  const [visibleGroups, setVisibleGroups] = useState({
+    evaluation: false,
+    maintenance: false,
+  });
+
+  const toggleGroup = (group) =>
+    setVisibleGroups(prev => ({ ...prev, [group]: !prev[group] }));
+
+  const visibleColumns = useMemo(
+    () => COLUMNS.filter(c => !c.group || visibleGroups[c.group]),
+    [visibleGroups]
+  );
+
+  // SORT: click cycles asc -> desc -> off
+  const handleSort = (colId) => {
+    setSortConfig(prev => {
+      if (prev.key !== colId) return { key: colId, direction: 'asc' };
+      if (prev.direction === 'asc') return { key: colId, direction: 'desc' };
+      return { key: null, direction: null };
+    });
+  };
+
+  // RESIZE
+  const startResize = useCallback((e, colId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = colWidths[colId];
+
+    const onMove = (ev) => {
+      const next = Math.max(MIN_COL_WIDTH, startWidth + (ev.clientX - startX));
+      setColWidths(prev => ({ ...prev, [colId]: next }));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [colWidths]);
+
+  const totalWidth = useMemo(
+    () => visibleColumns.reduce((sum, c) => sum + (colWidths[c.id] || c.width), 0),
+    [visibleColumns, colWidths]
+  );
+
+  // Sticky styles for frozen columns. `left` is the combined width of the frozen
+  // columns before it, so it still works after the user resizes a column.
+  const getFrozenSx = (colId, isHead = false) => {
+    if (!FROZEN_COLS.includes(colId)) return {};
+    const left = FROZEN_COLS
+      .slice(0, FROZEN_COLS.indexOf(colId))
+      .reduce((sum, id) => sum + (colWidths[id] || 0), 0);
+    const isLastFrozen = colId === FROZEN_COLS[FROZEN_COLS.length - 1];
+    return {
+      position: 'sticky',
+      left,
+      ...(isHead && { top: 0 }), 
+      zIndex: isHead ? 4 : 4,                       // header cells must sit above body cells
+      backgroundColor: isHead ? '#f5f5f5' : '#fff', // opaque, so scrolled content doesn't show through
+      ...(isLastFrozen && { boxShadow: '2px 0 4px -2px rgba(0,0,0,0.25)' }),
+    };
+  };
+
+  // FILTER + SORT (works in both edit and read-only mode)
+  const displayedItems = useMemo(() => {
+    let items = Array.isArray(currentTRItems) ? [...currentTRItems] : [];
+
+    const q = searchText.trim().toLowerCase();
+    if (q) {
+      items = items.filter(row =>
+        SEARCH_FIELDS.some(f =>
+          String(row[f] ?? '').toLowerCase().includes(q)
+        )
+      );
+    }
+
+    if (sortConfig.key && sortConfig.direction) {
+      const col = COLUMNS.find(c => c.id === sortConfig.key);
+      const dir = sortConfig.direction === 'asc' ? 1 : -1;
+      items.sort((a, b) => {
+        const va = getSortValue(a, col);
+        const vb = getSortValue(b, col);
+        // empty values always go to the bottom
+        if (va === null && vb === null) return 0;
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        if (typeof va === 'string') {
+          return va.localeCompare(vb, undefined, { numeric: true }) * dir;
+        }
+        return (va - vb) * dir;
+      });
+    }
+    return items;
+  }, [currentTRItems, searchText, sortConfig]);
+
   // ADD ROW
   const handleAddRow = () => {
     addDetailRow();
@@ -118,16 +311,18 @@ const TRLineItems = ({
     console.log('Selected asset for row:', rowId, selectedAsset);
     
     const updates = {
+      Orig_Department: selectedAsset.Department || '',
       FAC_NO: selectedAsset.FacNO || 'n ',
       FAC_name: selectedAsset.FacName || '',
       qty: selectedAsset.balance_unit || 1,
       UOM: selectedAsset.Unit || '',
       brand: selectedAsset.Brand || '',
       serialNo: selectedAsset.serialNo || '',
-      location: selectedAsset.ItemLocation || '',
       Date_Aq: selectedAsset.Adate || '',
       Amount_aq: selectedAsset.AAmount || '',
       Holder: selectedAsset.Holder || '',
+      location: selectedAsset.ItemLocation || '',
+
     };
     
     // Update each field individually
@@ -167,6 +362,56 @@ const TRLineItems = ({
           </Typography>
         </Box>
       )}
+
+        {/* SEARCH (always enabled) */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 1.5 }}>
+        <TextField
+          size="small"
+          placeholder="Search asset details..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          sx={{ 
+            // Responsive widths based on screen sizes
+            width: {
+              xs: '100%',      // Mobile screens
+              sm: 350,         // Tablets (iPad)
+              md: 450,         // Laptops / Desktops
+              lg: 450,         // Large monitors
+            },
+            maxWidth: '100%',
+            '& .MuiInputBase-input': {
+              padding: '12px 14px',
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="medium" />
+              </InputAdornment>
+            ),
+            endAdornment: searchText ? (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  aria-label="Clear search"
+                  onClick={() => setSearchText('')}
+                >
+                  <ClearIcon fontSize="medium" />
+                </IconButton>
+              </InputAdornment>
+            ) : null
+          }}
+        />
+
+
+        {searchText.trim() && (
+          <Typography variant="body2" color="text.secondary">
+            Showing {displayedItems.length} of {currentTRItems?.length || 0}
+          </Typography>
+        )}
+
+      </Box>
+
       <TableContainer
         component={Paper}
         sx={{
@@ -182,8 +427,9 @@ const TRLineItems = ({
         <Table
           stickyHeader
           sx={{
-            width: '100%',
-            minWidth: 1600,
+            tableLayout: 'fixed',
+            width: totalWidth,
+            minWidth: '100%',
             '& .MuiTableCell-root': {
               padding: '4px 8px',
               fontSize: '0.875rem'
@@ -196,31 +442,84 @@ const TRLineItems = ({
         >
           <TableHead>
             <TableRow>
-              <TableCell>Action</TableCell>
-              <TableCell>Asset No.</TableCell>
-              <TableCell>Asset Name</TableCell>
-              <TableCell>Qty</TableCell>
-              <TableCell>UOM</TableCell>
-              <TableCell>Brand</TableCell>
-              <TableCell>Serial No.</TableCell>
-              <TableCell>Acquired Date</TableCell>
-              <TableCell>Acquired Cost</TableCell>
-              <TableCell>Holder</TableCell>
-              <TableCell>Location</TableCell>
-              {/* <TableCell>Original Dept.</TableCell>
-              <TableCell>New Holder</TableCell>
-              <TableCell>New Location</TableCell> */}
+              {visibleColumns.map((col) => {
+                const isActive = sortConfig.key === col.id;
+                return (
+                  <TableCell
+                    key={col.id}
+                    sx={{
+                      width: colWidths[col.id],
+                      position: 'sticky',        // was: 'relative'
+                      top: 0,
+                      zIndex: 3,
+                      backgroundColor: '#f5f5f5',
+                      overflow: 'hidden',
+                      whiteSpace: 'wrap',
+                      userSelect: 'none',
+                      ...getFrozenSx(col.id, true),   // Action + Asset No. get left + higher z-index
+                    }}
+                    sortDirection={isActive ? sortConfig.direction : false}
+                  >
+                    {col.sortable === false ? (
+                      col.label
+                    ) : (
+                      <TableSortLabel
+                        active={isActive}
+                        direction={isActive ? sortConfig.direction : 'asc'}
+                        onClick={() => handleSort(col.id)}
+                      >
+                        {col.label}
+                      </TableSortLabel>
+                    )}
+                    {/* RESIZE HANDLE */}
+                    <Box
+                      onMouseDown={(e) => startResize(e, col.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: 8,
+                        cursor: 'col-resize',
+                        zIndex: 1,
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '20%',
+                          bottom: '20%',
+                          right: 3,
+                          width: '2px',
+                          backgroundColor: 'rgba(0,0,0,0.2)'
+                        },
+                        '&:hover::after': {
+                          backgroundColor: 'primary.main'
+                        }
+                      }}
+                    />
+                  </TableCell>
+                );
+              })}
             </TableRow>
           </TableHead>
           <TableBody>
-            {currentTRItems.map((row) => (
+            {displayedItems.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={visibleColumns.length} align="center" sx={{ py: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {searchText.trim() ? 'No items match your search.' : 'No items.'}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+            {displayedItems.map((row) => (
               
               <TableRow
                 key={row.id}
                 hover
               >
                 {/* DELETE */}
-                <TableCell>
+                <TableCell sx={getFrozenSx('action')}>
                   <IconButton
                     color="error"
                     size="small"
@@ -230,8 +529,30 @@ const TRLineItems = ({
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </TableCell>
+                {/* FROM DEPARTMENT */}
+                <TableCell sx={getFrozenSx('Orig_Department')}>
+                  <Autocomplete
+                    variant='body2'
+                    disabled={isReadOnly}
+                    className={`flex-1 min-w-[180px] max-w-sm`}
+                    size = 'small'
+                    options= {departments} 
+                    value={row?.Orig_Department || '' }
+                    onChange={(e, newValue) =>  handleRowFieldChange(row.id,'Orig_Department', newValue)}
+                    renderInput={(params) => (
+                      <TextField {...params} 
+                        size="small"
+                          placeholder="Search department"
+                          sx={{
+                            '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
+                            width: '100%'
+                          }}
+                      />              
+                    )} 
+                  />        
+                </TableCell>
                 {/* ASSET NO */}
-                <TableCell sx={{ minWidth: 300 }}>
+                <TableCell sx={getFrozenSx('FAC_NO')}>
                   {(isReadOnly) ? (
                     <Box
                       sx={{
@@ -240,6 +561,8 @@ const TRLineItems = ({
                         padding: '8.5px 14px',
                         backgroundColor: '#f5f5f5',
                         minHeight: '40px',
+                        width: '100%',
+                        boxSizing: 'border-box',
                         display: 'flex',
                         alignItems: 'center',
                         cursor: 'pointer',
@@ -255,16 +578,19 @@ const TRLineItems = ({
                         sx={{
                           textAlign: "left",
                           fontWeight: 500,
-                          width: '100%',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
                         {row.FAC_NO}
                       </Link>
                     </Box>
                   ) : (
-                    <Autocomplete
-                      options={assetOptions}
-                      loading={!assetsLoaded && isLoading}
+                    <Autocomplete   
+                      fullWidth
+                      options={getRowOptions(row)} 
+                      noOptionsText={row.Orig_Department ? 'No assets for this department' : 'Select a department first'}                      loading={!assetsLoaded && isLoading}
                       filterOptions={filterOptions}
                       value={
                         assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
@@ -302,6 +628,7 @@ const TRLineItems = ({
                           placeholder="Search Asset..."
                           sx={{
                             '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
+                            width: '100%'
                           }}
                           InputProps={{
                             ...params.InputProps,
@@ -329,7 +656,7 @@ const TRLineItems = ({
                     fullWidth
                     sx={{
                       '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                      width: 300
+                      width: '100%'
                     }}
                   />
                 </TableCell>
@@ -350,7 +677,7 @@ const TRLineItems = ({
                     fullWidth
                     sx={{
                       '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                      width: 50
+                      width: '100%'
                     }}
                   />
                 </TableCell>
@@ -363,7 +690,7 @@ const TRLineItems = ({
                     fullWidth
                     sx={{
                       '& .MuiInputBase-root':
-                        tableFieldFormat(state.isEditing), width: 60
+                        tableFieldFormat(state.isEditing), width: '100%'
                     }}
                   />
                 </TableCell>
@@ -371,96 +698,66 @@ const TRLineItems = ({
                 <TableCell>
                   <TextField
                     size="small"
-                    value={row.Brand || ''}
-                    fullWidth
+                    value={row.brand || ''}
                     disabled
-                    sx={{
-                        '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                        width: 150
-                    }}
-                  />
-                </TableCell>
-                {/* Serial No */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.serial_no || ''}
-                    fullWidth
-                    disabled
-                    sx={{
-                        '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                        width: 150
-                    }}
-                  />
-                </TableCell>
-                {/* Date Acquired */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    type="date"
-                    value={
-                    row.Date_Aq 
-                      ? (() => {
-                          const d = new Date(row.Date_Aq)
-                          return `${d.getFullYear()}-${String(
-                            d.getMonth() + 1
-                          ).padStart(2, '0')}-${String(
-                            d.getDate()
-                          ).padStart(2, '0')}`
-                        })()
-                      : ''
-                    }
-                    onChange={(e) => handleRowFieldChange( row.id, 'Date_Aq', e.target.value)}
-                    disabled
-                    fullWidth
-                    InputLabelProps={{
-                      shrink: true
-                    }}
                     sx={{
                       '& .MuiInputBase-root':
-                        tableFieldFormat(!isReadOnly)
+                        tableFieldFormat(state.isEditing), width: '100%',
                     }}
                   />
                 </TableCell>
-                {/* Amount Acquired */}
+                {/* SERIAL NUMBER */}
                 <TableCell>
                   <TextField
                     size="small"
-                    value={formatWithCommas(row.Amount_aq) || ''}
+                    value={row.serialno || ''}
                     disabled
-                    fullWidth
                     sx={{
                       '& .MuiInputBase-root':
-                        tableFieldFormat(state.isEditing), width: 150
+                        tableFieldFormat(state.isEditing), width: '100%',
                     }}
                   />
                 </TableCell>
-                {/* HOLDER */}
+
+                {/* Acquisition Date */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    type='date'
+                    value={row.Date_Aq || ''}
+                    disabled
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
+                      width: '100%'
+                    }}
+                  />
+                </TableCell>
+                {/* Unit Cost */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    value={row.Amount_aq || ''}
+                    disabled
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
+                      width: '100%'
+                    }}
+                  />
+                </TableCell>
+              {/* Holder */}
                 <TableCell>
                   <TextField
                     size="small"
                     value={row.Holder || ''}
                     disabled
-                    fullWidth
                     sx={{
                       '& .MuiInputBase-root':
-                        tableFieldFormat(state.isEditing), width: 200
+                        tableFieldFormat(state.isEditing), width: '100%',
                     }}
                   />
                 </TableCell>
-                {/* Location */}
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={row.location || ''}
-                    disabled
-                    fullWidth
-                    sx={{
-                      '& .MuiInputBase-root':
-                        tableFieldFormat(state.isEditing), width: 200
-                    }}
-                />
-                </TableCell>            
               </TableRow>
             ))}
           </TableBody>

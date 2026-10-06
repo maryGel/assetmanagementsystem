@@ -160,7 +160,6 @@ function SearchTransactions(useProps) {
       // Trigger a re-apply of filters
       setRefreshTrigger(prev => {
         const newTrigger = prev + 1;
-        console.log('Refresh trigger updated to:', newTrigger);
         return newTrigger;
       });
 
@@ -169,7 +168,6 @@ function SearchTransactions(useProps) {
       
       // Show toast with new data count
       setTimeout(() => {
-        console.log('📊 New docHeaders length after refresh:', docHeaders.length);
         showToast(`Data refreshed successfully`, 'success');
       }, 300);
       
@@ -236,10 +234,10 @@ function SearchTransactions(useProps) {
 
   // Function to apply filters
   const applyFilters = useCallback(() => {
-    console.log('Applying filters...');
-    console.log('docHeaders length:', docHeaders.length);
-    console.log('hasSearched:', hasSearched);
-    console.log('filters:', filters);
+    // console.log('Applying filters...');
+    // console.log('docHeaders length:', docHeaders.length);
+    // console.log('hasSearched:', hasSearched);
+    // console.log('filters:', filters);
     
     if (!hasSearched || !filters) {
       setFilteredDocuments([]);

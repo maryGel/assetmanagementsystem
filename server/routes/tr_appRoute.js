@@ -4,6 +4,8 @@ import { db } from '../server.js';
 // helper config
 import { getApprovalConfig, getCurrentApprovalStatus, getLatestApprovalLevel, calculateXpost, getApprovalStat} from './approvalConfigRoute.js';
 
+
+
 const router = express.Router();
 
 /**
@@ -11,7 +13,8 @@ const router = express.Router();
  */
 router.put('/approve/:TR_No', (req, res) => {
   const { TR_No } = req.params;
-  const { approved, remarks, userInfo, appLevel } = req.body;
+  const { approved, remarks, userInfo, appLevel, Department, Location, Holder } = req.body;
+
 
   // console.log('Approval request:', { TR_No, approved, remarks });
 
@@ -118,13 +121,43 @@ router.put('/approve/:TR_No', (req, res) => {
         
         // 8. Check if this is the final approval level (xpost becomes 1)
         const isFinalApproval = approvedLevelsCount === totalLevels;
-        
-        // 9. Update tr_d table only on final approval (when xpost becomes 1)
+
+        // 9. On final approval, update tr_d and itemlist using the values stored in tr_h
         let DetailsUpdateResult = null;
+        let ItemlistUpdateResult = null;
         if (isFinalApproval) {
-          const updateDetailsSql = `UPDATE tr_d SET xpost = 1 WHERE TR_No = ?`;
+
+          // Single UPDATE ... JOIN pulls Department/Location/Holder straight from tr_h
+          const updateDetailsSql = `
+            UPDATE tr_d d
+            JOIN tr_h h ON h.TR_No = d.TR_No
+            SET d.xpost = 1,
+                d.New_Department = h.Department,
+                d.New_Location = h.Location,
+                d.New_Holder = h.Holder
+            WHERE d.TR_No = ?
+          `;
+
           DetailsUpdateResult = await new Promise((resolve, reject) => {
             connection.query(updateDetailsSql, [cleanDocNo], (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            });
+          });
+
+          // NOTE: adjust the join column (ItemCode) to whatever links tr_d to itemlist
+          const updateItemlistSql = `
+            UPDATE itemlist i
+            JOIN tr_d d ON d.FAC_NO = i.FacNO
+            JOIN tr_h h ON h.TR_No = d.TR_No
+            SET i.Department = h.Department,
+                i.ItemLocation = h.Location,
+                i.Holder = h.Holder
+            WHERE d.TR_No = ?
+          `;
+
+          ItemlistUpdateResult = await new Promise((resolve, reject) => {
+            connection.query(updateItemlistSql, [cleanDocNo], (error, result) => {
               if (error) reject(error);
               else resolve(result);
             });
@@ -178,6 +211,7 @@ router.put('/approve/:TR_No', (req, res) => {
             data: {
               doc_h_updated: updateResult.affectedRows,
               doc_d_updated: DetailsUpdateResult?.affectedRows || 0,
+              itemlist_updated: ItemlistUpdateResult?.affectedRows || 0,
               status: approvalStat,
               currentLevel: nextLevel,
               approvedLevels: approvedLevelsCount,

@@ -55,6 +55,7 @@ export default function TransferTabs({
     rows,
     dispatch,
     isReadOnly,
+    departments,
     currentHeader,
     currentTRItems,
     updateDetailRow,
@@ -118,6 +119,7 @@ export default function TransferTabs({
           rows={rows}
           dispatch={dispatch}
           isReadOnly={isReadOnly}
+          departments={departments}
           currentHeader={currentHeader}
           currentTRItems={currentTRItems}
           updateDetailRow={updateDetailRow}

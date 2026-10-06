@@ -957,7 +957,7 @@ const refreshData = useCallback(async () => {
                   value={currentHeader?.Remarks || ''}
                   onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
                   className={`${!state.isEditing && !state.isCreating 
-                    ? 'border-slate-200  text-slate-800 '
+                    ? 'border-slate-200  text-slate-500 '
                     : 'border-slate-200 bg-white text-slate-600 cursor-default ' }
                   border rounded-md w-full  font-normal text-gray-800
                   `}

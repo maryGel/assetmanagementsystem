@@ -238,32 +238,32 @@ const refreshData = useCallback(async () => {
 
   const handleSave = async () => {
     if (!state.createTRHeader?.TR_No) {
-      alert('Transfer Form number is required');
+      showToast('Transfer Form number is required');
       return;
     }
     if (!state.createTRHeader?.Department && !state.createTRHeader?.Department_Code) {
-      alert('Please select department where asset is transferred to.');
+      showToast('Please select department where asset is transferred to.');
       return;
     }
     if (!state.createTRHeader?.Holder) {
-      alert('Please select new holder.');
+      showToast('Please select new holder.');
       return;
     }
     if (!state.createTRHeader?.Location) {
-      alert('Please select location.');
+      showToast('Please select location.');
       return;
     }
     if (!state.createTRHeader?.Remarks) {
-      alert('Please enter remarks.');
+      showToast('Please enter remarks.');
       return;
     }
     if (!state.createTRDetails || state.createTRDetails.length === 0) {
-      alert('Please add at least one item');
+      showToast('Please add at least one item');
       return;
     }
     const invalidRows = state.createTRDetails.filter(row => !row.FAC_NO);
     if (invalidRows.length > 0) {
-      alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
+      showToast(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
       return;
     }
     openSaveDialog();
@@ -598,7 +598,7 @@ const refreshData = useCallback(async () => {
           </CustomBtn>
         )}
         
-        {!state.isEditing && !state.isCreating && copyDocNo && (
+        {!state.isEditing && !state.isCreating && currentHeader?.xpost === 0 &&  (
           <CustomBtn variant='editBtn' iconType='edit' onClick={handleEdit}>
             Edit
           </CustomBtn>       
@@ -651,14 +651,14 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+      <div className='p-10 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
           <h1 className='text-sm font-bold text-gray-800'>
             {state.isCreating ? 'Creating Transfer Form' : state.isEditing ? 'Editing Transfer Form' : 'Display Transfer Form'}
           </h1>
           <div className='flex flex-wrap gap-2'>
-            <span className='text-xs text-gray-500'>Last TR created :</span>
-            <span className='text-xs text-gray-500'>
+            <span className='text-sm text-gray-500'>Last TR created :</span>
+            <span className='text-sm text-gray-500'>
               {trHeaders && trHeaders.length > 0 
                 ? [...trHeaders].sort((a, b) => {
                     const numA = parseInt(String(a.TR_No).split('-').pop() || 0);
@@ -667,8 +667,8 @@ const refreshData = useCallback(async () => {
                   })[0]?.TR_No 
                 : '---'}
             </span>
-            <span className='text-xs text-gray-500'>Document Date:</span>
-            <span className='text-xs text-gray-500'>
+            <span className='text-sm text-gray-500'>Document Date:</span>
+            <span className='text-sm text-gray-500'>
               {trHeaders && trHeaders.length > 0 
                 ? (() => {
                     const latest = [...trHeaders].sort((a, b) => {
@@ -688,7 +688,7 @@ const refreshData = useCallback(async () => {
           <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.TR_No || ''}</label> 
           <label className='pl-10 text-base font-normal text-gray-500'>Document Date : </label>
           <input 
-            className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : 'bg-white'} border border-gray-300`}
+              className={`ml-5 p-2 text-base rounded-lg ${!state.isEditing && !state.isCreating ? '' : ' bg-white'} border border-gray-300`}
             type='date' 
             value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10) : ""} 
             disabled={isReadOnly}
@@ -706,15 +706,26 @@ const refreshData = useCallback(async () => {
               (Next approval level {nextLevel}/{totalLevels})
             </label>
           )}
+
+          <div className='flex items-center mt-5 flex-1 min-w-[240px] gap-3'>
+            <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Custodian : </label>
+            <input
+              type="text"
+              disabled
+              className="flex-1 min-w-[120px] text-base font-semibold text-gray-500"
+              value={currentHeader?.Custodian || userName}
+              onChange={(e) => handleHeaderChange('Custodian', e.target.value)}
+            />
+          </div>
           
           <Box className='mt-2'>
-            <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
-              <div className='flex items-center flex-1 min-w-[280px] gap-3'>
-                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Transfer to :</label>
+            <div className='flex max-w-[1200px] flex-wrap items-center justify-start w-full gap-2 mt-4 '>
+              <div className='flex items-center flex-1 min-w-[220px] gap-3'>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-36'>New Department :</label>
                 <Autocomplete
                   variant='body2'
                   disabled={isReadOnly}
-                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                  className={`flex-1 min-w-[100px] max-w-sm`}
                   size='small'
                   options={departments} 
                   value={currentHeader?.Department || ''}
@@ -731,7 +742,7 @@ const refreshData = useCallback(async () => {
                 <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>New Holder:</label>
                 <Autocomplete 
                   disabled={isReadOnly}
-                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                  className={`flex-1 min-w-[180px] max-w-sm`}
                   size='small'
                   options={employees} 
                   value={currentHeader?.Holder || ''}
@@ -744,24 +755,15 @@ const refreshData = useCallback(async () => {
                   )} 
                 />
               </div>
-              <div className='flex items-center flex-1 min-w-[240px] gap-3'>
-                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Custodian : </label>
-                <input
-                  type="text"
-                  disabled
-                  className="flex-1 min-w-[120px] text-base font-semibold text-gray-500"
-                  value={currentHeader?.Custodian || userName}
-                  onChange={(e) => handleHeaderChange('Custodian', e.target.value)}
-                />
-              </div>
+
             </div>
 
-            <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
+            <div className='flex flex-wrap items-center justify-start w-full gap-4 mt-4 lg:gap-10'>
               <div className='flex items-center flex-1 min-w-[280px] gap-3'>
-                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Location :</label>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Transfer to :</label>
                 <Autocomplete 
                   disabled={isReadOnly}
-                  className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 flex-1 min-w-[180px] max-w-sm`}
+                  className={`flex-1 min-w-[180px] max-w-sm`}
                   size='small'
                   options={locations} 
                   value={currentHeader?.Location || ''}
@@ -776,7 +778,7 @@ const refreshData = useCallback(async () => {
               </div>
             </div>
 
-            <div className='flex items-start justify-start w-full gap-10 mt-4'>
+            <div className='flex items-start max-w-[1000px] justify-start gap-6 mt-4 min-w-0.5'>
               <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks :</label>
               <textarea
                 id="remarks"
@@ -785,13 +787,17 @@ const refreshData = useCallback(async () => {
                 minRows={2}
                 value={currentHeader?.Remarks || ''}
                 onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                className={`${!state.isEditing && !state.isCreating ? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 w-full max-w-4xl`}
+                className={`${!state.isEditing && !state.isCreating 
+                  ? 'border-slate-200  text-slate-500 '
+                  : 'border-slate-200 bg-white text-slate-600 cursor-default ' }
+                border rounded-md w-full  font-normal text-gray-800 
+                `} 
                 style={{ 
-                  resize: 'both',
-                  padding: '.5rem',
-                  border: '1px solid #ccc',
-                  marginTop: '.5rem'
-                }}   
+                    resize: 'both',
+                    padding: '1rem',
+                    // border: '1px solid #ccc',
+                    marginTop: '.5rem'
+                  }}  
               />
             </div>
           </Box>
@@ -806,6 +812,7 @@ const refreshData = useCallback(async () => {
             isEditing={state.isEditing}
             setIsEditing={state.setIsEditing}
             docStatus={docStatus}
+            departments={departments}
             isReadOnly={isReadOnly}
             copyDocNo={copyDocNo}
             currentHeader={currentHeader}
@@ -813,6 +820,7 @@ const refreshData = useCallback(async () => {
             updateDetailRow={updateDetailRow}
             addDetailRow={addDetailRow}
             removeDetailRow={removeDetailRow}
+            handleHeaderChange={handleHeaderChange}
             handleDeleteClick={handleDeleteClick}
             handleConfirmDelete={handleConfirmDelete}
             handleCancelDelete={handleCancelDelete}
