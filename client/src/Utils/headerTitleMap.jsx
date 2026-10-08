@@ -16,7 +16,7 @@ export const headerTitleMap = {
   // Asset Movement Pages
   "/assetMovement/searchTransactions": "Search Transactions",
   "/assetMovement/pages/JOFormPage": "Job Order Page",
-  "/assetMovement/pages/TRFormPage": "Transfer Form Page",
+  "/assetMovement/pages/TRFormType": "Transfer Form Page",
   "/assetMovement/pages/ADFormPage": "Disposal Page",
   "/assetMovement/pages/AAFormPage": "Asset Accountability Page",
   "/assetMovement/pages/ALFormPage": "Lost Asset Page",
@@ -51,7 +51,7 @@ export const getBackPath = (currentPath) => {
   // Movement Pages
   if (currentPath.startsWith('/assetMovement/searchTransactions')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/JOFormPage')) return '/Home/Movement';
-  if (currentPath.startsWith('/assetMovement/pages/TRFormPage')) return '/Home/Movement';
+  if (currentPath.startsWith('/assetMovement/pages/TRFormType')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/ADFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/AAFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/ALFormPage')) return '/Home/Movement';

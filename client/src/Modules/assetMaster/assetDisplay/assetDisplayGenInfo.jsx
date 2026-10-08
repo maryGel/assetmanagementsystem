@@ -184,9 +184,6 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
             )}
           />
 
-          <span className={fieldLabelClass}>Location: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
-          <input type='text' className={staticFieldClass} value={asset.ItemLocation || ''} disabled readOnly />
-
           <span className={fieldLabelClass}>Department: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
           <Autocomplete
             disabled={!isEditing}
@@ -199,6 +196,11 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
               <TextField {...params} sx={getAutocompleteSx(isEditing)} />
             )}
           />
+          
+          <span className={fieldLabelClass}>Location: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
+          <input type='text' className={staticFieldClass} value={asset.ItemLocation || ''} disabled readOnly />
+
+
 
           <span className={fieldLabelClass}>Holder:</span>
           <input

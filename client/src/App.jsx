@@ -30,9 +30,14 @@ const ReferentialPage = lazy(() =>
 const JOFormPage = lazy(() =>
   import("./Modules/Movement/pages/jobOrderPage.jsx")
 );
-const TRFormPage = lazy(() =>
-  import("./Modules/Movement/pages/transferFormPage.jsx")
+// const TRFormPage = lazy(() =>
+//   import("./Modules/Movement/pages/transferFormPage.jsx")
+// );
+
+const TRFormType = lazy(() =>
+  import("./Modules/Movement/transfer/transferTypePage.jsx")
 );
+
 const ADFormPage = lazy(() =>
   import("./Modules/Movement/pages/disposalPage.jsx")
 );
@@ -215,11 +220,19 @@ function App() {
                 </PermissionRoute>
               }
             />
-            <Route
+            {/* <Route
               path="/assetMovement/pages/TRFormPage"
               element={
                 <PermissionRoute path="/assetMovement/pages/TRFormPage">
                   <TRFormPage setHeaderTitle={saveTitleUpdate} />
+                </PermissionRoute>
+              }
+            /> */}
+            <Route
+              path="/assetMovement/pages/TRFormType"
+              element={
+                <PermissionRoute path="/assetMovement/pages/TRFormType">
+                  <TRFormType setHeaderTitle={saveTitleUpdate} />
                 </PermissionRoute>
               }
             />

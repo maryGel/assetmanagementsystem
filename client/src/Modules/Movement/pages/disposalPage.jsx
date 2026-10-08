@@ -58,6 +58,7 @@ export default function ADFormPage(useProps) {
     cancelEditCreate,
 
     addDetailRow,
+    addDetailRowsFromMaintenance,
     updateHeaderField,
     updateDetailRow,
     removeDetailRow,
@@ -88,6 +89,7 @@ export default function ADFormPage(useProps) {
   } = useDisposalApproval();
 
   const [postDialogOpen, setPostDialogOpen] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [rowToDelete, setRowToDelete] = useState(null);
   const [totalLevels, setTotalLevels] = useState(3);
   const [localSnackbar, setLocalSnackbar] = useState({
@@ -222,6 +224,29 @@ const refreshData = useCallback(async () => {
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
 
   const handleHeaderChange = (field, value) => {
+    if (field === 'Department_Code') {
+      const prev = currentHeader?.Department_Code || currentHeader?.Department || '';
+      const hasAssets = (currentADItems || []).some(r => r.FAC_NO);
+
+      if (prev && prev !== value && hasAssets) {
+        const ok = window.confirm(
+          'Changing the department will clear the selected assets. Continue?'
+          
+        );
+        if (ok) {
+          showToast('Department changed. All selected assets have been cleared.', 'info');
+        } else return;
+
+         
+
+        (currentADItems || []).forEach(row => {
+          ['FAC_NO','FAC_name','qty','UOM','brand','serialno',
+          'ItemLocation','StartDate','EndDate'].forEach(f =>
+            updateDetailRow(row.id, f, '')
+          );
+        });
+      }
+    }
     updateHeaderField(field, value);
   };
 
@@ -245,29 +270,53 @@ const refreshData = useCallback(async () => {
   };
 
   const handleSave = async () => {
-    if (!state.createADHeader?.AD_No) {
-      alert('Disposal number is required');
-      return;
+  if (imageUploading) {
+    showToast('Please wait for the image upload to finish.', 'warning');
+    return;
+  }
+  if (!state.createADHeader?.AD_No) {
+    showToast('Disposal number is required');
+    return;
+  }
+  if (!state.createADHeader?.Department && !state.createADHeader?.Department_Code) {
+    showToast('Please select department.');
+    return;
+  }
+  if (!state.createADHeader?.Remarks) {
+    showToast('Please enter remarks.');
+    return;
+  }
+
+  const rows = state.createADDetails || [];
+  if (rows.length === 0) {
+    showToast('Please add at least one item');
+    return;
+  }
+
+  // Validate every row, collecting what is missing on each
+  const problems = [];
+  rows.forEach((row, idx) => {
+    const missing = [];
+    if (!row.FAC_NO) missing.push('asset');
+    if (!row.qty || Number(row.qty) <= 0) missing.push('quantity');
+    if (!String(row.workDet || '').trim()) missing.push('reason for disposal');
+    if (!row.Disposal_Type) {
+      missing.push('disposal type');
+    } else if (row.Disposal_Type === 'Selling' && !(Number(row.salvage_amount) > 0)) {
+      missing.push('salvage amount');
     }
-    if (!state.createADHeader?.Department && !state.createADHeader?.Department_Code) {
-      alert('Please select department.');
-      return;
-    }
-    if (!state.createADHeader?.Remarks) {
-      alert('Please enter remarks.');
-      return;
-    }
-    if (!state.createADDetails || state.createADDetails.length === 0) {
-      alert('Please add at least one item');
-      return;
-    }
-    const invalidRows = state.createADDetails.filter(row => !row.FAC_NO);
-    if (invalidRows.length > 0) {
-      alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
-      return;
-    }
-    openSaveDialog();
-  };
+    if (missing.length) problems.push(`Row ${idx + 1}: ${missing.join(', ')}`);
+  });
+
+  if (problems.length > 0) {
+    const shown = problems.slice(0, 3).join(' | ');
+    const more = problems.length > 3 ? ` (+${problems.length - 3} more rows)` : '';
+    showToast(`Please complete: ${shown}${more}`, 'warning');
+    return;
+  }
+
+  openSaveDialog();
+};
 
   const handleSuccessfulCreate = useCallback(async (newADNo) => {
     await refreshCompanyConfig();
@@ -591,7 +640,7 @@ const refreshData = useCallback(async () => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex flex-wrap justify-end gap-3 my-4 mx-14'>
+      <div className='flex flex-wrap justify-end gap-3 mx-16 mt-10'>
         {(state.isCreating || state.isEditing) && (
           <CustomBtn variant='saveBtn' iconType='save' onClick={handleSave}>
             {state.saving ? 'Saving...' : 'Save'}
@@ -651,14 +700,14 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+      <div className='p-10 my-5 bg-gray-100 rounded-lg shadow-lg lg:mx-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800'>
             {state.isCreating ? 'Creating Disposal' : state.isEditing ? 'Editing Disposal' : 'Display Disposal'}
           </h1>
           <div className='flex flex-wrap gap-2'>
-            <span className='text-xs text-gray-500'>Last Disposal created :</span>
-            <span className='text-xs text-gray-500'>
+            <span className='text-sm text-gray-500'>Last Disposal created :</span>
+            <span className='text-sm text-gray-500'>
               {adHeaders && adHeaders.length > 0 
                 ? [...adHeaders].sort((a, b) => {
                     const numA = parseInt(String(a.AD_No).split('-').pop() || 0);
@@ -667,8 +716,8 @@ const refreshData = useCallback(async () => {
                   })[0]?.AD_No 
                 : '---'}
             </span>
-            <span className='text-xs text-gray-500'>Document Date:</span>
-            <span className='text-xs text-gray-500'>
+            <span className='text-sm text-gray-500'>Document Date:</span>
+            <span className='text-sm text-gray-500'>
               {adHeaders && adHeaders.length > 0 
                 ? (() => {
                     const latest = [...adHeaders].sort((a, b) => {
@@ -688,7 +737,7 @@ const refreshData = useCallback(async () => {
           <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.AD_No || ''}</label> 
           <label className='pl-10 text-base font-normal text-gray-500'>Document Date : </label>
           <input 
-            className={`ml-5 p-2 text-base font-semibold text-gray-800 rounded-sm ${!state.isEditing && !state.isCreating ? '' : 'bg-white'} border border-gray-300`}
+            className={`ml-5 p-2 text-base min-w-[270px] border rounded-lg ${getAutocompleteSx(state.isEditing || state.isCreating)}`}
             type='date' 
             value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10) : ""} 
             disabled={isReadOnly}
@@ -709,35 +758,39 @@ const refreshData = useCallback(async () => {
           
           <Box className='mt-2'>
             <div className='flex flex-wrap items-center justify-start w-full gap-10 mt-4'>
-              <label className='text-base font-normal text-gray-500 w-28'>Department :</label>
-              <Autocomplete
-                variant='body2'
-                disabled={isReadOnly}
-                className={`rounded-sm ${!state.isEditing && !state.isCreating ? 'border' : 'border-none bg-white'} border-gray-300 w-80`}
-                size='small'
-                options={departments} 
-                value={currentHeader?.Department_Code || ''}
-                onChange={(e, newValue) => handleHeaderChange('Department_Code', newValue)}
-                renderInput={(params) => (
-                  <TextField {...params} 
-                    sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                    placeholder="Select Department" 
-                  />              
-                )} 
-              />
+              <div className='flex items-center min-w-[500px] gap-3'>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Department :</label>
+                <Autocomplete
+                  variant='body2'
+                  disabled={isReadOnly}
+                  className={`flex-1 min-w-[250px] `}
+                  size='small'
+                  options={departments} 
+                  value={currentHeader?.Department_Code || ''}
+                  onChange={(e, newValue) => handleHeaderChange('Department_Code', newValue)}
+                  renderInput={(params) => (
+                    <TextField {...params} 
+                      sx={getAutocompleteSx(state.isEditing || state.isCreating)}
+                      placeholder="Select Department" 
+                    />              
+                  )} 
+                />
+              </div>
 
-              <label className='text-base font-normal text-gray-500 w-28'>Evaluated by : </label>
-              <input
-                type="text"
-                disabled
-                className="text-base font-semibold text-gray-500"
-                value={currentHeader?.Evaluated_By || userName}
-                onChange={(e) => handleHeaderChange('Evaluated_By', e.target.value)}
-              />
+              <div className='flex items-center min-w-[240px] gap-3'>
+                <label className='text-base font-normal text-gray-500 w-28'>Evaluated by : </label>
+                <input
+                  type="text"
+                  disabled
+                  className="text-base font-semibold text-gray-500"
+                  value={currentHeader?.Evaluated_By || userName}
+                  onChange={(e) => handleHeaderChange('Evaluated_By', e.target.value)}
+                />
+              </div>
             </div>
 
 
-            <div className='flex items-start justify-start w-full gap-10 mt-4'>
+            <div className='flex max-w-[1000px] justify-start w-full gap-7 mt-4'>
               <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks :</label>
               <textarea
                 id="remarks"
@@ -746,12 +799,14 @@ const refreshData = useCallback(async () => {
                 minRows={2}
                 value={currentHeader?.Remarks || ''}
                 onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                className={`${!state.isEditing && !state.isCreating ? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300`}
+                className={`${!state.isEditing && !state.isCreating 
+                  ? 'border-slate-200  text-slate-500 '
+                  : 'border-slate-200 bg-white text-slate-600 cursor-default ' }
+                border rounded-md w-full  font-normal text-gray-800
+                `}
                 style={{ 
-                  width: '50rem',
                   resize: 'both',
-                  padding: '.5rem',
-                  border: '1px solid #ccc',
+                  padding: '.8rem',
                   marginTop: '.5rem'
                 }}   
               />
@@ -774,6 +829,8 @@ const refreshData = useCallback(async () => {
             currentADItems={currentADItems}
             updateDetailRow={updateDetailRow}
             addDetailRow={addDetailRow}
+            addDetailRowsFromMaintenance={addDetailRowsFromMaintenance}
+            onUploadingChange={setImageUploading}
             removeDetailRow={removeDetailRow}
             handleDeleteClick={handleDeleteClick}
             handleConfirmDelete={handleConfirmDelete}

@@ -498,7 +498,7 @@ export default function WorkOrderDialog({
   return (
     <>
       {/* Work Order Dialog */}
-      <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
+      <Dialog open={open} onClose={onClose} maxWidth="xxl" fullWidth>
         <DialogTitle>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -544,7 +544,9 @@ export default function WorkOrderDialog({
               </div>
 
               <TableContainer component={Paper} className="mb-4">
-                <Table size="small">
+                {/* Scroll area: vertical + horizontal. Pagination stays outside so it doesn't scroll away. */}
+                <div style={{ maxHeight: 420, overflow: 'auto' }}>
+                <Table size="small" stickyHeader sx={{ minWidth: 1500 }}>
                   <TableHead>
                     <TableRow className="bg-gray-50">
                       <TableCell>Item Status</TableCell>
@@ -591,7 +593,33 @@ export default function WorkOrderDialog({
                             <TableCell>{item.FAC_name}</TableCell>
                             <TableCell>{item.qty}</TableCell>
                             <TableCell>{item.uom}</TableCell>
-                            <TableCell>{item.detailsOfWork}</TableCell>
+                            <TableCell sx={{ verticalAlign: 'top' }}>
+                              {/* Fixed at ~3 lines by default; drag the bottom-right corner to resize
+                                  both width and height. Content scrolls if it overflows. */}
+                              <div
+                                title={item.detailsOfWork || ''}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  resize: 'both',
+                                  overflow: 'auto',
+                                  width: 240,
+                                  minWidth: 160,
+                                  maxWidth: 800,
+                                  height: '4.5em',     // 3 lines at line-height 1.5
+                                  minHeight: '1.5em',
+                                  maxHeight: 400,
+                                  lineHeight: 1.5,
+                                  whiteSpace: 'pre-wrap',
+                                  wordBreak: 'break-word',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: 4,
+                                  padding: '0 4px',
+                                  boxSizing: 'content-box',
+                                }}
+                              >
+                                {item.detailsOfWork}
+                              </div>
+                            </TableCell>
                             <TableCell>{item.evaluation}</TableCell>
                             <TableCell>{item.evalremarks}</TableCell>
                             <TableCell>
@@ -630,6 +658,7 @@ export default function WorkOrderDialog({
                     )}
                   </TableBody>
                 </Table>
+                </div>
                 <TablePagination
                   rowsPerPageOptions={[5, 10, 25]}
                   component="div"

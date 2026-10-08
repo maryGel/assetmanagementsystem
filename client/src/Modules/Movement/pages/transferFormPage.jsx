@@ -211,6 +211,13 @@ const refreshData = useCallback(async () => {
   const isReadOnly = !canEditDocument;
   const nextLevel = getNextLevel(baseHeader);
 
+  // Let a parent (e.g. the Transfer Type selector) know whether there are unsaved changes
+  const { onDirtyChange } = useProps;
+  const isDirty = !!(state.hasUnsavedChanges && (state.isCreating || state.isEditing));
+  useEffect(() => {
+    if (typeof onDirtyChange === 'function') onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
 
   const handleHeaderChange = (field, value) => {
@@ -591,7 +598,7 @@ const refreshData = useCallback(async () => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex flex-wrap justify-end w-full max-w-[1800px] gap-3 mx-auto my-4 px-4 lg:px-10'>
+      <div className='flex flex-wrap justify-end gap-3 mx-16'>
         {(state.isCreating || state.isEditing) && (
           <CustomBtn variant='saveBtn' iconType='save' onClick={handleSave}>
             {state.saving ? 'Saving...' : 'Save'}
@@ -651,7 +658,7 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-10 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+      <div className='p-10 mx-10 bg-gray-100 rounded-lg shadow-lg lg:my-5'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
           <h1 className='text-sm font-bold text-gray-800'>
             {state.isCreating ? 'Creating Transfer Form' : state.isEditing ? 'Editing Transfer Form' : 'Display Transfer Form'}

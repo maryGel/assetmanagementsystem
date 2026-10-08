@@ -1,7 +1,84 @@
-  import express from 'express';
+import express from 'express';
+  import fs from 'fs';
+  import path from 'path';
+  import multer from 'multer';
   import {db} from '../server.js';
 
   const router = express.Router();
+
+  // ---------- Image upload (server/uploads/disposal-images) ----------
+  const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'disposal-images');
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+  const MIME_BY_EXT = {
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+    '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
+  };
+
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('Only image files are allowed'));
+      }
+      cb(null, true);
+    },
+  });
+
+  // Safe file name: strip any path parts, keep the readable original name
+  const safeFileName = (name) =>
+    path.basename(String(name || 'image')).replace(/[\\/:*?"<>|]/g, '_');
+
+  // Unique file name inside the upload folder (TV!.jpg -> TV!_1700000000000.jpg if taken)
+  const uniqueFileName = (name) => {
+    let finalName = safeFileName(name);
+    if (fs.existsSync(path.join(UPLOAD_DIR, finalName))) {
+      const ext = path.extname(finalName);
+      finalName = `${path.basename(finalName, ext)}_${Date.now()}${ext}`;
+    }
+    return finalName;
+  };
+
+  // Buffer -> data URL so the browser can show it directly
+  const toDataUrl = (buffer, fileName) => {
+    if (!buffer) return null;
+    const mime = MIME_BY_EXT[path.extname(fileName || '').toLowerCase()] || 'image/jpeg';
+    return `data:${mime};base64,${Buffer.from(buffer).toString('base64')}`;
+  };
+
+  // Rows sent to the client: imgItem (BLOB) becomes a data URL
+  const withImageData = (rows) =>
+    rows.map((r) => ({ ...r, imgItem: toDataUrl(r.imgItem, r.imgTitle) }));
+
+  // Decide what to store in imgItem for a line: the saved file first,
+  // then the image already stored for the same asset, otherwise NULL.
+  const resolveImgItem = (item, existingByFacNo = {}) => {
+    if (!item.imgTitle) return null; // image removed / none chosen
+    const filePath = path.join(UPLOAD_DIR, safeFileName(item.imgTitle));
+    if (fs.existsSync(filePath)) return fs.readFileSync(filePath);
+    return existingByFacNo[item.FAC_NO] || null;
+  };
+
+  // Upload one image. Saves the file to disk and returns its name + data URL.
+  router.post('/upload-image', (req, res) => {
+    upload.single('image')(req, res, (err) => {
+      if (err) return res.status(400).json({ error: err.message });
+      if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+
+      const imgTitle = uniqueFileName(req.file.originalname);
+      fs.writeFile(path.join(UPLOAD_DIR, imgTitle), req.file.buffer, (writeErr) => {
+        if (writeErr) {
+          console.error('Image save error:', writeErr);
+          return res.status(500).json({ error: 'Failed to save image' });
+        }
+        res.status(201).json({
+          imgTitle,
+          imgItem: toDataUrl(req.file.buffer, imgTitle),
+        });
+      });
+    });
+  });
 
   // Get all ad_d
   router.get('/', (req, res) => {
@@ -18,7 +95,7 @@
             if(err){
                 return res.status(500).json({err: 'Error fetching the data: ad_d'})
             }
-            res.json(results);
+            res.json(withImageData(results));
         });
     });
   });
@@ -52,7 +129,7 @@
           return res.status(404).json({error: 'ad_d not found'})
         }
 
-        res.json(result[0]);
+        res.json(withImageData(result)[0]);
       });
     });
   });
@@ -91,8 +168,9 @@
       // Process each item
       const sql = `INSERT INTO ad_d (
         AD_No, FAC_NO, FAC_name, qty, xDate, xpost, 
-        UOM, brand, serialno, workDet, Disposal_Type, salvage_amount
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`;
+        UOM, brand, serialno, workDet, Disposal_Type, salvage_amount,
+        imgTitle, imgItem
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       
       const promises = items.map((item) => {
         const {
@@ -108,6 +186,7 @@
           workDet,
           Disposal_Type,          
           salvage_amount,
+          imgTitle,
         } = item;
         
         const values = [
@@ -123,6 +202,8 @@
           workDet || '',
           Disposal_Type || '',
           salvage_amount !== undefined ? Number(salvage_amount) : 0,
+          imgTitle || null,
+          resolveImgItem(item),
         ];
         
         return new Promise((resolve, reject) => {
@@ -167,6 +248,16 @@
     db.getConnection((err, connection) => {
       if (err) return res.status(500).json({ error: 'DB connection error' });
       
+      // Keep the images already stored for this AD, so unchanged lines
+      // don't lose their imgItem when the details are replaced below
+      connection.query('SELECT FAC_NO, imgItem FROM ad_d WHERE AD_No = ?', [AD_No], (selErr, existingRows) => {
+      if (selErr) {
+        connection.release();
+        return res.status(500).json({ error: 'Error reading old details', details: selErr.message });
+      }
+      const existingByFacNo = {};
+      existingRows.forEach(r => { if (r.imgItem) existingByFacNo[r.FAC_NO] = r.imgItem; });
+
       // First, delete all existing details for this AD
       const deleteSql = 'DELETE FROM ad_d WHERE AD_No = ?';
       
@@ -182,7 +273,7 @@
         }
         
         // Insert new details
-        const insertSql = 'INSERT INTO ad_d (AD_No, FAC_NO, FAC_name, qty, xDate,  xpost, UOM, brand, serialno, workDet, Disposal_Type, salvage_amount) VALUES ?';
+        const insertSql = 'INSERT INTO ad_d (AD_No, FAC_NO, FAC_name, qty, xDate,  xpost, UOM, brand, serialno, workDet, Disposal_Type, salvage_amount, imgTitle, imgItem) VALUES ?';
         
         const values = details.map(detail => [
           AD_No,
@@ -197,6 +288,8 @@
           detail.workDet || '',
           detail.Disposal_Type || '',
           detail.salvage_amount !== undefined ? Number(detail.salvage_amount) : 0,
+          detail.imgTitle || null,
+          resolveImgItem(detail, existingByFacNo),
         ]);
         
         connection.query(insertSql, [values], (err, insertResult) => {
@@ -214,6 +307,7 @@
             insertedCount: insertResult.affectedRows
           });
         });
+      });
       });
     });
   });
@@ -236,5 +330,3 @@
   });
 
   export default router;
-
- 

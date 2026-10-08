@@ -611,7 +611,7 @@ const handleEmployeeChange = (event, newValue) => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex justify-end gap-3 my-4 mx-14'>
+      <div className='flex flex-wrap justify-end gap-3 mx-16 mt-10'>
         {(state.isCreating || state.isEditing) && (
           <CustomBtn variant='saveBtn' iconType='save' onClick={handleSave}>
             {state.saving ? 'Saving...' : 'Save'}
@@ -671,14 +671,14 @@ const handleEmployeeChange = (event, newValue) => {
         )}
       </div>
           
-      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+      <div className='p-10 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800'>
             {state.isCreating ? 'Creating Asset Accountability' : state.isEditing ? 'Editing Asset Accountability' : 'Display Asset Accountability'}
           </h1>
           <div className='flex flex-wrap gap-2'>
-            <span className='text-xs text-gray-500'>Last Asset Accountability created :</span>
-            <span className='text-xs text-gray-500'>
+            <span className='text-sm text-gray-500'>Last Asset Accountability created :</span>
+            <span className='text-sm text-gray-500'>
               {assetAccHeaders && assetAccHeaders.length > 0 
                 ? [...assetAccHeaders].sort((a, b) => {
                     const numA = parseInt(String(a.AAFNo).split('-').pop() || 0);
@@ -687,8 +687,8 @@ const handleEmployeeChange = (event, newValue) => {
                   })[0]?.AAFNo 
                 : '---'}
             </span>
-            <span className='text-xs text-gray-500'>Document Date:</span>
-            <span className='text-xs text-gray-500'>
+            <span className='text-sm text-gray-500'>Document Date:</span>
+            <span className='text-sm text-gray-500'>
               {assetAccHeaders && assetAccHeaders.length > 0 
                 ? (() => {
                     const latest = [...assetAccHeaders].sort((a, b) => {

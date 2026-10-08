@@ -472,7 +472,7 @@ function SearchTransactions(useProps) {
           onChange={(event, newValue) => setDraftTransType(newValue)}
           getOptionLabel={(option) => option}
           renderInput={(params) => (
-            <TextField {...params} label="Document Type" placeholder="DocumentType" />
+            <TextField {...params} label="Document Type" placeholder="Document Type" />
           )}
           sx={{ width: '20rem', marginRight: '1rem', flex: '1 1 200px', minWidth: 180, maxWidth: 280  }}
         />

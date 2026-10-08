@@ -59,6 +59,8 @@ export default function DisposalTabs({
     currentADItems,
     updateDetailRow,
     addDetailRow,
+    addDetailRowsFromMaintenance,
+    onUploadingChange,
     removeDetailRow,
     handleDeleteClick,
     handleConfirmDelete,
@@ -119,6 +121,8 @@ export default function DisposalTabs({
           currentADItems={currentADItems}
           updateDetailRow={updateDetailRow}
           addDetailRow={addDetailRow}
+          addDetailRowsFromMaintenance={addDetailRowsFromMaintenance}
+          onUploadingChange={onUploadingChange}
           removeDetailRow={removeDetailRow}
           handleDeleteClick={handleDeleteClick}
           handleConfirmDelete={handleConfirmDelete}

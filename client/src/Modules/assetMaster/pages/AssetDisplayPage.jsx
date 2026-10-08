@@ -365,7 +365,7 @@ export default function AssetMasterDisplay() {
                 </div>
 
                 <div className='flex items-center min-w-0 gap-3'>
-                  <span className='text-gray-500 w-28 shrink-0'>Status:</span>
+                  <span className='text-gray-500 w-28 shrink-0'>Current Status:</span>
                   <div>
                     <StatusBadge status={asset.xxStats} />
                   </div>

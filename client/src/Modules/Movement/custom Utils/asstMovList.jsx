@@ -23,7 +23,7 @@ export const assetMovList= [
   {
     id: 4,
     title: 'Transfer',
-    link: '/assetMovement/pages/TRFormPage',
+    link: '/assetMovement/pages/TRFormType',
     imgSrc: '/icons/menu_icons/transfer.png',
     headerTitle: 'Asset Transfer',
   },

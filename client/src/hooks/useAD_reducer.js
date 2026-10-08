@@ -170,6 +170,8 @@ function adReducer(state, action) {
             workDet: '',
             Disposal_Type: '',
             salvage_amount: '',
+            imgTitle: '',
+            imgItem: '',
             },
         ],
         hasUnsavedChanges: false,
@@ -197,6 +199,8 @@ function adReducer(state, action) {
         workDet: '',
         Disposal_Type: '',
         salvage_amount: '',
+        imgTitle: '',
+        imgItem: '',
       };
 
       return {
@@ -205,6 +209,19 @@ function adReducer(state, action) {
         hasUnsavedChanges: true,
       };
       
+
+    // Bulk add rows (e.g. assets picked from the Maintenance dialog).
+    // Blank placeholder rows (no FAC_NO) are replaced so picked assets start at the first free row.
+    case 'ADD_DETAIL_ROWS': {
+      const incoming = action.payload || [];
+      if (incoming.length === 0) return state;
+      const kept = state.createADDetails.filter((row) => row.FAC_NO);
+      return {
+        ...state,
+        createADDetails: [...kept, ...incoming],
+        hasUnsavedChanges: true,
+      };
+    }
 
     // FIXED: UPDATE_DETAIL_ROW to handle both create and edit modes
       case 'UPDATE_DETAIL_ROW':
@@ -449,7 +466,8 @@ export const useADData = (onSaveSuccess) => {
       console.log('Header saved:', res.data);
       
       const detailPayload = state.createADDetails.map((item) => {
-        const { id, ...cleanItem } = item;
+        // imgItem (base64 preview) is not sent: the server reads the saved file by imgTitle
+        const { id, imgItem, ...cleanItem } = item;
         return {
           ...cleanItem,
           AD_No: state.createADHeader.AD_No,
@@ -569,7 +587,8 @@ export const useADData = (onSaveSuccess) => {
       
       // Format details - PRESERVE dates exactly as they are
       const detailPayload = state.createADDetails.map((item) => {
-        const { id, ...cleanItem } = item;
+        // imgItem (base64 preview) is not sent: the server keeps/reads the image by imgTitle
+        const { id, imgItem, ...cleanItem } = item;
         return {
           ...cleanItem,
           AD_No: state.createADHeader.AD_No,
@@ -698,11 +717,43 @@ export const useADData = (onSaveSuccess) => {
       workDet: '',
       Disposal_Type: '',
       salvage_amount: '',
+      imgTitle: '',
+      imgItem: '',
     };
     
     // Use the same action type for both create and edit
     // The reducer will handle it based on state.selectedAD
     dispatch({ type: 'ADD_DETAIL_ROW', payload: newRow });
+  };
+
+  // Add rows prefilled from the Maintenance dialog (jo_d rows with Main_Status = For Disposal)
+  const addDetailRowsFromMaintenance = (picked = []) => {
+    const todayObj = new Date();
+    const today = `${todayObj.getFullYear()}-${String(
+      todayObj.getMonth() + 1
+    ).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+    const adNo = state.isCreating ? state.createADHeader?.AD_No || '' : state.selectedAD?.AD_No || '';
+    const stamp = Date.now();
+
+    const newRows = picked.map((r, index) => ({
+      id: `${stamp}_${index}`,
+      AD_No: adNo,
+      FAC_NO: r.FAC_NO || '',
+      FAC_name: r.FAC_name || '',
+      qty: r.qty || 1,
+      xDate: today,
+      xpost: 0,
+      UOM: r.UOM || '',
+      brand: r.brand || '',
+      serialno: r.serialno ?? r.serialNo ?? '',
+      workDet: r.workDet || '',
+      Disposal_Type: '',
+      salvage_amount: '',
+      imgTitle: '',
+      imgItem: '',
+    }));
+
+    dispatch({ type: 'ADD_DETAIL_ROWS', payload: newRows });
   };
 
   const updateHeaderField = (field, value) => {
@@ -834,6 +885,7 @@ const forceRefreshAD = useCallback(async (AD_No) => {
     cancelEditCreate,
 
     addDetailRow,
+    addDetailRowsFromMaintenance,
     updateHeaderField,
     updateDetailRow,
     removeDetailRow,

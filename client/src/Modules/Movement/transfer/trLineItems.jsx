@@ -32,11 +32,12 @@ import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 // Custom Utils
 import { tableFieldFormat } from '../custom Utils/customLayout';
 import formatWithCommas from '../../../Utils/formatWithCommas';
-// import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
+// import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
 
 // COLUMN CONFIG (width = default px width, resizable)
 const MIN_COL_WIDTH = 50;
 const COLUMNS = [
+  { id: 'no',       label: 'No',      width: 60,  sortable: false },
   { id: 'action',       label: 'Action',      width: 70,  sortable: false },
   { id: 'Orig_Department',       label: 'From Department',   width: 300, type: 'string' },
   { id: 'FAC_NO',       label: 'Asset No.',   width: 300, type: 'string' },
@@ -47,14 +48,45 @@ const COLUMNS = [
   { id: 'serialno',     label: 'Serial No',   width: 160, type: 'string' },
   { id: 'Adate',        label: 'Acquired Date',    width: 160, type: 'date' },
   { id: 'AAmount',      label: 'Unit Cost', width: 170, type: 'number' },
-  { id: 'Holder',       label: 'Old Holder',   width: 170, type: 'string' },
+  { id: 'Holder',       label: 'Old Holder',   width: 190, type: 'string' },
 ];
 
 // Fields covered by the search box
 const SEARCH_FIELDS = ['FAC_NO', 'FAC_name', 'Description', 'serialno', 'brand', 'ItemLocation', 'Holder'];
 
 // Columns frozen on the left while scrolling sideways
-const FROZEN_COLS = ['action', 'FAC_NO'];
+const FROZEN_COLS = ['no', 'action', 'FAC_NO'];
+
+// Line fields that come from the selected asset. They are all cleared when the
+// line's From Department is changed or removed.
+const ROW_ASSET_FIELDS = [
+  'FAC_NO', 'FAC_name', 'qty', 'UOM', 'brand',
+  'serialNo', 'serialno', 'Date_Aq', 'Amount_aq', 'Holder', 'location',
+];
+
+const money = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
+
+// An asset can only be added to a transfer while its itemlist status is ACTIVE
+// (anything else means it still has a pending transaction)
+const PENDING_TRANSACTION_MSG = 'cannot add with pending transaction';
+const DUPLICATE_ASSET_MSG = 'Asset No. is already on another line';
+// Reads the status field regardless of casing (xStatus / xstatus / XSTATUS ...)
+const getXStatus = (asset) => {
+  if (!asset) return '';
+  const key = Object.keys(asset).find(k => k.toLowerCase() === 'xxstats');
+  return key ? String(asset[key] ?? '').trim().toUpperCase() : '';
+};
+const isActiveAsset = (asset) => getXStatus(asset) === '';
+
+// Vertical scroll: show at most this many line items before the table scrolls
+const MAX_VISIBLE_ROWS = 10;
+const ROW_HEIGHT = 56;      // px, fixed body row height
+const HEADER_HEIGHT = 56;   // px, header row height
+// Extra space so the scrollbars never sit on top of the last column / last row
+const SCROLLBAR_PADDING = 24;
 
 // Normalise any date value to YYYY-MM-DD (local), or '' if empty/invalid
 const toDateStr = (value) => {
@@ -100,6 +132,7 @@ const TRLineItems = ({
   const {
     allAssets,
     fetchAssets,
+    fetchAssetByFacN0,
     isLoading
   } = useAssetMasterData();
   const [snackbar, setSnackbar] = useState({
@@ -110,6 +143,8 @@ const TRLineItems = ({
   const [assetOptions, setAssetOptions] = useState([]);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const fetchAttempted = useRef(false);
+  // FacNOs the server reported as not ACTIVE when picked (the cached list can be stale)
+  const [blockedFacNOs, setBlockedFacNOs] = useState({});
 
   // LOAD ASSETS
   useEffect(() => {
@@ -135,50 +170,49 @@ const TRLineItems = ({
   useEffect(() => {
     if (allAssets?.length > 0) {
       setAssetOptions(
-        allAssets.map(a => ({
-          ...a,
-          FacNO: String(a.FacNO ?? '').trim(),
-        }))
+        allAssets
+        .map(a => ({ ...a, FacNO: String(a.FacNO ?? '').trim() }))
+        .filter(a => a.FacNO)
       );
     }
   }, [allAssets]);
-  
-    // Department currently 
-  const selectedDept = String(
-    currentTRItems?.Orig_Department || ''
-  ).trim().toLowerCase();
 
-  console.log('Selected Department:', selectedDept);
-
-  const handleDetailsChange = (field, value) => {
-    updateDetailRow(field, value);
-  };
+  //   // Department currently
+  // const selectedDept = String(
+  //   currentTRItems?.Orig_Department || ''
+  // ).trim().toLowerCase();
 
 
-  // Only assets that belong to the selected department
-  const deptAssetOptions = useMemo(() => {
-    if (!selectedDept) return [];   // force the user to pick a department first
-    return assetOptions.filter(
-      a => String(a.Department ?? '').trim().toLowerCase() === selectedDept
+  // Asset Nos already used on the OTHER lines of this transfer
+  const getUsedFacNOs = (rowId) =>
+    new Set(
+      (Array.isArray(currentTRItems) ? currentTRItems : [])
+        .filter(r => r.id !== rowId && r.FAC_NO)
+        .map(r => String(r.FAC_NO).trim())
     );
-  }, [assetOptions, selectedDept]);
 
   // Per-row options: the filtered list, plus the row's current asset if it falls outside
   // the filter (e.g. loading an old JO), so MUI doesn't warn and the value still displays.
   const getRowOptions = (row) => {
     const dept = String(row.Orig_Department || '').trim().toLowerCase();
+    const usedElsewhere = getUsedFacNOs(row.id);
+    // only ACTIVE assets of the selected department that are not already on another line
     const deptOptions = dept
-      ? assetOptions.filter(a => String(a.Department ?? '').trim().toLowerCase() === dept)
+      ? assetOptions.filter(a =>
+          String(a.Department ?? '').trim().toLowerCase() === dept &&
+          isActiveAsset(a) && !blockedFacNOs[a.FacNO] &&
+          !usedElsewhere.has(a.FacNO)
+        )
       : [];
     const current = assetOptions.find(opt => opt.FacNO === row.FAC_NO);
     return current && !deptOptions.includes(current)
       ? [current, ...deptOptions]
       : deptOptions;
   };
-  
+
   // SEARCH / SORT / RESIZE STATE
   const [searchText, setSearchText] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: null }); // 'asc' | 'desc' | null
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: '' }); // 'asc' | 'desc' | null
   const [colWidths, setColWidths] = useState(() =>
     COLUMNS.reduce((acc, c) => ({ ...acc, [c.id]: c.width }), {})
   );
@@ -245,8 +279,10 @@ const TRLineItems = ({
     return {
       position: 'sticky',
       left,
-      ...(isHead && { top: 0 }), 
-      zIndex: isHead ? 4 : 4,                       // header cells must sit above body cells
+      ...(isHead && { top: 0 }),
+      // Stacking order (low -> high): body frozen (2) < normal header (3) < frozen header (5).
+      // Body frozen cells must stay below the header, otherwise they paint over it while scrolling down.
+      zIndex: isHead ? 5 : 2,
       backgroundColor: isHead ? '#f5f5f5' : '#fff', // opaque, so scrolled content doesn't show through
       ...(isLastFrozen && { boxShadow: '2px 0 4px -2px rgba(0,0,0,0.25)' }),
     };
@@ -284,53 +320,158 @@ const TRLineItems = ({
     return items;
   }, [currentTRItems, searchText, sortConfig]);
 
-  // ADD ROW
+  // Text typed in each row's Asset No. box (used to explain why nothing can be picked)
+  const [assetInputs, setAssetInputs] = useState({});
+
+  // Message shown when the Asset No. dropdown has no options for a row
+  const getNoOptionsText = (row) => {
+    const dept = String(row.Orig_Department || '').trim().toLowerCase();
+    if (!dept) return 'Select a department first';
+
+    const q = String(assetInputs[row.id] || '').trim().toLowerCase();
+    if (q) {
+      const matches = (a) =>
+        String(a.Department ?? '').trim().toLowerCase() === dept &&
+        (String(a.FacNO ?? '').toLowerCase().includes(q) ||
+          String(a.FacName ?? '').toLowerCase().includes(q));
+
+      const matchesPending = assetOptions.some(a =>
+        matches(a) && (!isActiveAsset(a) || blockedFacNOs[a.FacNO])
+      );
+      if (matchesPending) return PENDING_TRANSACTION_MSG;
+
+      const usedElsewhere = getUsedFacNOs(row.id);
+      const matchesDuplicate = assetOptions.some(a =>
+        matches(a) && usedElsewhere.has(a.FacNO)
+      );
+      if (matchesDuplicate) return DUPLICATE_ASSET_MSG;
+    }
+    return 'Asset not available';
+  };
+
+  // ADD ROW (line numbers come from each row's position, so they update automatically)
   const handleAddRow = () => {
     addDetailRow();
-    // updateDetailRow(rowId, field, value);
   };
-  
+
+  // Line number = position in the full list, so it stays stable while searching/sorting
+  const getLineNo = (row) => {
+    const idx = Array.isArray(currentTRItems)
+      ? currentTRItems.findIndex(r => r.id === row.id)
+      : -1;
+    return idx + 1;
+  };
+
   const handleSelectItem = (facNo) => {
     const path = `/assetFolder/assetMasterDisplay?copyFrom=${facNo}`;
     window.open(path, "_blank");
   };
 
   // UPDATE FIELD
-  const handleRowFieldChange = (
-    rowId,
-    field,
-    value
-  ) => {
+  const handleRowFieldChange = (rowId, field, value) => {
+    if (field === 'Orig_Department') {
+      const row = (Array.isArray(currentTRItems) ? currentTRItems : []).find(r => r.id === rowId);
+      const prevDept = String(row?.Orig_Department || '').trim();
+      const nextDept = String(value || '').trim();
+
+      // Department changed or removed: this line's asset details no longer apply
+      if (prevDept !== nextDept) {
+        ROW_ASSET_FIELDS.forEach(f => updateDetailRow(rowId, f, ''));
+        setAssetInputs(prev => ({ ...prev, [rowId]: '' }));
+      }
+
+      updateDetailRow(rowId, field, value || '');
+      return;
+    }
+
     updateDetailRow(rowId, field, value);
   };
+
   // ASSET SELECT
 
-  const handleAssetSelect = (rowId, selectedAsset) => {
+  // Pulls the asset record out of whatever shape GET /itemlist/:facNo returns
+  const extractAssetRecord = (res) => {
+    if (!res) return ;
+    if (Array.isArray(res)) return res[0] || '';
+    if (Array.isArray(res.data)) return res.data[0] || '';
+    return res.data || res.asset || res;
+  };
+
+  const handleAssetSelect = async (rowId, selectedAsset) => {
     if (!selectedAsset) return;
-    
+
+    // the same Asset No. cannot be on two lines
+    if (getUsedFacNOs(rowId).has(String(selectedAsset.FacNO).trim())) {
+      setSnackbar({ open: true, message: DUPLICATE_ASSET_MSG, severity: 'warning' });
+      return;
+    }
+
+    // Check the CURRENT xStatus of the selected FacNO on the server, because the
+    // dropdown list is loaded once and can be out of date.
+    let latest = selectedAsset;
+    let fullRecord = '';   // complete itemlist row (the dropdown list only has a few columns)
+    try {
+      const fresh = extractAssetRecord(await fetchAssetByFacN0(selectedAsset.FacNO));
+      if (fresh && typeof fresh === 'object') fullRecord = fresh;
+      if (fresh && getXStatus(fresh)) latest = fresh;
+    } catch (err) {
+      console.error('Could not verify asset status, using cached list value:', err);
+    }
+
+    // DEBUG: shows exactly which record/status the check is looking at
+    console.log('[xStatus check]', {
+      FacNO: selectedAsset.FacNO,
+      cachedXStatus: getXStatus(selectedAsset),
+      latestXStatus: getXStatus(latest),
+      latestFields: Object.keys(latest),
+    });
+
+    // never accept an asset that is not ACTIVE in itemlist
+    if (!isActiveAsset(latest)) {
+      setBlockedFacNOs(prev => ({ ...prev, [selectedAsset.FacNO]: true }));
+      setSnackbar({ open: true, message: PENDING_TRANSACTION_MSG, severity: 'warning' });
+      return;
+    }
+    setBlockedFacNOs(prev => {
+      if (!prev[selectedAsset.FacNO]) return prev;
+      const { [selectedAsset.FacNO]: _removed, ...rest } = prev;
+      return rest;
+    });
+    setAssetInputs(prev => ({ ...prev, [rowId]: '' }));
+
     console.log('Selected asset for row:', rowId, selectedAsset);
-    
+
+    // Cached list row + the full record from the server (non-empty values win),
+    // so fields missing from the dropdown list (Adate, Holder, balance_unit...) still fill in
+    const src = {
+      ...selectedAsset,
+      ...Object.fromEntries(
+        Object.entries(fullRecord || {}).filter(([, v]) => v !== null && v !== undefined && v !== '')
+      ),
+    };
+
     const updates = {
       Orig_Department: selectedAsset.Department || '',
-      FAC_NO: selectedAsset.FacNO || 'n ',
+      FAC_NO: selectedAsset.FacNO || '',
       FAC_name: selectedAsset.FacName || '',
-      qty: selectedAsset.balance_unit || 1,
-      UOM: selectedAsset.Unit || '',
-      brand: selectedAsset.Brand || '',
-      serialNo: selectedAsset.serialNo || '',
-      Date_Aq: selectedAsset.Adate || '',
-      Amount_aq: selectedAsset.AAmount || '',
-      Holder: selectedAsset.Holder || '',
-      location: selectedAsset.ItemLocation || '',
+      qty: src.balance_unit || 1,
+      UOM: src.Unit || '',
+      brand: src.Brand || '',
+      serialNo: src.serialNo || '',
+      serialno: src.serialNo || src.serialno || '',   // the table reads `serialno`
+      Date_Aq: toDateStr(src.Adate),                  // <input type="date"> needs YYYY-MM-DD
+      Amount_aq: src.AAmount || '',
+      Holder: src.Holder || '',
+      location: src.ItemLocation || '',
 
     };
-    
+
     // Update each field individually
     Object.entries(updates).forEach(([field, value]) => {
       updateDetailRow(rowId, field, value);
     });
   };
-  
+
   // FILTER OPTIONS
   const filterOptions = (options, { inputValue }) => {
     if (!inputValue) {
@@ -346,7 +487,7 @@ const TRLineItems = ({
 
   return (
 
-    
+
     <Box sx={{ p: 2, width: '100%' }}>
       {!assetsLoaded && isLoading && (
         <Box
@@ -370,7 +511,7 @@ const TRLineItems = ({
           placeholder="Search asset details..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          sx={{ 
+          sx={{
             // Responsive widths based on screen sizes
             width: {
               xs: '100%',      // Mobile screens
@@ -416,9 +557,11 @@ const TRLineItems = ({
         component={Paper}
         sx={{
           width: '100%',
-          maxHeight: '72vh',
+          // header + 10 rows; anything beyond scrolls vertically
+          maxHeight: HEADER_HEIGHT + ROW_HEIGHT * MAX_VISIBLE_ROWS,
           overflowX: 'auto',
           overflowY: 'auto',
+          scrollbarGutter: 'stable',
           '& .MuiTable-root': {
             minWidth: { xs: 1800, xl: '100%' }
           }
@@ -436,7 +579,19 @@ const TRLineItems = ({
             },
             '& .MuiTableCell-head': {
               backgroundColor: '#f5f5f5',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              height: HEADER_HEIGHT
+            },
+            '& .MuiTableBody-root .MuiTableRow-root': {
+              height: ROW_HEIGHT
+            },
+            // padding after the last column so the vertical scrollbar doesn't cover its fields
+            '& .MuiTableCell-root:last-of-type': {
+              paddingRight: `${SCROLLBAR_PADDING}px`
+            },
+            // padding under the last row so the horizontal scrollbar doesn't cover its fields
+            '& .MuiTableBody-root .MuiTableRow-root:last-of-type .MuiTableCell-root': {
+              paddingBottom: `${SCROLLBAR_PADDING}px`
             }
           }}
         >
@@ -513,11 +668,16 @@ const TRLineItems = ({
               </TableRow>
             )}
             {displayedItems.map((row) => (
-              
+
+
               <TableRow
                 key={row.id}
                 hover
               >
+                {/* Line No */}
+                <TableCell sx={getFrozenSx('no')}>
+                  {getLineNo(row)}
+                </TableCell>
                 {/* DELETE */}
                 <TableCell sx={getFrozenSx('action')}>
                   <IconButton
@@ -529,6 +689,7 @@ const TRLineItems = ({
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </TableCell>
+
                 {/* FROM DEPARTMENT */}
                 <TableCell sx={getFrozenSx('Orig_Department')}>
                   <Autocomplete
@@ -536,20 +697,20 @@ const TRLineItems = ({
                     disabled={isReadOnly}
                     className={`flex-1 min-w-[180px] max-w-sm`}
                     size = 'small'
-                    options= {departments} 
-                    value={row?.Orig_Department || '' }
+                    options= {departments}
+                    value={row?.Orig_Department || ''}
                     onChange={(e, newValue) =>  handleRowFieldChange(row.id,'Orig_Department', newValue)}
                     renderInput={(params) => (
-                      <TextField {...params} 
+                      <TextField {...params}
                         size="small"
                           placeholder="Search department"
                           sx={{
                             '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
                             width: '100%'
                           }}
-                      />              
-                    )} 
-                  />        
+                      />
+                    )}
+                  />
                 </TableCell>
                 {/* ASSET NO */}
                 <TableCell sx={getFrozenSx('FAC_NO')}>
@@ -571,7 +732,7 @@ const TRLineItems = ({
                         },
                       }}
                     >
-                      <Link       
+                      <Link
                         component="button"
                         underline="hover"
                         onClick={() => handleSelectItem(row.FAC_NO)}
@@ -587,13 +748,21 @@ const TRLineItems = ({
                       </Link>
                     </Box>
                   ) : (
-                    <Autocomplete   
+                    <Autocomplete
                       fullWidth
-                      options={getRowOptions(row)} 
-                      noOptionsText={row.Orig_Department ? 'No assets for this department' : 'Select a department first'}                      loading={!assetsLoaded && isLoading}
+                      options={getRowOptions(row)}
+                      noOptionsText={getNoOptionsText(row)}
+                      onInputChange={(event, value, reason) => {
+                        if (reason === 'input' || reason === 'clear') {
+                          setAssetInputs(prev => ({ ...prev, [row.id]: value }));
+                        }
+                      }}
+                      loading={!assetsLoaded && isLoading}
                       filterOptions={filterOptions}
                       value={
-                        assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
+                        row.FAC_NO
+                          ? assetOptions.find(opt => opt.FacNO === row.FAC_NO) || null
+                          : null
                       }
                       onChange={(event, newValue) => {
                         handleAssetSelect(row.id, newValue);
@@ -724,7 +893,7 @@ const TRLineItems = ({
                   <TextField
                     size="small"
                     type='date'
-                    value={row.Date_Aq || ''}
+                    value={toDateStr(row.Date_Aq)}
                     disabled
                     fullWidth
                     sx={{
@@ -737,7 +906,9 @@ const TRLineItems = ({
                 <TableCell>
                   <TextField
                     size="small"
-                    value={row.Amount_aq || ''}
+                    className="max-w-64"
+                    
+                    value={money.format(Number(row.Amount_aq || 0))}
                     disabled
                     fullWidth
                     sx={{

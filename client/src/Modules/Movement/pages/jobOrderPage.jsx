@@ -137,7 +137,6 @@ export default function JOFormPage(useProps) {
         log.Module === 'Lost Asset')
   );
 
-
     // Fetch total levels
   useEffect(() => {
     let isMounted = true;
@@ -599,7 +598,7 @@ const refreshData = useCallback(async () => {
   console.log('Button config:', buttonConfig);
     
   return (
-    <div className=' w-full min-w-0 max-w-[2000px] mx-auto p-3'>
+    <div className='w-full min-w-0 p-3 mx-auto '>
       {/* Save Confirmation Dialog */}
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
@@ -740,7 +739,7 @@ const refreshData = useCallback(async () => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex flex-wrap justify-end w-full max-w-[1800px] gap-3 mx-auto my-4 px-4 lg:px-10'>
+      <div className='flex flex-wrap justify-end gap-3 mx-16 mt-10'>
         
         {/* Save Button */}
         {(state.isCreating || state.isEditing) && (
@@ -842,7 +841,7 @@ const refreshData = useCallback(async () => {
         )}
       </div>
           
-      <div className='p-10 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+      <div className='p-10 my-5 bg-gray-100 rounded-lg shadow-lg lg:mx-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
           <h1 className='text-sm font-bold text-gray-800 '>{
             state.isCreating ? 'Creating Job Order' : state.isEditing ? 'Editing Job Order' : 'Display Job Order'
@@ -912,7 +911,7 @@ const refreshData = useCallback(async () => {
             </div>
             <Box className='mt-2 '>
               <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
-                <div className='flex items-center  min-w-[400px] gap-3'>
+                <div className='flex items-center min-w-[400px] gap-3'>
                   <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Department :</label>
                   <Autocomplete
                     variant='body2'
@@ -964,7 +963,6 @@ const refreshData = useCallback(async () => {
                   style={{ 
                     resize: 'both',
                     padding: '.5rem',
-                    // border: '1px solid #ccc',
                     marginTop: '.5rem'
                   }}   
                 />

@@ -19,7 +19,6 @@
 //     companyConfig,
 //     userName,
 //     totalLevels,
-//     approvalLogs,      // optional - filtered approval log rows for this AD
 //   })}>
 //     Preview
 //   </CustomBtn>
@@ -76,117 +75,73 @@ const defaultDocStatus = (status) => {
   }
 };
 
+// The line items use 'Selling' (older code compared against 'Sell')
+const isSellType = (type) => type === 'Selling' || type === 'Sell';
+
 /* ------------------------------------------------------------------ */
 /*  HTML builders                                                     */
 /* ------------------------------------------------------------------ */
 
-function buildItemsRows(items) {
-  if (!items || items.length === 0) {
-    return `
-      <tr>
-        <td colspan="9" class="empty-row">No line items on this Disposal.</td>
-      </tr>`;
-  }
+function buildItemCard(row, idx) {
+  const disposalType = row.Disposal_Type || '—';
+  const salvage = isSellType(disposalType) ? formatAmount(row.salvage_amount) : '—';
+  const imageHtml = row.imgItem
+    ? `<img class="item-img" src="${escapeHtml(row.imgItem)}" alt="${escapeHtml(row.imgTitle || row.FAC_name || 'Asset image')}" />`
+    : `<div class="no-image">No image</div>`;
 
-  return items
-    .map((row, idx) => {
-      const disposalType = row.Disposal_Type || '—';
-      const salvage = disposalType === 'Sell' ? formatAmount(row.salvage_amount) : '—';
-      return `
+  const line = (label, value) => `
         <tr>
-          <td class="num-cell">${idx + 1}</td>
-          <td>${escapeHtml(row.FAC_NO)}</td>
-          <td>${escapeHtml(row.FAC_name)}</td>
-          <td class="center">${escapeHtml(row.qty)}</td>
-          <td class="center">${escapeHtml(row.UOM)}</td>
-          <td class="work-details">${escapeHtml(row.workDet)}</td>
-          <td class="center">
-            <span class="type-pill type-${disposalType === 'Sell' ? 'sell' : 'dispose'}">${escapeHtml(disposalType)}</span>
-          </td>
-          <td class="amount-cell">${salvage}</td>
-          <td>${escapeHtml(row.Brand)}</td>
-          <td>${escapeHtml(row.serialno)}</td>
+          <th class="lbl">${label}</th>
+          <td class="val">${value}</td>
         </tr>`;
-    })
-    .join('');
+
+  // 9 label/value rows on the left; the image spans all of them on the right.
+  // The first row carries the image cell (rowspan=9).
+  return `
+    <table class="item-card">
+      <colgroup>
+        <col style="width:22%" />
+        <col style="width:34%" />
+        <col style="width:44%" />
+      </colgroup>
+      <tr>
+        <th class="lbl">#</th>
+        <td class="val">${idx + 1}</td>
+        <td class="img-cell" rowspan="9">${imageHtml}</td>
+      </tr>
+      ${line('Asset No.', escapeHtml(row.FAC_NO))}
+      ${line('Asset Name', escapeHtml(row.FAC_name))}
+      ${line('Qty', escapeHtml(row.qty))}
+      ${line('UOM', escapeHtml(row.UOM))}
+      ${line('Type', escapeHtml(disposalType))}
+      ${line('Salvage Amount', salvage)}
+      ${line('Brand', escapeHtml(row.brand || row.Brand))}
+      ${line('Serial No.', escapeHtml(row.serialno))}
+      <tr>
+        <th class="lbl">Reason for Disposal</th>
+        <td class="val reason" colspan="2">${escapeHtml(row.workDet)}</td>
+      </tr>
+    </table>`;
 }
 
-function buildTotalsRow(items) {
+function buildItemCards(items) {
+  if (!items || items.length === 0) {
+    return `<div class="empty-row">No line items on this Disposal.</div>`;
+  }
+  return items.map((row, idx) => buildItemCard(row, idx)).join('');
+}
+
+function buildTotalsBlock(items) {
   const total = (items || [])
-    .filter((r) => r.Disposal_Type === 'Sell')
+    .filter((r) => isSellType(r.Disposal_Type))
     .reduce((sum, r) => sum + (Number(r.salvage_amount) || 0), 0);
 
   return `
-    <tr class="totals-row">
-      <td colspan="7" class="totals-label">Total Estimated Salvage Value</td>
-      <td class="amount-cell totals-value" colspan="3">${formatAmount(total)}</td>
-    </tr>`;
-}
-
-function buildApprovalSection(approvalLogs, totalLevels) {
-  const hasLogs = Array.isArray(approvalLogs) && approvalLogs.length > 0;
-
-  if (hasLogs) {
-    const rows = approvalLogs
-      .slice()
-      .sort((a, b) => (a.APP_LEVEL || 0) - (b.APP_LEVEL || 0))
-      .map((log) => {
-        const approver = (log.X_USER || '').split('-')[1] || log.X_USER || '';
-        return `
-          <tr>
-            <td class="center">${escapeHtml(log.APP_LEVEL)}</td>
-            <td>${escapeHtml(approver)}</td>
-            <td class="center">${formatDate(log.DT)}</td>
-            <td class="center">${escapeHtml(log.STAT)}</td>
-            <td>${escapeHtml(log.REMARKS)}</td>
-          </tr>`;
-      })
-      .join('');
-
-    return `
-      <table class="approval-table">
-        <thead>
-          <tr>
-            <th style="width:8%">Level</th>
-            <th style="width:27%">Approver</th>
-            <th style="width:20%">Date</th>
-            <th style="width:15%">Action</th>
-            <th style="width:30%">Remarks</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>`;
-  }
-
-  // No approval history yet — render blank signature lines for each level
-  const levels = Math.max(1, Number(totalLevels) || 1);
-  const blankRows = Array.from({ length: levels })
-    .map((_, i) => `
+    <table class="totals-table">
       <tr>
-        <td class="center">${i + 1}</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-      </tr>`)
-    .join('');
-
-  return `
-    <table class="approval-table">
-      <thead>
-        <tr>
-          <th style="width:8%">Level</th>
-          <th style="width:27%">Approver</th>
-          <th style="width:20%">Date</th>
-          <th style="width:15%">Action</th>
-          <th style="width:30%">Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${blankRows}
-      </tbody>
+        <th class="lbl">Total Estimated Salvage Value</th>
+        <td class="val totals-value">${formatAmount(total)}</td>
+      </tr>
     </table>`;
 }
 
@@ -208,7 +163,6 @@ export function generateADPrintHTML({
   companyConfig = {},
   userName = '',
   totalLevels = 3,
-  approvalLogs = [],
   // Prefix to prepend to companyConfig.ReportHeader (the logo path returned by
   // the server) if it's a relative path, e.g. your API's origin/base URL.
   // Leave as '' if ReportHeader already stores a full/absolute usable URL.
@@ -235,9 +189,8 @@ export function generateADPrintHTML({
   const evaluatedBy = currentHeader?.Evaluated_By || userName || '—';
   const remarks = currentHeader?.Remarks || '';
 
-  const itemsRows = buildItemsRows(currentADItems);
-  const totalsRow = buildTotalsRow(currentADItems);
-  const approvalSection = buildApprovalSection(approvalLogs, totalLevels);
+  const itemCards = buildItemCards(currentADItems);
+  const totalsBlock = buildTotalsBlock(currentADItems);
 
   return `<!DOCTYPE html>
 <html>
@@ -397,73 +350,73 @@ export function generateADPrintHTML({
     margin-bottom: 4px;
   }
 
-  /* ---------- Items table ---------- */
-  table.items-table {
+  /* ---------- Item cards (one block per asset) ---------- */
+  table.item-card {
     width: 100%;
     border-collapse: collapse;
-    font-size: 10.5px;
-    margin-top: 6px;
+    table-layout: fixed;
+    margin-top: 10px;
+    font-size: 11.5px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
-  table.items-table th {
-    background: #01579b;
-    color: #fff;
-    padding: 6px 6px;
+  table.item-card th.lbl,
+  table.totals-table th.lbl {
+    color: #0B0C0F;
     text-align: left;
-    font-weight: 600;
-    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-  table.items-table td {
-    border: 1px solid #dbe2ea;
-    padding: 5px 6px;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.02em;
+    padding: 5px 8px;
+    border: 1px solid #cfd8e3;
     vertical-align: top;
   }
-  table.items-table tr:nth-child(even) td { background: #f8fafc; }
-  .num-cell { text-align: center; width: 24px; color: #777; }
-  .center { text-align: center; white-space: nowrap; }
-  .amount-cell { text-align: right; white-space: nowrap; }
-  .work-details { min-width: 130px; }
+  table.item-card td.val {
+    border: 1px solid #cfd8e3;
+    padding: 5px 8px;
+    vertical-align: top;
+    word-wrap: break-word;
+  }
+  table.item-card td.reason {
+    white-space: pre-wrap;
+    min-height: 40px;
+  }
+  table.item-card td.img-cell {
+    border: 1px solid #cfd8e3;
+    padding: 6px;
+    text-align: center;
+    vertical-align: middle;
+    background: #fff;
+  }
+  .item-img {
+    display: block;
+    margin: 0 auto;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 230px;
+    object-fit: contain;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .no-image { color: #999; font-style: italic; font-size: 11px; }
   .empty-row { text-align: center; color: #888; padding: 16px; font-style: italic; }
-  .totals-row td {
-    background: #f4f7fb !important;
-    border-top: 2px solid #01579b;
-  }
-  .totals-label {
-    text-align: right;
-    font-weight: 700;
-    color: #444;
-    text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: 0.03em;
-  }
-  .totals-value {
-    font-weight: 700;
-    color: #01579b;
-    font-size: 11.5px;
-  }
 
-  /* ---------- Approval table ---------- */
-  table.approval-table {
+  table.totals-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 10.5px;
-    margin-top: 6px;
+    margin-top: 14px;
+    font-size: 11.5px;
+    page-break-inside: avoid;
   }
-  table.approval-table th {
-    background: #f4f7fb;
+  table.totals-table th.lbl { width: 56%; }
+  table.totals-table td.val {
     border: 1px solid #cfd8e3;
-    padding: 6px 6px;
+    padding: 5px 8px;
+    text-align: right;
     font-weight: 700;
-    color: #444;
-    text-transform: uppercase;
-    font-size: 9.5px;
-    letter-spacing: 0.03em;
-  }
-  table.approval-table td {
-    border: 1px solid #dbe2ea;
-    padding: 8px 6px;
-    height: 20px;
+    color: #01579b;
   }
 
   /* ---------- Signatures ---------- */
@@ -524,6 +477,7 @@ export function generateADPrintHTML({
     cursor: pointer;
   }
   .toolbar .btn-print { background: #01579b; color: #fff; }
+  .toolbar button:disabled { opacity: 0.6; cursor: wait; }
   .toolbar .btn-close { background: #666; color: #fff; }
 
   @media print {
@@ -537,7 +491,7 @@ export function generateADPrintHTML({
 <body>
 
   <div class="toolbar">
-    <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
+    <button class="btn-print" id="btnPrint" onclick="window.print()" disabled>Loading images…</button>
     <button class="btn-close" onclick="window.close()">Close</button>
   </div>
 
@@ -587,29 +541,8 @@ export function generateADPrintHTML({
       <div class="remarks-box">${remarks ? escapeHtml(remarks) : '&nbsp;'}</div>
 
       <div class="section-label">Disposal Items</div>
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th style="width:3%">#</th>
-            <th style="width:10%">Asset No.</th>
-            <th style="width:15%">Asset Name</th>
-            <th style="width:5%">Qty</th>
-            <th style="width:5%">UOM</th>
-            <th style="width:24%">Reason for Disposal</th>
-            <th style="width:9%">Type</th>
-            <th style="width:10%">Salvage Amount</th>
-            <th style="width:9%">Brand</th>
-            <th style="width:10%">Serial No.</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsRows}
-          ${totalsRow}
-        </tbody>
-      </table>
-
-      <div class="section-label">Approval History</div>
-      ${approvalSection}
+      ${itemCards}
+      ${totalsBlock}
 
       <div class="signatures">
         <div class="sig-block">
@@ -638,6 +571,22 @@ export function generateADPrintHTML({
     </div>
   </div>
 
+<script>
+  // Enable printing only after every image has loaded, so none are printed cut off or blank
+  (function () {
+    var btn = document.getElementById('btnPrint');
+    var imgs = [].slice.call(document.images);
+    var pending = imgs.filter(function (i) { return !i.complete; }).length;
+    function ready() { btn.disabled = false; btn.textContent = 'Print / Save as PDF'; }
+    if (pending === 0) { ready(); return; }
+    imgs.forEach(function (i) {
+      if (i.complete) return;
+      var done = function () { pending--; if (pending <= 0) ready(); };
+      i.addEventListener('load', done);
+      i.addEventListener('error', done);
+    });
+  })();
+</script>
 </body>
 </html>`;
 }

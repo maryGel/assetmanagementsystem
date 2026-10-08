@@ -40,7 +40,9 @@ const normalizeMaintenanceStatus = (status) => {
     const value = String(status || '').trim().toLowerCase();
     if (value === 'ongoing') return 'Ongoing';
     if (value === 'not-started' || value === 'not started' || value === '') return 'Not Started';
-    if (value === 'Completed' || value === 'completed') return 'Completed';
+    // `value` is already lower-cased, so compare against lower-case only.
+    // The table badge also treats 'Done' as completed, so the filter must too.
+    if (value === 'completed' || value === 'complete' || value === 'done') return 'Completed';
     return status;
 };
 
@@ -95,13 +97,18 @@ function MaintenanceFormDesktop({
 
     // Dashboard links deliberately override the saved range/statuses to show
     // maintenance needing attention with no date restriction (Anytime).
+    // Depend on a string key, not the array: the parent passes a new array on
+    // every render (e.g. after Refresh), which used to re-run this effect and
+    // wipe the status the user had just picked (such as Completed).
+    const initialStatusesKey = initialStatuses.join('|');
     useEffect(() => {
         setMaintenanceStatuses(initialStatuses.map(normalizeMaintenanceStatus).filter(Boolean));
         setPickerPreset(initialDatePreset);
         if (initialDatePreset === 'anytime') {
             setDateRange({ startDate: null, endDate: null });
         }
-    }, [initialDatePreset, initialStatuses]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialDatePreset, initialStatusesKey]);
 
     // Save date range to localStorage whenever it changes
     useEffect(() => {
@@ -266,6 +273,26 @@ function MaintenanceFormDesktop({
                 part
         );
     };
+
+    // Total number of line items across every JO matching the current filters
+    // (all pages), plus the same figure for the rows shown on this page.
+    const itemCountByJO = useMemo(() => {
+        const counts = {};
+        joDetails.forEach((detail) => {
+            counts[detail.JO_No] = (counts[detail.JO_No] || 0) + 1;
+        });
+        return counts;
+    }, [joDetails]);
+
+    const totalItemCount = useMemo(
+        () => filteredJO.reduce((sum, jo) => sum + (itemCountByJO[jo.JO_No] || 0), 0),
+        [filteredJO, itemCountByJO]
+    );
+
+    const pageItemCount = useMemo(
+        () => paginatedJO.reduce((sum, jo) => sum + (itemCountByJO[jo.JO_No] || 0), 0),
+        [paginatedJO, itemCountByJO]
+    );
 
     if (isLoading) {
         return (
@@ -438,7 +465,7 @@ function MaintenanceFormDesktop({
                       <TableBody>
                           {paginatedJO.length === 0 ? (
                               <TableRow>
-                                  <TableCell colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                                  <TableCell colSpan={9} className="px-4 py-8 text-center text-gray-500">
                                       No maintenance records found
                                   </TableCell>
                               </TableRow>
@@ -520,15 +547,20 @@ function MaintenanceFormDesktop({
                           )}
                       </TableBody>
                   </Table>
-                  <TablePagination
-                      rowsPerPageOptions={[5, 10, 25, 50]}
-                      component="div"
-                      count={filteredJO.length}
-                      rowsPerPage={rowsPerPage}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                  />
+                  <div className="flex flex-wrap items-center justify-end border-t border-gray-200">
+                      <span className="mr-10 text-sm text-gray-700">
+                          Total no. of items: <strong>{totalItemCount}</strong>
+                      </span>
+                      <TablePagination
+                          rowsPerPageOptions={[5, 10, 25, 50]}
+                          component="div"
+                          count={filteredJO.length}
+                          rowsPerPage={rowsPerPage}
+                          page={page}
+                          onPageChange={handleChangePage}
+                          onRowsPerPageChange={handleChangeRowsPerPage}
+                      />
+                  </div>
               </TableContainer>
             </div>
 
