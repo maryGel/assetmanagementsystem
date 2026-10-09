@@ -11,6 +11,7 @@ import Box from '@mui/material/Box';
 import AssetDisplayGenInfo from './assetDisplayGenInfo';
 import AssetDisplayValue from './assetDisplayValue';
 import AssetDisplayTrans from './assetDisplayTrans';
+import { useCombinedDocPerFacNo } from '../../../hooks/combinedDocPerFacNo';
 
 
 
@@ -53,6 +54,13 @@ export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFiel
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
 
+  // Fetched once here and shared: General Info uses it to lock the
+  // assignment fields, and the Transaction tab uses it to list the rows.
+  const resolvedFacNo = facNo || asset?.FacNO;
+  const { transactions, isLoading: isTransLoading, error: transError } =
+    useCombinedDocPerFacNo(resolvedFacNo);
+  const hasTransactions = Array.isArray(transactions) && transactions.length > 0;
+
   const handleChange = (event, newValue) => {
     setValue(newValue);
   }; 
@@ -82,6 +90,9 @@ export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFiel
           isEditing={isEditing}
           setIsEditing={setIsEditing}
           onFieldChange={onFieldChange}
+          hasTransactions={hasTransactions}
+          isTransLoading={isTransLoading}
+          transError={transError}
         />
       </TabPanel>
       <TabPanel value={value} index={1} dir={theme.direction}>
@@ -93,7 +104,11 @@ export default function AssetDisplayTabs({asset, isEditing, setIsEditing, onFiel
         />
       </TabPanel>
       <TabPanel value={value} index={2} dir={theme.direction}>
-        <AssetDisplayTrans facNo={facNo || asset?.FacNO} />
+        <AssetDisplayTrans
+          transactions={transactions}
+          isLoading={isTransLoading}
+          error={transError}
+        />
       </TabPanel>
     </Box>
   );

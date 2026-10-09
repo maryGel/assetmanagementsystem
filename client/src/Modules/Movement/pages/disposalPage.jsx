@@ -647,7 +647,7 @@ const refreshData = useCallback(async () => {
           </CustomBtn>
         )}
         
-        {!state.isEditing && !state.isCreating && copyDocNo && (
+        {!state.isEditing && !state.isCreating && currentHeader?.xpost === 0 && (
           <CustomBtn variant='editBtn' iconType='edit' onClick={handleEdit}>
             Edit
           </CustomBtn>       

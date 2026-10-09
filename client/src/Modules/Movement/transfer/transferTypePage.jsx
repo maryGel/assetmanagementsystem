@@ -46,7 +46,7 @@ export default function TRFormType(){
   return (
     <>
       <div className='flex gap-10 pl-20 mt-10 place-items-center'>
-        <label className='text-lg font-medium tracking-wider'>
+        <label className='text-lg tracking-wide'>
           Transfer Type
         </label>
         <Select

@@ -72,12 +72,15 @@ const rowKey = (row) => `${row.DocNo ?? ''}-${row.DocType ?? ''}-${row.FacNO}`;
 
 const handleSelectItem = (row) => {
   const transNo = encodeURIComponent(row.DocNo);
-
-  switch (row.DocType) {
+  const transInternal = 'Transfer Internal'
+  switch (row.DocType) {   
     case 'Job Order':
       return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
     case 'Transfer':
-      return window.open(`/assetMovement/pages/TRFormPage?docId=${transNo}`, '_blank');
+      return window.open(
+        `/assetMovement/pages/TRFormType?docId=${transNo}&transferType=${encodeURIComponent(transInternal)}`,
+        '_blank'
+      );
     case 'Disposal':
       return window.open(`/assetMovement/pages/ADFormPage?docId=${transNo}`, '_blank');
     case 'Asset Accountability':

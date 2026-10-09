@@ -31,8 +31,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 // Custom Utils
 import { tableFieldFormat } from '../custom Utils/customLayout';
-import formatWithCommas from '../../../Utils/formatWithCommas';
-// import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
+
 
 // COLUMN CONFIG (width = default px width, resizable)
 const MIN_COL_WIDTH = 50;
@@ -706,7 +705,8 @@ const TRLineItems = ({
                           placeholder="Search department"
                           sx={{
                             '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                            width: '100%'
+                            width: '100%',
+                            backgroundColor: '#fff',
                           }}
                       />
                     )}
@@ -845,8 +845,10 @@ const TRLineItems = ({
                     disabled={isReadOnly}
                     fullWidth
                     sx={{
-                      '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                      width: '100%'
+                      '& .MuiInputBase-root': {padding: 1},
+                      width: '100%', border: 1, borderRadius: 1, 
+                      borderColor: 'rgba(0,0,0,0.1)',
+                      backgroundColor: isReadOnly ? '#f5f5f5' : '#fff',
                     }}
                   />
                 </TableCell>

@@ -858,8 +858,10 @@ const JOLineItems = ({
                     disabled={isReadOnly}
                     fullWidth
                     sx={{
-                      '& .MuiInputBase-root': tableFieldFormat(!isReadOnly),
-                      width: '100%'
+                      '& .MuiInputBase-root': {padding: 1},
+                      width: '100%', border: 1, borderRadius: 1, 
+                      borderColor: 'rgba(0,0,0,0.1)',
+                      backgroundColor: isReadOnly ? '#f5f5f5' : '#fff',
                     }}
                   />
                 </TableCell>
@@ -922,16 +924,13 @@ const JOLineItems = ({
                     onChange={(e) => handleRowFieldChange( row.id, 'TargetDate', e.target.value)}
                     disabled={isReadOnly}
                     fullWidth
-                    // InputLabelProps={{
-                    //   shrink: true
-                    // }}
-                     sx={{
-                        '& .MuiInputBase-root': {padding: 1},
-                        width: '100%', border: 1, borderRadius: 1, 
-                        borderColor: 'rgba(0,0,0,0.1)',
-                        backgroundColor: isReadOnly ? '#f5f5f5' : '#fff',
+                    sx={{
+                      '& .MuiInputBase-root': {padding: 1},
+                      width: '100%', border: 1, borderRadius: 1, 
+                      borderColor: 'rgba(0,0,0,0.1)',
+                      backgroundColor: isReadOnly ? '#f5f5f5' : '#fff',
 
-                      }}
+                    }}
                   />
                 </TableCell>
                 {/* BRAND */}

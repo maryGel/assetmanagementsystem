@@ -62,6 +62,7 @@ export default function JOFormPage(useProps) {
   
   const {
     state,
+    joHeaders, 
     getJOData,
     forceRefreshJO,
 
@@ -113,7 +114,7 @@ export default function JOFormPage(useProps) {
   });
 
   // reference data for dropdowns
-  const {joHeaders} = useJO_h();
+  // const {joHeaders} = useJO_h();
   const { refDeptData } = useRefDepartment();
   const { refSections } = useSections();
   const departments = refDeptData.map(item => item.Department);
@@ -358,12 +359,30 @@ const refreshData = useCallback(async () => {
     
 
 
-    // Check for empty required fields in details
-    const invalidRows = state.createJODetails.filter(row => !row.FAC_NO);
-    if (invalidRows.length > 0) {
-      showToast(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
-      return;
-    }
+  const rows = state.createJODetails || [];
+  if (rows.length === 0) {
+    showToast('Please add at least one item');
+    return;
+  }
+
+  // Validate every row, collecting what is missing on each
+  const problems = [];
+  rows.forEach((row, idx) => {
+    const missing = [];
+    if (!row.FAC_NO) missing.push('asset');
+    if (!row.qty || Number(row.qty) <= 0) missing.push('quantity');
+    if (!String(row.workDet || '').trim()) missing.push('work details');
+    if (!String(row.TargetDate || '').trim()) missing.push('target date');
+    
+    if (missing.length) problems.push(`Row ${idx + 1}: ${missing.join(', ')}`);
+  });
+
+  if (problems.length > 0) {
+    const shown = problems.slice(0, 3).join(' | ');
+    const more = problems.length > 3 ? ` (+${problems.length - 3} more rows)` : '';
+    showToast(`Please complete: ${shown}${more}`, 'warning');
+    return;
+  }
     
     // If validation passes, open save confirmation dialog
     openSaveDialog();
@@ -386,10 +405,10 @@ const refreshData = useCallback(async () => {
     const wasCreating = state.isCreating;
     
     // Call the original confirmSave (which calls createJO)
-    await confirmSave();
+    const saved = await confirmSave();
     
     // If this was a creation and we have a JO number, update the URL
-    if (wasCreating && newJONo) {
+    if (wasCreating && saved && newJONo) {
       handleSuccessfulCreate(newJONo);
     }
   };

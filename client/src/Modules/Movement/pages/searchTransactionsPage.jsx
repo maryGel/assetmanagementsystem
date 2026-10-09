@@ -339,6 +339,7 @@ function SearchTransactions(useProps) {
 
   const handleGoClick = () => {
     const selectedTransNos = draftTransNo.map(option => option.transNo);
+    setSelected([]);
     const newFilters = {
       type: draftTransType,
       location: draftSelectedLocation,

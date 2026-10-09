@@ -64,7 +64,7 @@
       Sector_Code,
       xDate,
       xpost,
-      Deparment_name,
+      Department_name,
       Department_Code,
       requested_by,
     } = req.body;
@@ -87,7 +87,7 @@
       
       const sql = `INSERT INTO jo_h (
         JO_No, Remarks, Sector_name, Sector_Code, 
-        xDate, xpost, Deparment_name, Department_Code, requested_by
+        xDate, xpost, Department_name, Department_Code, requested_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       
       const values = [
@@ -97,7 +97,7 @@
         Sector_Code || '',
         formatDate(xDate),  // Use formatted date
         xpost !== undefined ? xpost : 0,
-        Deparment_name || '',
+        Department_name || '',
         Department_Code || '',
         requested_by || '',
       ];

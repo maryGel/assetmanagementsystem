@@ -1,7 +1,7 @@
 import { DialogContent, DialogTitle, DialogContentText, DialogActions, Button  } from '@mui/material';
 
 
-export const CustomDialog = ({cancel, confirm, title, text, cancelText, confirmText}) => {
+export const CustomDialog = ({cancel, confirm, title, text, cancelText, confirmText, confirmColor = 'error'}) => {
 
   return (
     <>
@@ -16,7 +16,7 @@ export const CustomDialog = ({cancel, confirm, title, text, cancelText, confirmT
             sx ={{fontSize: 14, textTransform: 'none'}}
             onClick={cancel}>{cancelText}</Button>
           <Button 
-            color="error" 
+            color={confirmColor}
             sx ={{fontSize: 14, textTransform: 'none'}}
             onClick={confirm}>{confirmText}</Button>
         </DialogActions>

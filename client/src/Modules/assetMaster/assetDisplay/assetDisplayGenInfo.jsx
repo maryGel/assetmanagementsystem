@@ -21,6 +21,7 @@ import { useRefLocation } from '../../../hooks/refLocation';
 import { useRefBrand } from '../../../hooks/refBrand';
 import { useColors } from '../../../hooks/refColor';
 import { useSuppliers } from '../../../hooks/refSupp';
+import { useRefEmployees } from '../../../hooks/refEmployee'; 
 
 // ---------------------------------------------------------------------------
 // Shared styling. Flat gray fills read as placeholders rather than finished
@@ -31,7 +32,22 @@ import { useSuppliers } from '../../../hooks/refSupp';
 const sectionCardClass = 'py-6 shadow-sm border border-slate-200 rounded-lg bg-slate-50 min-w-0';
 const sectionHeaderClass = 'block pl-5 mb-4 pb-2 border-b border-slate-100 text-blue-800 text-[clamp(0.85rem,0.7rem+0.6vw,1.125rem)] font-medium';
 
-export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFieldChange }) {
+export default function AssetDisplayGenInfo({
+  useProps,
+  asset,
+  isEditing,
+  onFieldChange,
+  hasTransactions = false,
+  isTransLoading = false,
+  transError = null,
+}) {
+  // Category, Asset Class, Department, Location and Holder can only change
+  // while the asset has no transactions. Locked while the history is still
+  // loading or failed to load, so we never allow an edit we can't verify.
+  const assignmentLocked = hasTransactions || isTransLoading || !!transError;
+  const canEditAssignment = isEditing && !assignmentLocked;
+  const req = (on) => (on ? 'text-red-500' : 'text-transparent');
+
   const { uomData } = useRefUom(useProps);
   const { refCategoryData } = useRefCategory(useProps);
   const { refItemClassData } = useRefItemClass(useProps);
@@ -40,6 +56,7 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
   const { refBrandData } = useRefBrand(useProps);
   const { refColors } = useColors();
   const { refSuppliers } = useSuppliers();
+  const { refEmployees } = useRefEmployees();
 
   // Keep a color the asset already has even if it's not in the reference
   // list (e.g. legacy free-text data), so it isn't silently dropped.
@@ -52,6 +69,10 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
     const names = Array.isArray(refSuppliers) ? refSuppliers.map((s) => s.suppName).filter(Boolean) : [];
     return asset.suppName && !names.includes(asset.suppName) ? [asset.suppName, ...names] : names;
   }, [refSuppliers, asset.suppName]);
+
+  const employees = refEmployees.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
+
+
 
   return (
     <div className='w-full min-w-0 px-10 '>
@@ -168,48 +189,76 @@ export default function AssetDisplayGenInfo({ useProps, asset, isEditing, onFiel
           matching the Costing Information / Physical Count sections below.
         */}
         <div className='grid grid-cols-[minmax(10rem,14rem)_minmax(15rem,1fr)] min-w-0 mt-2 mb-8 mr-5 gap-y-3 gap-x-2 text-[clamp(0.72rem,0.55rem+0.6vw,1rem)] pr-8'>
-          <span className={fieldLabelClass}>Category: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
-          <input type='text' className={staticFieldClass} value={asset.CATEGORY || ''} disabled readOnly />
+          {/* {isEditing && assignmentLocked && (
+            <p className='col-span-2 px-2 py-1 text-xs border rounded text-amber-700 bg-amber-50 border-amber-200'>
+              {isTransLoading
+                ? 'Checking transaction history...'
+                : transError
+                  ? 'Could not verify transaction history, so these fields are locked.'
+                  : 'Category, Asset Class, Department, Location and Holder can no longer be changed because this asset already has transactions.'}
+            </p>
+          )} */}
 
-          <span className={fieldLabelClass}>Asset Class: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
+          <span className={fieldLabelClass}>Category: <span className={req(canEditAssignment)}>*</span></span>
           <Autocomplete
-            disabled={!isEditing}
+            disabled={!canEditAssignment}
+            className='w-full min-w-0'
+            options={refCategoryData.map((item) => item.category)}
+            value={asset.CATEGORY || ''}
+            onChange={(event, newValue) => onFieldChange('CATEGORY', newValue)}
+             renderInput={(params) => (
+              <TextField {...params} sx={getAutocompleteSx(canEditAssignment)} />
+            )}
+          />
+
+          <span className={fieldLabelClass}>Asset Class: <span className={req(canEditAssignment)}>*</span></span>
+          <Autocomplete
+            disabled={!canEditAssignment}
             size='small'
             className='w-full min-w-0'
             options={refItemClassData.map((item) => item.itemClass)}
             value={asset.ItemClass || ''}
             onChange={(event, newValue) => onFieldChange('ItemClass', newValue)}
             renderInput={(params) => (
-              <TextField {...params} sx={getAutocompleteSx(isEditing)} />
+              <TextField {...params} sx={getAutocompleteSx(canEditAssignment)} />
             )}
           />
 
-          <span className={fieldLabelClass}>Department: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
+          <span className={fieldLabelClass}>Department: <span className={req(canEditAssignment)}>*</span></span>
           <Autocomplete
-            disabled={!isEditing}
+            disabled={!canEditAssignment}
             size='small'
             className='w-full min-w-0'
             options={refDeptData.map((item) => item.Department)}
             value={asset.Department || ''}
             onChange={(event, newValue) => onFieldChange('Department', newValue)}
             renderInput={(params) => (
-              <TextField {...params} sx={getAutocompleteSx(isEditing)} />
+              <TextField {...params} sx={getAutocompleteSx(canEditAssignment)} />
             )}
           />
           
-          <span className={fieldLabelClass}>Location: <span className={`${isEditing ? 'text-red-500' : 'text-transparent'}`}>*</span></span>
-          <input type='text' className={staticFieldClass} value={asset.ItemLocation || ''} disabled readOnly />
-
-
+          <span className={fieldLabelClass}>Location: <span className={req(canEditAssignment)}>*</span></span>
+          <Autocomplete
+            className='w-full min-w-0'
+            value={asset.ItemLocation || ''}
+            disabled={!canEditAssignment}
+            options={refLocData.map((item) => item.LocationName)}
+            onChange={(e) => onFieldChange('ItemLocation', e.target.value)}
+            renderInput={(params) => (
+              <TextField {...params} sx={getAutocompleteSx(canEditAssignment)} />
+            )}
+          />
 
           <span className={fieldLabelClass}>Holder:</span>
-          <input
-            type='text'
-            className={fieldClass(isEditing)}
+          <Autocomplete
+            className='w-full min-w-0'
             value={asset.Holder || ''}
-            disabled={!isEditing}
-            readOnly={!isEditing}
+            disabled={!canEditAssignment}
+            options={employees}
             onChange={(e) => onFieldChange('Holder', e.target.value)}
+            renderInput={(params) => (
+              <TextField {...params} sx={getAutocompleteSx(canEditAssignment)} />
+            )}
           />
 
           <span className={fieldLabelClass}>Warranty:</span>

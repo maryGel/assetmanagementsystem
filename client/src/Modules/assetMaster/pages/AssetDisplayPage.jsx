@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 
 // MUI
-import { Snackbar, Alert, IconButton, Tooltip } from '@mui/material';
+import { Snackbar, Alert, IconButton, Tooltip, Dialog } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddAPhotoIcon from '@mui/icons-material/AddAPhoto';
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 
 // Custom Utils
 import { CustomBtn } from '../../../Utils/groupbtns';
+import { CustomDialog } from '../../../Utils/customDialog'; // ADJUST path if customDialog.jsx lives elsewhere
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { assetMasterFields, prepareAssetPayload, getAllValidationErrors, requiredFields} from '../../assetMaster/createAsset/assetMasterFields';
 // Components
@@ -104,6 +105,8 @@ export default function AssetMasterDisplay() {
   // so Cancel would otherwise bring back a picture that was just removed/replaced.
   const savedPicpathRef = useRef(undefined);
   const [saveError, setSaveError] = useState(null);
+  // Which confirmation dialog is open: null | 'save' | 'discard'
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const copyFacN0 = searchParams.get('copyFrom');
@@ -151,7 +154,60 @@ export default function AssetMasterDisplay() {
 
 
 
+  // True when the form differs from what Cancel would restore (the loaded
+  // asset, or the last saved picture), or a photo was added/removed. Values
+  // are compared as strings because inputs hand back strings while the DB
+  // row may hold numbers (e.g. AAmount 100 vs "100").
+  const isDirty = (() => {
+    if (pictureFile || removePicture) return true;
+    if (!singleAsset) return false;
+    const baseline = mapAssetToForm(singleAsset);
+    if (savedPicpathRef.current !== undefined) baseline.Picpath = savedPicpathRef.current;
+    return Object.keys(baseline).some(
+      (key) => String(baseline[key] ?? '') !== String(asset[key] ?? '')
+    );
+  })();
+
+  const closeConfirmDialog = () => setConfirmDialog(null);
+
+  // Save button: validate first, then ask for confirmation. Nothing is sent
+  // to the server until the user confirms in the dialog.
+  const handleSaveClick = () => {
+    setSaveError(null);
+
+    if (!isDirty) {
+      showSnackbar('No changes to save.', 'info');
+      return;
+    }
+
+    const validationErrors = getAllValidationErrors(asset, requiredFields);
+    if (validationErrors.length) {
+      setSaveError(`Validation errors: ${validationErrors.join(', ')}`);
+      return;
+    }
+
+    // quantity must be greater than 0
+    if (Number(asset.balance_unit) <= 0) {
+      setSaveError('Quantity must be greater than 0.');
+      return;
+    }
+
+    setConfirmDialog('save');
+  };
+
+  // Cancel button: only ask when there is something to lose.
+  const handleCancelClick = () => {
+    if (isDirty) {
+      setConfirmDialog('discard');
+    } else {
+      cancelEdit();
+    }
+  };
+
+  // Runs after the user confirms "Save" in the dialog.
   const handleSave = async () => {
+    closeConfirmDialog();
+    if (isMutating) return;
     try {
       setSaveError(null);
       const payload = prepareAssetPayload(asset);
@@ -159,19 +215,6 @@ export default function AssetMasterDisplay() {
       if (removePicture && !pictureFile) payload.removePicture = true;
 
       const result = await updateAsset(asset.FacNO, payload, pictureFile);
-
-      // Validate all required fields before saving
-      const validationErrors = getAllValidationErrors(asset, requiredFields);
-      if (validationErrors.length) {
-        setSaveError(`Validation errors: ${validationErrors.join(', ')}`);
-        return;
-      }
-      
-      // quantity must be greater than 0
-      if (asset.balance_unit <= 0) {
-        setSaveError('Quantity must be greater than 0.');
-        return;
-      }
 
       const savedPicpath = result?.Picpath || '';
       savedPicpathRef.current = savedPicpath;
@@ -274,6 +317,34 @@ export default function AssetMasterDisplay() {
           </Alert>
         </Snackbar>
 
+        {/* Confirmation dialogs (save / discard changes) */}
+        <Dialog open={confirmDialog !== null} onClose={closeConfirmDialog}>
+          {confirmDialog === 'save' && (
+            <CustomDialog
+              title='Save changes'
+              text={`Are you sure you want to update asset: ${asset.FacName}  with your changes?`}
+              cancelText='Review'
+              confirmText='Save'
+              confirmColor='primary'
+              cancel={closeConfirmDialog}
+              confirm={handleSave}
+            />
+          )}
+          {confirmDialog === 'discard' && (
+            <CustomDialog
+              title='Discard changes?'
+              text='You have unsaved changes. If you cancel now, they will be lost.'
+              cancelText='Keep editing'
+              confirmText='Discard'
+              cancel={closeConfirmDialog}
+              confirm={() => {
+                closeConfirmDialog();
+                cancelEdit();
+              }}
+            />
+          )}
+        </Dialog>
+
         {saveError && (
           <div className='p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-300 rounded'>
             {saveError}
@@ -301,7 +372,7 @@ export default function AssetMasterDisplay() {
               variant='saveBtn'
               iconType='save'
               title='Save Changes'
-              onClick={handleSave}
+              onClick={handleSaveClick}
               disabled={isMutating}
             >
               {isMutating ? 'Saving...' : 'Save'}
@@ -314,7 +385,7 @@ export default function AssetMasterDisplay() {
             iconType={isEditing ? 'cancel' : 'edit'}
             title={isEditing ? 'Cancel Edit' : 'Edit Asset'}
             type="button" // Use this to prevent from submission
-            onClick={isEditing ? cancelEdit : handleEditButton}
+            onClick={isEditing ? handleCancelClick : handleEditButton}
           >
             {isEditing ? <span>Cancel</span> : <span>Edit</span>}
           </CustomBtn>

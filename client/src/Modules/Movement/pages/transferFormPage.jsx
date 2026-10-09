@@ -268,11 +268,29 @@ const refreshData = useCallback(async () => {
       showToast('Please add at least one item');
       return;
     }
-    const invalidRows = state.createTRDetails.filter(row => !row.FAC_NO);
-    if (invalidRows.length > 0) {
-      showToast(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
+
+      const rows = state.createTRDetails || [];
+  if (rows.length === 0) {
+    showToast('Please add at least one item');
+    return;
+  }
+   
+    // Validate every row, collecting what is missing on each
+    const problems = [];
+    rows.forEach((row, idx) => {
+      const missing = [];
+      if (!row.FAC_NO) missing.push('asset');
+      if (!row.qty || Number(row.qty) <= 0) missing.push('quantity');
+      if (missing.length) problems.push(`Row ${idx + 1}: ${missing.join(', ')}`);
+    });
+
+    if (problems.length > 0) {
+      const shown = problems.slice(0, 3).join(' | ');
+      const more = problems.length > 3 ? ` (+${problems.length - 3} more rows)` : '';
+      showToast(`Please complete: ${shown}${more}`, 'warning');
       return;
     }
+
     openSaveDialog();
   };
 

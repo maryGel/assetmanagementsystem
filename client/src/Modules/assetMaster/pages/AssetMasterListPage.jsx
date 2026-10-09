@@ -72,11 +72,7 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
 
   const handleGoClick = () => {
     const selectedAssetNos = draftSelectedAssets.map(asset => asset.FacNO);
-
-    // A new filter run replaces the table data. Clear any selection from the
-    // previous result set immediately so the toolbar never acts on stale rows.
-    setSelected([]);
-    
+    setSelected([]); 
     const newFilters = {
       search: draftSearchQuery,
       categories: draftSelectedAssetCategories,
@@ -86,7 +82,6 @@ function AssetMasterListPage({ useProps, setHeaderTitle }) {
       assetNos: selectedAssetNos
     };
     
-    console.log('APPLYING FILTERS:', newFilters);
     setFilters(newFilters);
     setPage(0);
   }

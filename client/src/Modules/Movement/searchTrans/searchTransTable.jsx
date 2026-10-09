@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { alpha } from '@mui/material/styles';
@@ -40,6 +39,13 @@ function descendingComparator(a, b, orderBy) {
   const aValue = a[orderBy];
   const bValue = b[orderBy];
   if (aValue == null || bValue == null) return 0;
+  if (orderBy === 'Date') {
+    const aTime = new Date(aValue).getTime();
+    const bTime = new Date(bValue).getTime();
+    if (!Number.isNaN(aTime) && !Number.isNaN(bTime)) {
+      return bTime - aTime;
+    }
+  }
   if (typeof aValue === 'number' && typeof bValue === 'number') {
     return bValue - aValue;
   }
@@ -280,8 +286,8 @@ export default function SearchTransactionTable({
   dataVersion = 0
 }) {
   // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
-  const [order, setOrder] = useState('asc');
-  const [orderBy, setOrderBy] = useState('DocNo');  
+  const [order, setOrder] = useState('desc');
+  const [orderBy, setOrderBy] = useState('Date');  
   const [dense, setDense] = useState(false);
   const [docTypeLevels, setDocTypeLevels] = useState({});
   const [loadingLevels, setLoadingLevels] = useState(true);
@@ -340,11 +346,15 @@ export default function SearchTransactionTable({
 
   const handleSelectItem = (row) => {
     const transNo = row.DocNo;
+    const transInternal = 'Transfer Internal'
     switch (row.DocType) {
       case 'Job Order':
         return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
       case 'Transfer':
-        return window.open(`/assetMovement/pages/TRFormPage?docId=${transNo}`, '_blank');
+        return window.open(
+          `/assetMovement/pages/TRFormType?docId=${transNo}&transferType=${encodeURIComponent(transInternal)}`,
+          '_blank'
+        );
       case 'Disposal':
         return window.open(`/assetMovement/pages/ADFormPage?docId=${transNo}`, '_blank');
       case 'Asset Accountability':

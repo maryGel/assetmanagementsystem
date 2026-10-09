@@ -15,7 +15,6 @@ import Link from '@mui/material/Link';
 // Joins the 5 detail tables (which carry FAC_NO) back to their headers,
 // client-side, filtered to this one asset. See useCombinedDocPerFacNo.js
 // for the field-name assumptions this currently relies on.
-import { useCombinedDocPerFacNo } from '../../../hooks/combinedDocPerFacNo';
 // Same date formatting SearchTransactionTable (searchTransTable.jsx) uses.
 import DateDisplay from '../../../Utils/formatDateForInput';
 
@@ -63,8 +62,9 @@ function openDocumentPage(row) {
 // same cost tradeoff SearchTransactions has today. Worth revisiting as a
 // server-side endpoint (see chat) once the field-name assumptions in that
 // hook are confirmed and this is proven out end-to-end.
-export default function AssetDisplayTrans({ facNo }) {
-  const { transactions, isLoading, error } = useCombinedDocPerFacNo(facNo);
+// Data now comes from the parent (assetDisplayTabs.jsx), which also uses it
+// to decide whether the asset's assignment fields are still editable.
+export default function AssetDisplayTrans({ transactions, isLoading, error }) {
 
   const rows = React.useMemo(() => {
     if (!Array.isArray(transactions)) return [];
@@ -173,5 +173,7 @@ export default function AssetDisplayTrans({ facNo }) {
 }
 
 AssetDisplayTrans.propTypes = {
-  facNo: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  transactions: PropTypes.array,
+  isLoading: PropTypes.bool,
+  error: PropTypes.any,
 };

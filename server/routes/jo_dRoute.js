@@ -52,108 +52,123 @@ router.get('/:JO_No', (req, res) => {
   });
 });
 
+
 // Create JO details (accepts array of items)
 router.post('/', (req, res) => {
-  const items = req.body; // This should be an array of detail items
-  
-  // Validate that items is an array
+  const items = req.body; // array of detail items
+
   if (!Array.isArray(items)) {
-    return res.status(400).json({error: 'Request body must be an array of detail items'});
+    return res.status(400).json({ error: 'Request body must be an array of detail items' });
   }
-  
+
   if (items.length === 0) {
-    return res.status(400).json({error: 'At least one detail item is required'});
+    return res.status(400).json({ error: 'At least one detail item is required' });
   }
 
   db.getConnection((err, connection) => {
-    if(err) {
-      return res.status(500).json({error: 'Database connection failed jo_d', details: err.message});
+    if (err) {
+      return res.status(500).json({ error: 'Database connection failed jo_d', details: err.message });
     }
-    
-    // Helper function to format date
+
     const formatDate = (dateStr) => {
       if (!dateStr) return null;
-      // If already in YYYY-MM-DD format
       if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
         return dateStr;
       }
-      // Convert from other formats
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return null;
       return date.toISOString().split('T')[0];
     };
-    
-    // Process each item
+
+    const run = (sql, params) => new Promise((resolve, reject) => {
+      connection.query(sql, params, (error, result) => (error ? reject(error) : resolve(result)));
+    });
+
     const sql = `INSERT INTO jo_d (
-      JO_No, FAC_NO, FAC_name, qty, xDate, xpost, 
+      JO_No, FAC_NO, FAC_name, qty, xDate, xpost,
       UOM, brand, serialno, workDet, targetDate, Status, ItemLocation,
       StartDate, EndDate
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    
-    const promises = items.map((item) => {
-      const {
-        JO_No,
-        FAC_NO,
-        FAC_name,
-        qty,
-        xDate,
-        xpost,
-        UOM,
-        brand,
-        serialno,
-        workDet,
-        TargetDate,
-        Status,
-        ItemLocation,
-        StartDate,
-        EndDate,
-      } = item;
-      
-      const values = [
-        JO_No,
-        FAC_NO || '',
-        FAC_name || '',
-        qty !== undefined ? Number(qty) : 1,
-        formatDate(xDate),
-        xpost !== undefined ? xpost : 0,
-        UOM || '',
-        brand || '',
-        serialno || '',
-        workDet || '',
-        formatDate(TargetDate),
-        Status || 'OPEN',
-        ItemLocation || '',
-        formatDate(StartDate),
-        formatDate(EndDate)
-      ];
-      
-      return new Promise((resolve, reject) => {
-        connection.query(sql, values, (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        });
-      });
-    });
-    
-    // Execute all inserts
-    Promise.all(promises)
-      .then((results) => {
+
+    connection.beginTransaction(async (txErr) => {
+      if (txErr) {
         connection.release();
-        res.status(201).json({
-          message: 'JO details created successfully',
-          count: results.length,
-          ids: results.map(r => r.insertId)
+        return res.status(500).json({ error: 'Failed to start transaction' });
+      }
+
+      try {
+        const insertIds = [];
+
+        for (const item of items) {
+          const {
+            JO_No, FAC_NO, FAC_name, qty, xDate, xpost, UOM, brand,
+            serialno, workDet, TargetDate, Status, ItemLocation, StartDate, EndDate,
+          } = item;
+
+          const result = await run(sql, [
+            JO_No,
+            FAC_NO || '',
+            FAC_name || '',
+            qty !== undefined ? Number(qty) : 1,
+            formatDate(xDate),
+            xpost !== undefined ? xpost : 0,
+            UOM || '',
+            brand || '',
+            serialno || '',
+            workDet || '',
+            formatDate(TargetDate),
+            Status || 'OPEN',
+            ItemLocation || '',
+            formatDate(StartDate),
+            formatDate(EndDate),
+          ]);
+          insertIds.push(result.insertId);
+        }
+
+        // Flag each asset on this JO as having a pending JO (per FacNO).
+        // Blank FAC_NO and 'n' (no asset) are skipped, same as the maintenance update.
+        const facNos = [...new Set(
+          items
+            .map((i) => (i.FAC_NO || '').trim())
+            .filter((f) => f && f.toLowerCase() !== 'n')
+        )];
+
+        let assetsFlagged = 0;
+        if (facNos.length > 0) {
+          const upd = await run(
+            `UPDATE itemlist SET xxStats = 'With pending JO' WHERE FacNO IN (?)`,
+            [facNos]
+          );
+          assetsFlagged = upd.affectedRows;
+        }
+
+        connection.commit((commitErr) => {
+          if (commitErr) {
+            return connection.rollback(() => {
+              connection.release();
+              res.status(500).json({ error: 'Failed to commit transaction' });
+            });
+          }
+          connection.release();
+          res.status(201).json({
+            message: 'JO details created successfully',
+            count: insertIds.length,
+            ids: insertIds,
+            assetsFlagged,
+          });
         });
-      })
-      .catch((error) => {
-        connection.release();
+      } catch (error) {
         console.error('Detail insert error:', error);
-        res.status(500).json({
-          error: 'Database query failed jo_d',
-          details: error.sqlMessage,
-          code: error.code
+        connection.rollback(() => {
+          connection.release();
+          res.status(500).json({
+            error: 'Database query failed jo_d',
+            details: error.sqlMessage || error.message,
+            code: error.code,
+          });
         });
-      });
+      }
+    });
   });
 });
 

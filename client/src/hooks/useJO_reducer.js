@@ -81,6 +81,11 @@ function joReducer(state, action) {
         isLoading: false,
         saving: false,
         error: action.payload,
+        snackbar: {
+          open: true,
+          message: action.payload || 'Something went wrong',
+          severity: 'error',
+        },
       };
 
    case 'SET_JOFORM': {
@@ -152,7 +157,7 @@ function joReducer(state, action) {
           Sector_Code: '',
           xDate: today,
           xpost: 0,
-          Deparment_name: '',
+          Department_name: '',
           Department_Code: '',
           requested_by: requestedBy,
         },
@@ -449,8 +454,8 @@ export const useJOData = (onSaveSuccess) => {
         // Otherwise, leave it as is
       }
       
-      console.log('Header Data:', headerData);
-      console.log('Is Editing Mode:', state.isEditing);
+      // console.log('Header Data:', headerData);
+      // console.log('Is Editing Mode:', state.isEditing);
       
       // Create Header
       const res = await api.post('/jo_hRoute', headerData);
@@ -472,7 +477,7 @@ export const useJOData = (onSaveSuccess) => {
         };
       });
       
-      console.log('Details Payload:', detailPayload);
+      // console.log('Details Payload:', detailPayload);
       
       await api.post('/jo_dRoute', detailPayload);
       
@@ -511,44 +516,42 @@ export const useJOData = (onSaveSuccess) => {
       }
       // ========== END OF INCREMENT LOGIC ==========
       
-      await joRefresh();
+            await joRefresh();
       await joDetailsRefresh();
-      
-        // ========== DISPLAY THE NEWLY CREATED JO ==========
+
       const newJONo = state.createJOHeader.JO_No;
-      console.log('Newly created JO_No:', newJONo);
-      
-      // Fetch and display the new JO
-      await getJOData(newJONo);
-      
-      dispatch({ type: 'SAVE_SUCCESS' });
-      console.log('JO Created Successfully and loaded:', newJONo);
-      
-      // Show success message with JO number
-      dispatch({ 
+
+      // Load the saved JO straight from the server. getJOData would use the
+      // joHeaders/joDetails captured before the refresh, so it can't find the new JO.
+      const [hdrRes, detRes] = await Promise.all([
+        api.get(`/jo_hRoute/${encodeURIComponent(newJONo)}`),
+        api.get(`/jo_dRoute/${encodeURIComponent(newJONo)}`),
+      ]);
+
+      dispatch({
         type: 'SAVE_SUCCESS',
         payload: {
-          newJONo: newJONo,
-          message: `Job Order ${newJONo} created successfully!`
-        }
+          newJONo,
+          message: `Job Order ${newJONo} created successfully!`,
+        },
+      });
+      dispatch({
+        type: 'SET_JOFORM',
+        payload: { data: hdrRes.data, details: detRes.data },
       });
 
-      if (onSuccess && typeof onSuccess === 'function') {
-        onSuccess(newJONo);
-      }
-      console.log('FETCHED HEADER:', header);
-      console.log('FETCHED DETAILS:', details);
-        
+      return true;
     } catch (error) {
       console.error('Save Error:', error);
       console.error('Error Response:', error.response?.data);
-      
+
       dispatch({
         type: 'ERROR',
-        payload: error.response?.data?.error || 'Failed to create JO'
+        payload: error.response?.data?.error || 'Failed to create JO',
       });
+      return false;
     }
-  }, [state.createJOHeader, state.createJODetails, joRefresh, joDetailsRefresh, getJOData]);
+  }, [state.createJOHeader, state.createJODetails, joRefresh, joDetailsRefresh]);
 
   // =========================
   // UPDATE JO
@@ -779,20 +782,18 @@ export const useJOData = (onSaveSuccess) => {
 
   // saving JO - used for both create and update
   const confirmSave = async () => {
-    closeSaveDialog();
-    
-    if (state.isCreating) {
-      await createJO();
-      if (onSaveSuccess && typeof onSaveSuccess === 'function') {
-        const newJONo = state.createJOHeader?.JO_No;
-        if (newJONo) {
-          onSaveSuccess(newJONo);
-        }
-      }
-    } else if (state.isEditing) {
-      await updateJO();
+  closeSaveDialog();
+
+  if (state.isCreating) {
+    const ok = await createJO();
+    if (ok && typeof onSaveSuccess === 'function') {
+      onSaveSuccess(state.createJOHeader?.JO_No);
     }
-  };
+    return ok;
+  } else if (state.isEditing) {
+    await updateJO();
+  }
+};
 
   // delete the JO row - used for both create and update (but only if it's not posted for approval)
   const confirmDelete = (rowId) => {
