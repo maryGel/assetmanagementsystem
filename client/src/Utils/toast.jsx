@@ -48,6 +48,7 @@ export const ToastDesktop = ({ show, message, type = 'info', onClose, duration =
         success: 'bg-green-600 text-white',
         warning: 'bg-yellow-500 text-white',
         error: 'bg-red-600 text-white',
+        reject: 'bg-red-600 text-white',
         info: 'bg-blue-600 text-white'
     };
 

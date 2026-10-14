@@ -136,6 +136,7 @@ export default function WorkOrderDialog({
   const { fetchWorkOrderWithExpenses, createWorkOrderExpense, updateWorkOrderExpense, deleteWorkOrderExpense, generateExpenseId } = useJO_woe();
   const joDetailsRefresh = joDetailsRefreshProp || joDetailsRefreshInternal;
 
+  const isCreateMode = resolvedMode === 'create';
   const [isInitializing, setIsInitializing] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -144,7 +145,29 @@ export default function WorkOrderDialog({
 
   const [selectedItemForExpense, setSelectedItemForExpense] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(0);
-  const [workOrderData, setWorkOrderData] = useState({ joNo: '', workNo: '', woDate: '', maintenanceStatus: '', items: [] });
+  const [workOrderData, setWorkOrderData] = useState({ joNo: '', workNo: '', woDate: '', maintenanceStatus: 'Ongoing', items: [] });
+
+  // Resizable column widths (px), in the same order as the header cells.
+  const WO_COLUMNS = ['Item Status', 'FAC No.', 'Item Name', 'Qty', 'UOM', 'Details of Work', 'Evaluation', 'Remarks on Eval.', 'Maintenance Remarks', 'Expenses', 'Actions', 'Reason for Disposal'];
+  const [colWidths, setColWidths] = useState([140, 190, 180, 70, 80, 260, 140, 180, 220, 130, 140, 200]);
+  const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
+
+  const startColResize = (e, colIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = colWidths[colIndex];
+    const onMove = (ev) => {
+      const next = Math.max(60, startWidth + ev.clientX - startX);
+      setColWidths((prev) => prev.map((w, i) => (i === colIndex ? next : w)));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
   const [woItemsPage, setWoItemsPage] = useState(0);
   const [woItemsRowsPerPage, setWoItemsRowsPerPage] = useState(5);
@@ -201,7 +224,7 @@ export default function WorkOrderDialog({
             return acc;
           }, {});
 
-          let status = jo.main_stat || '';
+          let status = jo.main_stat || 'Ongoing';
           if (status === 'Done') status = 'Completed';
 
           if (!cancelled) {
@@ -209,7 +232,7 @@ export default function WorkOrderDialog({
               joNo: jo.JO_No,
               workNo: jo.workNo,
               woDate: jo.wo_date,
-              maintenanceStatus: status,
+              maintenanceStatus: 'Ongoing',
               items: buildItemsFromDetails(details, expensesByFacNo),
             });
           }
@@ -264,9 +287,9 @@ export default function WorkOrderDialog({
     } else if (allItemsCompleted && updatedItems.length > 0) {
       newOverallStatus = 'Completed';
     } else if (workOrderData.maintenanceStatus === 'Ongoing' && !hasOngoingItem) {
-      newOverallStatus = allItemsCompleted ? 'Completed' : '';
-    }
-
+      newOverallStatus = allItemsCompleted ? 'Completed' : 'Ongoing';
+    } 
+    
     setWorkOrderData((prev) => ({ ...prev, maintenanceStatus: newOverallStatus }));
     setValidationError(null);
 
@@ -278,6 +301,11 @@ export default function WorkOrderDialog({
 
   const handleOverallStatusChange = (event) => {
     const newStatus = event.target.value;
+
+    if (!newStatus){
+      setValidationError('You need to update the Work Order status')
+      return;
+    }
     if (newStatus === 'Completed') {
       const allItemsValid = workOrderData.items.every((item) => item.status === 'For Disposal' || item.status === 'Completed');
       if (!allItemsValid) {
@@ -305,7 +333,7 @@ export default function WorkOrderDialog({
   };
 
   const persistWorkOrder = async (items, overallStatus) => {
-    const dbStatus = overallStatus === 'Completed' ? 'Done' : overallStatus;
+    const dbStatus = overallStatus === 'Completed' ? 'Done' : (overallStatus || 'Ongoing');
     const headerUpdateData = { workNo: workOrderData.workNo, wo_date: workOrderData.woDate, main_stat: dbStatus };
     await updateJOHeader(workOrderData.joNo, headerUpdateData);
 
@@ -425,7 +453,10 @@ export default function WorkOrderDialog({
         const updatedItems = workOrderData.items.map((item, index) => {
           if (index !== selectedItemIndex) return item;
           const expenses = [...item.expenses];
-          const entry = { ...expenseData, id: result.data.id || generateExpenseId() };
+          // Store the parsed number (expenseData.expenseAmount may be a formatted
+          // string like "1,500.00") and fall back to the payload ID if the API
+          // response has no data/id.
+          const entry = { ...expenseData, expenseAmount: amount, id: result?.data?.id || expensePayload.ID };
           if (editingExpenseIndex !== null) expenses[editingExpenseIndex] = entry;
           else expenses.push(entry);
           return { ...item, expenses };
@@ -490,6 +521,14 @@ export default function WorkOrderDialog({
   const handleWoItemsChangePage = (_, newPage) => setWoItemsPage(newPage);
   const handleWoItemsChangeRowsPerPage = (event) => { setWoItemsRowsPerPage(parseInt(event.target.value, 10)); setWoItemsPage(0); };
 
+  const overallExpenses = useMemo(
+    () => workOrderData.items.reduce(
+      (sum, item) => sum + (item.expenses || []).reduce((s, exp) => s + safeParseNumber(exp.expenseAmount), 0),
+      0,
+    ),
+    [workOrderData.items],
+  );
+
   const paginatedWOItems = useMemo(() => {
     const startIndex = woItemsPage * woItemsRowsPerPage;
     return workOrderData.items.slice(startIndex, startIndex + woItemsRowsPerPage);
@@ -502,17 +541,19 @@ export default function WorkOrderDialog({
         <DialogTitle>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold">Work Order</h2>
-              <div className="mt-1 text-sm text-gray-500">
+              <h2 className="text-lg font-semibold text-green-600">Work Order {workOrderData.workNo} </h2>
+              <div className="mt-1 text-base text-gray-500">
                 <div><strong>Job Order :</strong> {workOrderData.joNo}</div>
-                <div><strong>Work Order :</strong> {workOrderData.workNo}</div>
               </div>
             </div>
-            <Chip label={getStatusLabel(workOrderData.maintenanceStatus)} className={getStatusColor(workOrderData.maintenanceStatus)} />
           </div>
         </DialogTitle>
         <DialogContent>
-          {saveSuccess && <Alert severity="success" className="mb-4">Work order updated successfully!</Alert>}
+          {saveSuccess && (
+            <Alert severity="success" className="mb-4">
+              {isCreateMode ? 'Work order created successfully!' : 'Work order updated successfully!'}
+            </Alert>
+          )}
           {saveError && <Alert severity="error" className="mb-4">Error: {saveError}</Alert>}
           {validationError && <Alert severity="warning" className="mb-4" onClose={() => setValidationError(null)}>{validationError}</Alert>}
 
@@ -523,10 +564,9 @@ export default function WorkOrderDialog({
           ) : (
             <>
               <div className="grid grid-cols-[1fr_2fr] gap-4 mt-2 mb-4">
-                <FormControl fullWidth>
-                  <InputLabel>Overall JO Status</InputLabel>
-                  <Select value={workOrderData.maintenanceStatus} onChange={handleOverallStatusChange} label="Overall JO Status" disabled={isSaving}>
-                    <MenuItem value="">Not Started</MenuItem>
+                <FormControl fullWidth required>
+                  <InputLabel>Work Order Status</InputLabel>
+                  <Select value={workOrderData.maintenanceStatus || 'Ongoing'} onChange={handleOverallStatusChange} label="Work Order Status" disabled={isSaving}>
                     <MenuItem value="Ongoing">Ongoing</MenuItem>
                     <MenuItem value="Completed">Completed</MenuItem>
                   </Select>
@@ -539,28 +579,34 @@ export default function WorkOrderDialog({
 
               <div className="flex justify-end gap-2 mb-4">
                 <Button variant="contained" color="primary" onClick={handleUpdateWorkOrder} disabled={isSaving}>
-                  {isSaving ? <CircularProgress size={24} /> : 'Update'}
+                  {isSaving ? <CircularProgress size={24} /> : (isCreateMode ? 'Create' : 'Update')}
                 </Button>
               </div>
 
               <TableContainer component={Paper} className="mb-4">
                 {/* Scroll area: vertical + horizontal. Pagination stays outside so it doesn't scroll away. */}
                 <div style={{ maxHeight: 420, overflow: 'auto' }}>
-                <Table size="small" stickyHeader sx={{ minWidth: 1500 }}>
+                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: totalColWidth, minWidth: totalColWidth }}>
+                  <colgroup>
+                    {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
+                  </colgroup>
                   <TableHead>
                     <TableRow className="bg-gray-50">
-                      <TableCell>Item Status</TableCell>
-                      <TableCell>FAC No.</TableCell>
-                      <TableCell>Item Name</TableCell>
-                      <TableCell>Qty</TableCell>
-                      <TableCell>UOM</TableCell>
-                      <TableCell>Details of Work</TableCell>
-                      <TableCell>Evaluation</TableCell>
-                      <TableCell>Remarks on Eval.</TableCell>
-                      <TableCell>Maintenance Remarks</TableCell>
-                      <TableCell align="center">Expenses</TableCell>
-                      <TableCell align="right">Actions</TableCell>
-                      <TableCell align="right">Reason for Disposal</TableCell>
+                      {WO_COLUMNS.map((label, i) => (
+                        <TableCell
+                          key={label}
+                          align={i === 9 ? 'center' : (i === 10 || i === 11) ? 'right' : 'left'}
+                          sx={{ position: 'relative', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+                        >
+                          {label}
+                          <span
+                            onMouseDown={(e) => startColResize(e, i)}
+                            onClick={(e) => e.stopPropagation()}
+                            title="Drag to resize"
+                            style={{ position: 'absolute', top: 0, right: 0, width: 6, height: '100%', cursor: 'col-resize', userSelect: 'none', borderRight: '2px solid #d1d5db' }}
+                          />
+                        </TableCell>
+                      ))}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -571,7 +617,6 @@ export default function WorkOrderDialog({
                     ) : (
                       paginatedWOItems.map((item, index) => {
                         const actualIndex = woItemsPage * woItemsRowsPerPage + index;
-                        const isExpenseEnabled = item.status === 'OPEN' || item.status === 'In Progress' || item.status === 'Completed' || (item.evaluation && item.evaluation.trim() !== '');
 
                         return (
                           <TableRow
@@ -590,7 +635,12 @@ export default function WorkOrderDialog({
                               </FormControl>
                             </TableCell>
                             <TableCell className="font-medium text-blue-600">{item.FAC_NO}</TableCell>
-                            <TableCell>{item.FAC_name}</TableCell>
+                            <TableCell 
+                              sx={{
+                                color: selectedItemIndex === actualIndex ? '#1d4ed8' : '', // blue-700 : orange-400
+                                fontWeight: selectedItemIndex === actualIndex ? 600 : 400,
+                              }}
+                            >{item.FAC_name}</TableCell>
                             <TableCell>{item.qty}</TableCell>
                             <TableCell>{item.uom}</TableCell>
                             <TableCell sx={{ verticalAlign: 'top' }}>
@@ -600,11 +650,9 @@ export default function WorkOrderDialog({
                                 title={item.detailsOfWork || ''}
                                 onClick={(e) => e.stopPropagation()}
                                 style={{
-                                  resize: 'both',
+                                  resize: 'vertical',
                                   overflow: 'auto',
-                                  width: 240,
-                                  minWidth: 160,
-                                  maxWidth: 800,
+                                  width: '100%',
                                   height: '4.5em',     // 3 lines at line-height 1.5
                                   minHeight: '1.5em',
                                   maxHeight: 400,
@@ -630,7 +678,7 @@ export default function WorkOrderDialog({
                                   setWorkOrderData({ ...workOrderData, items: updatedItems });
                                 }}
                                 disabled={isSaving || isOverallCompleted || !item.evaluation?.trim()}
-                                placeholder="Additional Expenses"
+                                placeholder="Type your remarks here"
                                 fullWidth
                                 variant="outlined"
                               />
@@ -642,9 +690,10 @@ export default function WorkOrderDialog({
                             </TableCell>
                             <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                               <button
-                                disabled={isSaving || isOverallCompleted || !item.evaluation?.trim()}
+                                disabled={isSaving || item.status === 'Completed'}
                                 onClick={() => handleAddExpense(item, actualIndex)}
-                                className={`flex items-center gap-2 p-2 border border-gray-300 text-sm font-medium rounded-lg transition-colors ${(isSaving || !isExpenseEnabled || isOverallCompleted) ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-gray-50'}`}
+                                className={`flex items-center gap-2 p-2 bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors 
+                                  ${(isSaving || item.status === 'Completed') ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-blue-500 hover:text-white'}`}
                               >
                                 <AddIcon fontSize="small" />Expense
                               </button>
@@ -659,29 +708,41 @@ export default function WorkOrderDialog({
                   </TableBody>
                 </Table>
                 </div>
-                <TablePagination
-                  rowsPerPageOptions={[5, 10, 25]}
-                  component="div"
-                  count={workOrderData.items.length}
-                  rowsPerPage={woItemsRowsPerPage}
-                  page={woItemsPage}
-                  onPageChange={handleWoItemsChangePage}
-                  onRowsPerPageChange={handleWoItemsChangeRowsPerPage}
-                />
+                <div className="flex flex-wrap items-center justify-end gap-2 px-4 border-t border-gray-200">
+                  <span className="text-sm font-semibold text-gray-700">
+                    Overall Expenses: <span className="text-blue-600">₱{formatWithCommas(overallExpenses)}</span>
+                  </span>
+                  <TablePagination
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={workOrderData.items.length}
+                    rowsPerPage={woItemsRowsPerPage}
+                    page={woItemsPage}
+                    onPageChange={handleWoItemsChangePage}
+                    onRowsPerPageChange={handleWoItemsChangeRowsPerPage}
+                  />
+                </div>
               </TableContainer>
 
-              <div className="mt-4">
-                <h4 className="mb-2 text-sm font-semibold text-gray-700">
-                  Work Details and Expenses - {workOrderData.items[selectedItemIndex]?.FAC_name}
+              <div key={workOrderData.items[selectedItemIndex]?.FAC_NO ?? selectedItemIndex} className="p-4 mt-4 border-2 border-blue-300 rounded-lg bg-blue-50/30">
+                <h4 className="mb-2 text-lg font-semibold text-orange-700">
+                  Work Details and Expenses
                 </h4>
+                <div className='flex items-center gap-3'>
+                  <span className='text-sm'>Asset Name:</span>
+                  <span className='font-medium text-blue-700'>{workOrderData.items[selectedItemIndex]?.FAC_name}</span>
+                </div>
                 {workOrderData.items[selectedItemIndex] && (
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Asset No:</span> {workOrderData.items[selectedItemIndex].FAC_NO}
+                      <div className="flex gap-3 text-sm text-gray-600">
+                        <span>Asset No: </span> {workOrderData.items[selectedItemIndex].FAC_NO}
                         <span className="ml-4">
                           <span className="font-medium">Status:</span>
-                          <Chip label={getItemStatusLabel(workOrderData.items[selectedItemIndex].status)} size="small" className={`ml-2 ${getStatusColor(workOrderData.items[selectedItemIndex].status || 'OPEN')}`} />
+                          <Chip 
+                            label={getItemStatusLabel(workOrderData.items[selectedItemIndex].status)} 
+                            size="small" 
+                            className={`ml-2 ${getStatusColor(workOrderData.items[selectedItemIndex].status || 'OPEN')}`} />
                         </span>
                       </div>
                       <span className="text-sm font-medium text-gray-600">

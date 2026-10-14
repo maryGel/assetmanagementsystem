@@ -7,6 +7,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DownloadIcon from '@mui/icons-material/Download';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 
 import { IconButton, ThemeProvider, TextField, TablePagination, Snackbar, Alert, Dialog} from '@mui/material';
 
@@ -286,7 +287,7 @@ export default function RefBrand({ openTab, useProps }) {
                         style={theaderStyle('Code')}
                       >
                         <div className='flex justify-between'>
-                          <span className='mr-2'>Branch Code</span>
+                          <span className='mr-2'>Brand Code</span>
                           <RenderSortIcon columnKey='BrandID'  sortConfig={sortConfig} /> 
                           <div
                             onMouseDown={(e) => handleResizeMouseDown('BrandID', e)}
@@ -302,7 +303,7 @@ export default function RefBrand({ openTab, useProps }) {
                         style={theaderStyle('Name')}
                       >
                         <div className='flex justify-between'>
-                          <span className='mr-2'> Branch Name </span>
+                          <span className='mr-2'> Brand Name </span>
                           <RenderSortIcon columnKey='BrandName'  sortConfig={sortConfig} /> 
                           <div
                             onMouseDown={(e) => handleResizeMouseDown('BrandName', e)}
@@ -342,10 +343,15 @@ export default function RefBrand({ openTab, useProps }) {
                         {/* Edit Button */}
                         <td className="p-1 pl-2 text-center">
                           {editingRowId === null && (
-                            <IconButton size="small" onClick={() => handleEditExistingRow(row)}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          )}
+                            <>
+                              <IconButton size="small" onClick={() => handleEditExistingRow(row)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton> 
+                              <IconButton title='Set Inactive'size="small" >
+                                <ToggleOffIcon fontSize="small" />
+                              </IconButton>
+                            </>
+                          )}  
                         </td>
                       </tr>
                     ))}

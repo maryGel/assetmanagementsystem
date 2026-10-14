@@ -395,12 +395,12 @@ const handleEmployeeChange = (event, newValue) => {
       
       if (bulkActionType === 'approve') {
         if (result.data?.isFinalApproval) {
-          showToast(`Asset Accountability fully approved!`, 'success');
+          showToast(`Asset Accountability  ${baseHeader.AAFNo} is fully approved!`, 'success');
         } else {
           showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
         }
       } else {
-        showToast(`Asset Accountability rejected successfully`, 'success');
+        showToast(`Asset Accountability ${baseHeader.AAFNo} is rejected`, 'error');
       }
       
     // Force refresh the data

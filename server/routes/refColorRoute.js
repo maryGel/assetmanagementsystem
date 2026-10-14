@@ -52,7 +52,7 @@ router.get('/:id', (req, res) => {
 // Post create new Unit
 
 router.post('/', (req, res) => {
-  const {ColID} = req.body;
+  const {ColID, ColName} = req.body;
 
   if(!ColID){
     return res.status(400).json({error: 'Color Id is required'})
@@ -63,7 +63,7 @@ router.post('/', (req, res) => {
       return res.status(500).json({error: 'Database connection failed'});
     }
 
-    const sql = 'INSERT INTO refcolor (ColID, ColName  ) VALUES (?)';
+    const sql = 'INSERT INTO refcolor (ColID, ColName  ) VALUES (?,?)';
     const params = [ColID, ColName || '']
 
     connection.query(sql, params, (error, result) => {
@@ -76,7 +76,8 @@ router.post('/', (req, res) => {
       res.json({
         message: 'New color has been created',
         id: result.insertId,
-        Unit: Unit || ''
+        ColID,
+        ColName
       });
     });
   });

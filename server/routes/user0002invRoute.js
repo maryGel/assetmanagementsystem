@@ -106,11 +106,11 @@ router.post('/', (req, res) => {
         // Stored as 0/1; default to 1 (auto) so existing installs keep today's behavior
         AutoFacNO: AutoFacNO !== undefined ? (AutoFacNO ? 1 : 0) : 1,
         ItmPicpath: ItmPicpath || null,
-        ApprovalApp: ApprovalApp !== undefined ? ApprovalApp : null,
-        AccessBySection: AccessBySection !== undefined ? AccessBySection : null,
-        Dep15Days: Dep15Days !== undefined ? Dep15Days : null,
-        DepByDay: DepByDay !== undefined ? DepByDay : null,
-        Signatories: Signatories !== undefined ? Signatories : null,
+        ApprovalApp: ApprovalApp !== undefined ? ApprovalApp : 1,
+        AccessBySection: AccessBySection !== undefined ? AccessBySection : 1,
+        Dep15Days: Dep15Days !== undefined ? Dep15Days : 1,
+        DepByDay: DepByDay !== undefined ? DepByDay : 0,
+        Signatories: Signatories !== undefined ? Signatories : 1,
         DisposalFinanceDetailsPrintOut: DisposalFinanceDetailsPrintOut !== undefined ? DisposalFinanceDetailsPrintOut : null
     };
 

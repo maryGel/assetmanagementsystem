@@ -34,6 +34,8 @@ import { visuallyHidden } from '@mui/utils';
 import DateDisplay from '../../../Utils/formatDateForInput';
 import { getNextLevel, isPendingApproval } from '../../../Utils/approvalLevelUtils';
 import { useAllApprovalLevels } from '../../../Utils/approvalHookFactory';
+// hooks
+
 
 function descendingComparator(a, b, orderBy) {
   const aValue = a[orderBy];
@@ -67,20 +69,58 @@ const headCells = [
   { id: 'Remarks', numeric: true, disablePadding: false, label: 'Remarks'},
   { id: 'Department', numeric: true, disablePadding: false, label: 'Department'},
   { id: 'Location', numeric: true, disablePadding: false, label: 'Location'},
+  { id: 'ItemCount', numeric: true, disablePadding: false, label: 'No. of Items'},
   { id: 'Date', numeric: true, disablePadding: false, label: 'Date' },
   { id: 'Status', numeric: true, disablePadding: false, label: 'Status'},
   { id: 'Action', numeric: true, disablePadding: false, label: 'Level'},
 ];
 
+// Initial / minimum widths (px) for the resizable columns
+const DEFAULT_COLUMN_WIDTHS = {
+  DocNo: 150,
+  DocType: 170,
+  Remarks: 500,
+  Department: 200,
+  Location: 200,
+  ItemCount: 110,
+  Date: 120,
+  Status: 160,
+  Action: 120,
+};
+const MIN_COLUMN_WIDTH = 70;
+const cellOverflowSx = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const CHECKBOX_COLUMN_WIDTH = 48;
+
+// Number of items (distinct FAC_NO) in a document.
+// `itemCounts` comes from buildItemCounts(): { [DocType]: { [DocNo]: count } }
+function getItemCount(row, itemCounts) {
+  const fromLookup = itemCounts?.[row.DocType]?.[String(row.DocNo ?? '').trim()];
+  if (fromLookup !== undefined) return fromLookup;
+  const raw =
+    row.ItemCount ??
+    row.itemCount ??
+    row.ItemsCount ??
+    row.Items ??
+    row.items ??
+    row.Details ??
+    row.details;
+  if (Array.isArray(raw)) return raw.length;
+  const n = Number(raw);
+  return raw === undefined || raw === null || raw === '' || Number.isNaN(n) ? 0 : n;
+}
+
 function EnhancedTableHead(props) {
-  const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } = props;
+  const {
+    onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort,
+    columnWidths, onResizeStart,
+  } = props;
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
   };
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="checkbox">
+        <TableCell padding="checkbox" sx={{ width: CHECKBOX_COLUMN_WIDTH }}>
           {rowCount > 0 && (
             <Checkbox
               color="primary"
@@ -99,7 +139,17 @@ function EnhancedTableHead(props) {
             align='left'
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
-            sx={{ fontWeight: 'bold' }}
+            sx={{
+              fontWeight: 'bold',
+              position: 'relative',
+              width: columnWidths[headCell.id],
+              minWidth: columnWidths[headCell.id],
+              maxWidth: columnWidths[headCell.id],
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              userSelect: 'none',
+            }}
           >
             <TableSortLabel
               active={orderBy === headCell.id}
@@ -113,6 +163,35 @@ function EnhancedTableHead(props) {
                 </Box>
               ) : null}
             </TableSortLabel>
+            {/* Drag handle to resize this column */}
+            <Box
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={`Resize ${headCell.label} column`}
+              onPointerDown={(e) => onResizeStart(e, headCell.id)}
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                height: '100%',
+                width: 8,
+                cursor: 'col-resize',
+                touchAction: 'none',
+                zIndex: 1,
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '25%',
+                  right: 3,
+                  height: '50%',
+                  width: 2,
+                  borderRadius: 1,
+                  backgroundColor: 'divider',
+                },
+                '&:hover::after': { backgroundColor: 'primary.main' },
+              }}
+            />
           </TableCell>
         ))}
       </TableRow>
@@ -127,6 +206,8 @@ EnhancedTableHead.propTypes = {
   order: PropTypes.oneOf(['asc', 'desc']).isRequired,
   orderBy: PropTypes.string.isRequired,
   rowCount: PropTypes.number.isRequired,
+  columnWidths: PropTypes.object.isRequired,
+  onResizeStart: PropTypes.func.isRequired,
 };
 
 function EnhancedTableToolbar(props) {
@@ -283,7 +364,8 @@ export default function SearchTransactionTable({
   onBulkReject,
   selectedDocuments = [],
   isRefreshing = false,
-  dataVersion = 0
+  dataVersion = 0,
+  itemCounts = {}
 }) {
   // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
   const [order, setOrder] = useState('desc');
@@ -293,6 +375,36 @@ export default function SearchTransactionTable({
   const [loadingLevels, setLoadingLevels] = useState(true);
   const { getTotalLevelsForDocTypes } = useAllApprovalLevels();
   const rows = Array.isArray(displayedDocs) ? displayedDocs : [];
+
+  // Resizable column widths
+  const [columnWidths, setColumnWidths] = useState(DEFAULT_COLUMN_WIDTHS);
+
+  const handleResizeStart = useCallback((event, columnId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startWidth = columnWidths[columnId] ?? DEFAULT_COLUMN_WIDTHS[columnId];
+
+    const onMove = (e) => {
+      const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + (e.clientX - startX));
+      setColumnWidths((prev) => ({ ...prev, [columnId]: newWidth }));
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  }, [columnWidths]);
+
+  const tableWidth =
+    CHECKBOX_COLUMN_WIDTH +
+    headCells.reduce((sum, c) => sum + (columnWidths[c.id] ?? DEFAULT_COLUMN_WIDTHS[c.id]), 0);
 
   // All hooks must be called before any conditional returns
   const handleRequestSort = useCallback((event, property) => {
@@ -436,6 +548,7 @@ export default function SearchTransactionTable({
       
       return {
         ...row,
+        ItemCount: getItemCount(row, itemCounts),
         nextLevel,
         totalLevels,
         levelShortDisplay: nextLevel ? `${nextLevel}/${totalLevels}` : '',
@@ -447,7 +560,7 @@ export default function SearchTransactionTable({
     const paginated = sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
     
     return paginated;
-  }, [rows, order, orderBy, page, rowsPerPage, isTableActive, docTypeLevels]);
+  }, [rows, order, orderBy, page, rowsPerPage, isTableActive, docTypeLevels, itemCounts]);
 
   const handleExportCsv = () => {
     const header = headCells.map((c) => `"${c.label}"`).join(',');
@@ -455,7 +568,7 @@ export default function SearchTransactionTable({
       .map((row) =>
         headCells
           .map((c) => {
-            const val = row[c.id] ?? '';
+            const val = c.id === 'ItemCount' ? getItemCount(row, itemCounts) : (row[c.id] ?? '');
             return `"${String(val).replace(/"/g, '""')}"`;
           })
           .join(',')
@@ -521,9 +634,9 @@ export default function SearchTransactionTable({
           onBulkReject={onBulkReject}
           selectedDocuments={selectedDocuments}
         />
-        <TableContainer>
+        <TableContainer sx={{ overflowX: 'auto' }}>
           <Table
-            sx={{ minWidth: 750 }}
+            sx={{ tableLayout: 'fixed', width: tableWidth, minWidth: tableWidth }}
             aria-labelledby="tableTitle"
             size={dense ? 'small' : 'medium'}
           >
@@ -534,6 +647,8 @@ export default function SearchTransactionTable({
               onSelectAllClick={handleSelectAllClick}
               onRequestSort={handleRequestSort}
               rowCount={rows.length}
+              columnWidths={columnWidths}
+              onResizeStart={handleResizeStart}
             />
             <TableBody>
               {visibleRows.map((row) => {
@@ -589,10 +704,11 @@ export default function SearchTransactionTable({
                     >
                       {row.DocNo || ""}
                     </TableCell>
-                    <TableCell align="left">{row.DocType}</TableCell>
-                    <TableCell align="left">{row.Remarks}</TableCell>
-                    <TableCell align="left">{row.Department}</TableCell>
-                    <TableCell align="left">{row.Location}</TableCell>
+                    <TableCell align="left" sx={cellOverflowSx} title={row.DocType}>{row.DocType}</TableCell>
+                    <TableCell align="left" sx={cellOverflowSx} title={row.Remarks}>{row.Remarks}</TableCell>
+                    <TableCell align="left" sx={cellOverflowSx} title={row.Department}>{row.Department}</TableCell>
+                    <TableCell align="left" sx={cellOverflowSx} title={row.Location}>{row.Location}</TableCell>
+                    <TableCell align="left">{row.ItemCount}</TableCell>
                     <TableCell align="center"><DateDisplay value={row.Date} format="short" /></TableCell>
                     <TableCell align="left">
                       {handleDocStatus(row.Status, row.Rejected)}
@@ -719,5 +835,6 @@ SearchTransactionTable.propTypes = {
   onBulkReject: PropTypes.func,
   selectedDocuments: PropTypes.array,
   isRefreshing: PropTypes.bool,
-  dataVersion: PropTypes.number
+  dataVersion: PropTypes.number,
+  itemCounts: PropTypes.object
 };

@@ -23,6 +23,14 @@ import { useAssetLostApproval } from '../../../hooks/useAssetLostApproval';
 import { useUsers } from '../../../hooks/useUsers';
 import { transTypes } from '../../../Utils/moduleList';
 
+import { buildItemCounts } from '../../../hooks/itemCount'
+import { useJO_d } from '../../../hooks/useJO_d';
+import { useTR_d } from '../../../hooks/useTR_d';
+import { useAD_d } from '../../../hooks/useAD_d';
+import { useAssetAccD } from '../../../hooks/useAssetAccD';
+import { useAssetLostD } from '../../../hooks/useAssetLostD';
+
+
 
 const statusOptions = [
   {status: 0, label: 'Draft'},
@@ -55,6 +63,18 @@ function SearchTransactions(useProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataVersion, setDataVersion] = useState(0); // Force re-render of table
+  //  To count the number of items
+  const { joDetails } = useJO_d();
+  const { trDetails } = useTR_d();
+  const { adDetails } = useAD_d();
+  const { assetAccDetails } = useAssetAccD();
+  const { assetLostDetails } = useAssetLostD();
+
+  const itemCounts = useMemo(
+    () => buildItemCounts({ joDetails, trDetails, adDetails, assetAccDetails, assetLostDetails }),
+    [joDetails, trDetails, adDetails, assetAccDetails, assetLostDetails]
+  );
+
   
   // Local Snackbar state for toast notifications
   const [localSnackbar, setLocalSnackbar] = useState({
@@ -563,7 +583,8 @@ function SearchTransactions(useProps) {
         onBulkReject={handleBulkReject}
         selectedDocuments={selectedDocuments}
         isRefreshing={isRefreshing}
-        dataVersion={dataVersion} // Pass data version to trigger re-render
+        dataVersion={dataVersion} 
+        itemCounts={itemCounts}
       />
 
       {/* Bulk Action Dialog */}

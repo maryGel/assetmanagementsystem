@@ -9,6 +9,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import DownloadIcon from '@mui/icons-material/Download';
 import Autocomplete from '@mui/material/Autocomplete';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 
 import { IconButton, ThemeProvider, TextField, TablePagination, Snackbar, Alert, Dialog} from '@mui/material';
 
@@ -428,10 +429,15 @@ export default function RefAppHierarchy({ openTab, useProps }) {
                         {/* Edit Button */}
                         <td className="p-1 pl-2 text-center">
                           {editingRowId === null && (
-                            <IconButton size="small" onClick={() => handleEditExistingRow(row)}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          )}
+                            <>
+                              <IconButton size="small" onClick={() => handleEditExistingRow(row)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton> 
+                              <IconButton title='Set Inactive'size="small" >
+                                <ToggleOffIcon fontSize="small" />
+                              </IconButton>
+                            </>
+                          )}  
                         </td>
                       </tr>
                     ))}

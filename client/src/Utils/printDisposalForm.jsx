@@ -516,7 +516,7 @@ export function generateADPrintHTML({
 
       <table class="info-grid">
         <tr>
-          <td class="label">Date Created</td>
+          <td class="label">Document Date</td>
           <td class="value">${formatDate(currentHeader?.xDate)}</td>
           <td class="label">Status</td>
           <td class="value">

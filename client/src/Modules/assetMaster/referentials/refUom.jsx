@@ -306,7 +306,7 @@ export default function RefUom({useProps, openTab,}) {
                           />
                         </div>
                       </th>
-                      <th className='p-2 text-sm text-center'>Action</th>
+                      <th className='w-20 p-2 text-sm text-center'>Action</th>
                     </tr>
                   </thead>
 
@@ -332,13 +332,15 @@ export default function RefUom({useProps, openTab,}) {
                         {/* Edit Button */}
                         <td className='p-1 pl-2 text-center'>
                           {editingRowId === null && (
-                            <IconButton size="small" onClick={() => handleEditExistingRow(row)}>
-                              <EditIcon fontSize="small" />
-                            </IconButton> 
-                          ) }
-                           <IconButton title='Set Inactive'size="small" >
-                              <ToggleOffIcon fontSize="small" />
-                            </IconButton>
+                            <>
+                              <IconButton size="small" onClick={() => handleEditExistingRow(row)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton> 
+                              <IconButton title='Set Inactive'size="small" >
+                                <ToggleOffIcon fontSize="small" />
+                              </IconButton>
+                            </>
+                          )}                      
                         </td>
                       </tr>
                     ))}

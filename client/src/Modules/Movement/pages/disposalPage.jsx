@@ -424,12 +424,12 @@ const refreshData = useCallback(async () => {
       
       if (bulkActionType === 'approve') {
         if (result.data?.isFinalApproval) {
-          showToast(`Disposal fully approved!`, 'success');
+          showToast(`Disposal ${baseHeader.AD_No} is now fully approved!`, 'success');
         } else {
           showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
         }
       } else {
-        showToast(`Disposal rejected successfully`, 'success');
+        showToast(`Disposal ${baseHeader.AD_No} is rejected`, 'error');
       }
       
     // Force refresh the data

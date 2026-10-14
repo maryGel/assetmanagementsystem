@@ -530,12 +530,12 @@ const refreshData = useCallback(async () => {
       
       if (bulkActionType === 'approve') {
         if (result.data?.isFinalApproval) {
-          showToast(`Transfer Form fully approved!`, 'success');
+          showToast(`Job Order Form ${baseHeader.JO_No} is fully approved!`, 'success');
         } else {
           showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
         }
       } else {
-        showToast(`Transfer Form rejected successfully`, 'success');
+        showToast(`Job Order ${baseHeader.JO_No} is rejected`, 'error');
       }
       
     // Force refresh the data

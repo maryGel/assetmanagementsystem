@@ -129,35 +129,6 @@ function buildApprovalSection(approvalLogs, totalLevels) {
         </tbody>
       </table>`;
   }
-
-  // No approval history yet — render blank signature lines for each level
-  const levels = Math.max(1, Number(totalLevels) || 1);
-  const blankRows = Array.from({ length: levels })
-    .map((_, i) => `
-      <tr>
-        <td class="center">${i + 1}</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-      </tr>`)
-    .join('');
-
-  return `
-    <table class="approval-table">
-      <thead>
-        <tr>
-          <th style="width:8%">Level</th>
-          <th style="width:27%">Approver</th>
-          <th style="width:20%">Date</th>
-          <th style="width:15%">Action</th>
-          <th style="width:30%">Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${blankRows}
-      </tbody>
-    </table>`;
 }
 
 function buildStatusWatermark(statusCode) {
@@ -499,7 +470,7 @@ export function generateJOPrintHTML({
 
       <table class="info-grid">
         <tr>
-          <td class="label">Date Created</td>
+          <td class="label">Document Date</td>
           <td class="value">${formatDate(currentHeader?.xDate)}</td>
           <td class="label">Status</td>
           <td class="value">
@@ -542,9 +513,6 @@ export function generateJOPrintHTML({
           ${itemsRows}
         </tbody>
       </table>
-
-      <div class="section-label">Approval History</div>
-      ${approvalSection}
 
       <div class="signatures">
         <div class="sig-block">

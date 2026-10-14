@@ -10,7 +10,7 @@ export default function TRFormType(){
   // Preselect from ?transferType=..., ignoring anything that isn't a known type
   const [transferType, setTransferType] = useState(() => {
   const fromUrl = searchParams.get('transferType')
-      return TRANSFER_TYPES.includes(fromUrl) ? fromUrl : ''
+      return TRANSFER_TYPES.includes(fromUrl) ? fromUrl : 'Transfer Internal'
     })
   const [pendingType, setPendingType] = useState(null)   // type the user wants to switch to
   const [hasUnsaved, setHasUnsaved] = useState(false)    // reported by TRFormPage
@@ -46,7 +46,7 @@ export default function TRFormType(){
   return (
     <>
       <div className='flex gap-10 pl-20 mt-10 place-items-center'>
-        <label className='text-lg tracking-wide'>
+        <label className='text-sm font-medium tracking-wide text'>
           Transfer Type
         </label>
         <Select
@@ -58,7 +58,7 @@ export default function TRFormType(){
           }
           sx={{ 
             minWidth: 300, 
-            fontSize: '1.125rem',
+            fontSize: '1rem',
             '& .MuiSelect-select': {
               paddingTop: '8px',
               paddingBottom: '8px',
