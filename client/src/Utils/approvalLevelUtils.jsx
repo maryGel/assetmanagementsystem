@@ -41,6 +41,42 @@ export const getNextLevel = (header) => {
 };
 
 /**
+ * Get the current level: the last level that has been approved (the last entry
+ * of appStat, e.g. "1,2" -> 2).
+ * - For Approval (3): nothing approved yet -> 0
+ * - Partially Approved (2): last approved level from appStat; if appStat is
+ *   missing, assume level 1 is approved (mirrors getNextLevel's default of 2)
+ * - Anything else: null
+ * @param {Object} header - Document header object with xpost and appStat
+ * @returns {number|null} Last approved level, or null when not in approval flow
+ */
+export const getCurrentLevel = (header) => {
+  if (!header) return null;
+
+  const xpost = header.xpost || header.xPosted;
+  if (!xpost) return null;
+
+  if (xpost === 3) return 0;
+
+  if (xpost === 2) {
+    if (header.appStat) {
+      const approvedLevels = String(header.appStat)
+        .split(',')
+        .map((l) => parseInt(l.trim(), 10))
+        .filter((n) => !Number.isNaN(n));
+      if (approvedLevels.length > 0) {
+        return approvedLevels[approvedLevels.length - 1];
+      }
+      // appStat present but unparseable: fall back to the count of entries
+      return String(header.appStat).split(',').length;
+    }
+    return 1;
+  }
+
+  return null;
+};
+
+/**
  * Check if a document is pending approval
  * @param {Object} header - Document header
  * @returns {boolean} True if document needs approval

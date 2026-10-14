@@ -77,6 +77,9 @@ export default function CreateAsset({ setHeaderTitle }) {
   const [asset, setAsset] = useState(assetMasterFields);
   const [activeStep, setActiveStep] = useState(0);
   const [submitError, setSubmitError] = useState(null);
+  // Set when Next is clicked with missing fields. The error list itself is derived
+  // from the current asset, so each message disappears as soon as its field is filled.
+  const [showStepErrors, setShowStepErrors] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [facNOLoading, setFacNOLoading] = useState(false);
 
@@ -178,14 +181,16 @@ export default function CreateAsset({ setHeaderTitle }) {
 
     const validationErrors = getStepValidationErrors(activeStep, asset, requiredFields);
     if (validationErrors.length > 0) {
-      setSubmitError(validationErrors);
+      setShowStepErrors(true);
       return;
     }
+    setShowStepErrors(false);
     setActiveStep((prev) => prev + 1); // last step (steps.length - 1) -> summary (steps.length)
   };
 
   const handleBack = () => {
     setSubmitError(null);
+    setShowStepErrors(false);
     setActiveStep((prev) => prev - 1);
   };
 
@@ -196,6 +201,7 @@ export default function CreateAsset({ setHeaderTitle }) {
     setActiveStep(0);
     setAsset(assetMasterFields);
     setSubmitError(null);
+    setShowStepErrors(false);
     setSubmitSuccess(false);
   };
 
@@ -288,6 +294,8 @@ export default function CreateAsset({ setHeaderTitle }) {
       title: 'General Information',
       stepIndex: 0,
       fields: [
+        field('Category', 'CATEGORY'),
+        field('Item Class', 'ItemClass'),
         field('Asset Number', 'FacNO'),
         field('Asset Name', 'FacName'),
         field('Description', 'Description'),
@@ -302,8 +310,6 @@ export default function CreateAsset({ setHeaderTitle }) {
       title: 'Capitalization Details',
       stepIndex: 1,
       fields: [
-        field('Category', 'CATEGORY'),
-        field('Item Class', 'ItemClass'),
         field('Unit', 'Unit'),
         field('Quantity', 'balance_unit'),
         field('Acquisition Date', 'Adate'),
@@ -323,12 +329,17 @@ export default function CreateAsset({ setHeaderTitle }) {
     }
   ];
 
+  // Live required-field errors for the current step (empty once the fields are filled)
+  const liveStepErrors = showStepErrors
+    ? getStepValidationErrors(activeStep, asset, requiredFields)
+    : [];
+
   const renderFinalStepSummary = () => {
     const validationErrors = validationFinalSubmission(asset, requiredFields);
 
     return (
       <React.Fragment>
-        <Box className="pl-4 mt-4 text-base">
+        <Box className="text-base ">
           <Typography variant="h6" gutterBottom>
             Review and Submit
           </Typography>
@@ -368,7 +379,7 @@ export default function CreateAsset({ setHeaderTitle }) {
         </Alert>
       )}
 
-      <ValidationAlert errors={submitError} />
+      <ValidationAlert errors={liveStepErrors.length > 0 ? liveStepErrors : submitError} />
 
       <Stepper activeStep={activeStep}>
         {steps.map((label) => (
@@ -383,7 +394,7 @@ export default function CreateAsset({ setHeaderTitle }) {
       ) : (
         <React.Fragment>
           {getStepContent(activeStep)}
-          <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2, px: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'row', pt: 3, pb: 10, px: 2 }}>
             <Button color="inherit" disabled={activeStep === 0} onClick={handleBack} sx={{ mr: 1 }}>
               Back
             </Button>

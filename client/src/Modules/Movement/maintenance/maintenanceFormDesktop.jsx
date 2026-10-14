@@ -71,6 +71,18 @@ function MaintenanceFormDesktop({
     const [maintenanceStatuses, setMaintenanceStatuses] = useState(() =>
         initialStatuses.map(normalizeMaintenanceStatus).filter(Boolean)
     );
+    // Selected Sector_name values (jo_h.Sector_name); empty = all sectors.
+    const [sectorFilters, setSectorFilters] = useState([]);
+
+    // Sector options come from the data itself.
+    const sectorOptions = useMemo(() => {
+        const set = new Set();
+        (joHeaders || []).forEach((jo) => {
+            const name = String(jo.Sector_name ?? '').trim();
+            if (name) set.add(name);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }, [joHeaders]);
 
     // Date range state with localStorage persistence
     const [dateRange, setDateRange] = useState(() => {
@@ -134,7 +146,7 @@ function MaintenanceFormDesktop({
     // Reset page when filters change
     useEffect(() => {
         setPage(0);
-    }, [searchTerm, dateRange, maintenanceStatuses]);
+    }, [searchTerm, dateRange, maintenanceStatuses, sectorFilters]);
 
     // Opens the Work Order dialog in 'create' mode (jo has no workNo yet).
     const handleCreateWorkOrder = (jo) => {
@@ -185,6 +197,7 @@ function MaintenanceFormDesktop({
     const handleClearFilters = () => {
         setSearchTerm('');
         setMaintenanceStatuses([]);
+        setSectorFilters([]);
         setSelectedJO(null);
         setPage(0);
     };
@@ -211,6 +224,12 @@ function MaintenanceFormDesktop({
             );
         }
 
+        if (sectorFilters.length > 0) {
+            filtered = filtered.filter(jo =>
+                sectorFilters.includes(String(jo.Sector_name ?? '').trim())
+            );
+        }
+
         if (keyword) {
             filtered = filtered.filter(jo => {
                 const status = jo.main_stat || "Not Started";
@@ -218,6 +237,7 @@ function MaintenanceFormDesktop({
                 return (
                     jo.JO_No?.toLowerCase().includes(keyword) ||
                     jo.Department_Code?.toLowerCase().includes(keyword) ||
+                    jo.Sector_name?.toLowerCase().includes(keyword) ||
                     displayStatus.toLowerCase().includes(keyword) ||
                     status.toLowerCase().includes(keyword) ||
                     jo.workNo?.toLowerCase().includes(keyword) ||
@@ -241,7 +261,7 @@ function MaintenanceFormDesktop({
         }
 
         return filtered;
-    }, [joHeaders, searchTerm, dateRange, maintenanceStatuses]);
+    }, [joHeaders, searchTerm, dateRange, maintenanceStatuses, sectorFilters]);
 
     // Get total items count
     const totalItems = filteredJO.length;
@@ -345,6 +365,26 @@ function MaintenanceFormDesktop({
                             ))}
                         </Select>
                     </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 220 }}>
+                        <InputLabel id="maintenance-sector-filter-label">Maintenance</InputLabel>
+                        <Select
+                            labelId="maintenance-sector-filter-label"
+                            multiple
+                            value={sectorFilters}
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                setSectorFilters(typeof value === 'string' ? value.split(',') : value);
+                            }}
+                            label="Maintenance"
+                            renderValue={(selected) => selected.length ? selected.join(', ') : 'All sectors'}
+                        >
+                            {sectorOptions.map(sector => (
+                                <MenuItem key={sector} value={sector}>
+                                    {sector}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                     <button
                         onClick={handleOptionsOpen}
                         className={`
@@ -408,7 +448,7 @@ function MaintenanceFormDesktop({
             )}
 
             {/* Filter Summary */}
-            {(dateRange?.startDate || searchTerm || maintenanceStatuses.length > 0) && (
+            {(dateRange?.startDate || searchTerm || maintenanceStatuses.length > 0 || sectorFilters.length > 0) && (
                 <div className="px-4 py-2 mt-3 text-xs text-gray-600 border border-blue-100 rounded-lg bg-blue-50">
                     <div className="flex flex-wrap items-center gap-3">
                         <span>
@@ -422,6 +462,12 @@ function MaintenanceFormDesktop({
                             <>
                                 <span>|</span>
                                 <span>Status: <strong>{maintenanceStatuses.join(', ')}</strong></span>
+                            </>
+                        )}
+                        {sectorFilters.length > 0 && (
+                            <>
+                                <span>|</span>
+                                <span>Sector: <strong>{sectorFilters.join(', ')}</strong></span>
                             </>
                         )}
                         {searchTerm && (
@@ -454,6 +500,7 @@ function MaintenanceFormDesktop({
                               <TableCell className="px-4 py-3">JO Number</TableCell>
                               <TableCell className="px-4 py-3">Date</TableCell>
                               <TableCell className="px-4 py-3">Department</TableCell>
+                              <TableCell className="px-4 py-3">Maintenance</TableCell>
                               <TableCell className="px-4 py-3">Remarks</TableCell>
                               <TableCell className="px-4 py-3">Status</TableCell>
                               <TableCell className="px-4 py-3">Items</TableCell>
@@ -465,7 +512,7 @@ function MaintenanceFormDesktop({
                       <TableBody>
                           {paginatedJO.length === 0 ? (
                               <TableRow>
-                                  <TableCell colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                                  <TableCell colSpan={10}className="px-4 py-8 text-center text-gray-500">
                                       No maintenance records found
                                   </TableCell>
                               </TableRow>
@@ -505,6 +552,7 @@ function MaintenanceFormDesktop({
                                           <DateDisplay value={jo.xDate} format="short" />
                                       </TableCell>
                                       <TableCell className="px-4 py-3 text-gray-600">{jo.Department_Code}</TableCell>
+                                      <TableCell className="px-4 py-3 text-gray-600">{jo.Sector_name || '-'}</TableCell>
                                       <TableCell className="max-w-xs px-4 py-3 text-gray-600 truncate">
                                           {jo.Remarks || '-'}
                                       </TableCell>

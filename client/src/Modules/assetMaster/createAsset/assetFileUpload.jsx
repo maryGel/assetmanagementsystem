@@ -3,8 +3,13 @@ import { Box, Typography, Button } from '@mui/material';
 
 const AssetFileUpload = ({ asset, updateAssetData }) => {
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const input = e.target;
+    const file = input.files[0];
     if (file) {
+      // Free the previous preview before replacing it
+      if (asset.uploadPicture?.preview) {
+        URL.revokeObjectURL(asset.uploadPicture.preview);
+      }
       updateAssetData({
         uploadPicture: {
           file,
@@ -12,6 +17,15 @@ const AssetFileUpload = ({ asset, updateAssetData }) => {
         }
       });
     }
+    // Reset so choosing the same file again still fires onChange
+    input.value = '';
+  };
+
+  const handleRemove = () => {
+    if (asset.uploadPicture?.preview) {
+      URL.revokeObjectURL(asset.uploadPicture.preview);
+    }
+    updateAssetData({ uploadPicture: { file: null, preview: '' } });
   };
 
   return (
@@ -61,9 +75,7 @@ const AssetFileUpload = ({ asset, updateAssetData }) => {
               variant="outlined" 
               color="error" 
               size="small"
-              onClick={() => updateAssetData({
-                uploadPicture: { file: null, preview: '' }
-              })}
+              onClick={handleRemove}
               sx={{ mt: 1 }}
             >
               Remove Image

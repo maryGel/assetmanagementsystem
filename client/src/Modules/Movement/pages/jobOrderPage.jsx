@@ -17,6 +17,7 @@ import { getAutocompleteSx,
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
+import { getCurrentLevel } from '../../../Utils/approvalLevelUtils'
 
 
 
@@ -261,6 +262,7 @@ const refreshData = useCallback(async () => {
   const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
   const isReadOnly = !canEditDocument;
   const nextLevel = getNextLevel(baseHeader);
+  const currentLevel = getCurrentLevel(baseHeader);
 
   // Generate Auto JO number based on the company config (db table: user0002inv)
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
@@ -913,9 +915,9 @@ const refreshData = useCallback(async () => {
             <br/>
             <label className='text-base font-normal text-gray-500 '>Status : </label>
             <label className='pl-3 text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
-              {nextLevel && currentHeader?.xpost === 2 && (
+              {nextLevel && (currentHeader?.xpost === 2 || currentHeader?.xpost === 3) && (
                 <label className='pl-3 text-sm text-blue-600'>
-                  (Next approval level {nextLevel}/{totalLevels})
+                  (Level of approval :  {currentLevel}/{totalLevels})
                 </label>
               )}
             <div className='flex items-center pt-3 min-w-[240px] gap-3'>

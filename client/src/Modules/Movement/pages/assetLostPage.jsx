@@ -12,7 +12,8 @@ import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
-import { openALPrintPreview } from '../../../Utils/printLostAssetForm'
+import { openALPrintPreview } from '../../../Utils/printLostAssetForm';
+import { getCurrentLevel } from '../../../Utils/approvalLevelUtils'
 
 // Custom Hooks
 import { useAD_h } from '../../../hooks/useAD_h';
@@ -217,6 +218,7 @@ const refreshData = useCallback(async () => {
   const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xPosted === 0);
   const isReadOnly = !canEditDocument;
   const nextLevel = getNextLevel(baseHeader);
+  const currentLevel = getCurrentLevel(baseHeader);
 
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
 
@@ -721,11 +723,11 @@ const handleEmployeeChange = (event, newValue) => {
           <br/>
           <label className='text-base font-normal text-gray-500'>Status : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{docStatus(currentHeader?.xPosted)}</label>
-          {nextLevel && currentHeader?.xPosted === 2 && (
-            <label className='pl-3 text-sm text-orange-300'>
-              (Next approval level {nextLevel}/{totalLevels})
-            </label>
-          )}
+             {nextLevel && (currentHeader?.xPosted === 2 || currentHeader?.xPosted === 3) && (
+                <label className='pl-3 text-sm text-blue-600'>
+                  (Level of approval :  {currentLevel}/{totalLevels})
+                </label>
+              )}
           
           <Box className='mt-2'>
             <div className='flex flex-wrap items-center justify-start w-full gap-10 mt-4'>

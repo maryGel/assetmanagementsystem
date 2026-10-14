@@ -64,8 +64,8 @@ export const reqFieldsDisplayAsset = {
 
 // Required field validations for each step
 export const stepRequiredFields = {
-  0: ['FacName', 'Description', 'ReferenceNo'], // General Info
-  1: ['CATEGORY', 'FacNO', 'ItemClass', 'Unit', 'Adate', 'AAmount', 'Percent', 'ItemLocation', 'Department'], // Capitalization
+  0: ['CATEGORY', 'FacNO', 'ItemClass', 'FacName', 'Description', 'ReferenceNo'], // General Info
+  1: ['Unit', 'Adate', 'AAmount', 'Percent', 'ItemLocation', 'Department'], // Capitalization
   2: [] // Upload Picture (optional)
 };
 
@@ -89,12 +89,37 @@ export const isFieldMissing = (field, asset) => {
   return String(value).trim() === '';
 };
 
+// Residual value must be >= 0 and not greater than the acquired value.
+// Returns an error message, or '' when valid. The acquired-value comparison is
+// skipped until an acquired value has been entered, so typing residual first
+// doesn't flash an error.
+export const getResidualValueError = (asset) => {
+  const raw = asset.Abre;
+  if (raw === '' || raw === null || raw === undefined) return '';
+  const residual = toNumber(raw);
+  if (Number.isNaN(residual)) return '';
+  if (residual < 0) return 'Residual value cannot be less than 0.';
+
+  const acquiredRaw = asset.AAmount;
+  if (acquiredRaw === '' || acquiredRaw === null || acquiredRaw === undefined) return '';
+  if (residual > toNumber(acquiredRaw)) {
+    return 'Residual value cannot be greater than the acquired value.';
+  }
+  return '';
+};
+
 // Get specific error messages for a step
 export const getStepValidationErrors = (step, asset, labels = requiredFields) => {
   const fields = stepRequiredFields[step] || [];
-  return fields
+  const errors = fields
     .filter((field) => isFieldMissing(field, asset))
     .map((field) => `${labels[field] || field} is required.`);
+
+  if (step === 1) {
+    const residualError = getResidualValueError(asset);
+    if (residualError) errors.push(residualError);
+  }
+  return errors;
 };
 
 export const getAllValidationErrors = (asset, labels = requiredFields ) => {
@@ -108,10 +133,15 @@ export const validateStep = (step, asset) =>
   getStepValidationErrors(step, asset).length === 0;
 
 // Final validation for all required fields
-export const validationFinalSubmission = (asset, labels = requiredFields) =>
-  Object.entries(labels)
+export const validationFinalSubmission = (asset, labels = requiredFields) => {
+  const errors = Object.entries(labels)
     .filter(([field]) => isFieldMissing(field, asset))
     .map(([, label]) => `${label} is required`);
+
+  const residualError = getResidualValueError(asset);
+  if (residualError) errors.push(residualError);
+  return errors;
+};
 
 // Prepare payload for API submission
 export const prepareAssetPayload = (asset) => ({

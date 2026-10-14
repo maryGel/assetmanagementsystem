@@ -32,7 +32,7 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import { visuallyHidden } from '@mui/utils';
 // Custom Utils
 import DateDisplay from '../../../Utils/formatDateForInput';
-import { getNextLevel, isPendingApproval } from '../../../Utils/approvalLevelUtils';
+import { getNextLevel, getCurrentLevel, isPendingApproval } from '../../../Utils/approvalLevelUtils';
 import { useAllApprovalLevels } from '../../../Utils/approvalHookFactory';
 // hooks
 
@@ -544,14 +544,17 @@ export default function SearchTransactionTable({
       };
       
       const nextLevel = getNextLevel(header);
+      // Last approved level (last entry of appStat)
+      const currentLevel = getCurrentLevel(header);
       const isPending = isPendingApproval(header);
-      
+
       return {
         ...row,
         ItemCount: getItemCount(row, itemCounts),
         nextLevel,
+        currentLevel,
         totalLevels,
-        levelShortDisplay: nextLevel ? `${nextLevel}/${totalLevels}` : '',
+        levelShortDisplay: currentLevel !== null ? `${currentLevel}/${totalLevels}` : '',
         isPending
       };
     });

@@ -13,10 +13,9 @@ import {
 
 // Custom Hooks
 import { useRefUom } from '../../../hooks/refUom';
-import { useRefCategory } from '../../../hooks/refCategory';
-import { useRefItemClass } from '../../../hooks/refClass';
 import { useRefLocation } from '../../../hooks/refLocation';
 import { useRefDepartment } from '../../../hooks/refDepartment';
+import { getResidualValueError } from './assetMasterFields';
 
 // Builds a clean option list from a reference table
 const toOptions = (data, key) =>
@@ -27,27 +26,12 @@ export default function CreateAssetCapitalization({
   updateAssetData,
   loading,
   error,
-  facNOLoading,
-  autoNumbering = true
 }) {
   const { uomData } = useRefUom();
-  const { refCategoryData } = useRefCategory();
-  const { refItemClassData } = useRefItemClass();
   const { refDeptData } = useRefDepartment();
   const { refLocData } = useRefLocation();
 
   const uomOptions = useMemo(() => toOptions(uomData, 'Unit'), [uomData]);
-  const categoryOptions = useMemo(() => toOptions(refCategoryData, 'category'), [refCategoryData]);
-
-  // Each refItemclass row belongs to exactly one category (see the 'category'
-  // column in refItemClass.jsx), so Asset Class options depend on Category.
-  const itemClassOptions = useMemo(() => {
-    if (!asset.CATEGORY || !Array.isArray(refItemClassData)) return [];
-    return refItemClassData
-      .filter((item) => item.category === asset.CATEGORY)
-      .map((item) => item.itemClass)
-      .filter(Boolean);
-  }, [refItemClassData, asset.CATEGORY]);
 
   const locationOptions = useMemo(() => toOptions(refLocData, 'LocationName'), [refLocData]);
   const departmentOptions = useMemo(() => toOptions(refDeptData, 'Department'), [refDeptData]);
@@ -69,17 +53,9 @@ export default function CreateAssetCapitalization({
     updateAssetData({ [field]: value });
   };
 
-  // Changing the category can orphan the previously chosen class
-  // (e.g. switching from "IT Equipment" to "Furniture" while "Laptop" is selected).
-  const handleCategoryChange = (newCategory) => {
-    const stillValid = refItemClassData?.some(
-      (item) => item.category === newCategory && item.itemClass === asset.ItemClass
-    );
-    updateAssetData({
-      CATEGORY: newCategory,
-      ItemClass: stillValid ? asset.ItemClass : ''
-    });
-  };
+  // Shown live, before the user clicks Next
+  const residualError = getResidualValueError(asset);
+
 
   // NumericFormat: store the raw number string ("1250.5"), not the display
   // string ("1,250.50"). `source === 'event'` ignores echoes of our own value.
@@ -97,72 +73,6 @@ export default function CreateAssetCapitalization({
       <Typography variant="h6" gutterBottom>
         Asset Capitalization
       </Typography>
-
-      {/* ... Category (drives the asset number) and Asset Number ... */}
-      <Autocomplete
-        key="Asset Category"
-        sx={selectSx}
-        options={categoryOptions}
-        value={asset.CATEGORY || null}
-        onChange={(event, newValue) => handleCategoryChange(newValue || '')}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="Category"
-            placeholder="Select Category"
-            sx={inputSx}
-            required
-          />
-        )}
-      />
-
-      {autoNumbering ? (
-        <TextField
-          label="Asset Number"
-          sx={selectSx}
-          value={facNOLoading ? 'Generating...' : asset.FacNO || ''}
-          helperText={
-            asset.FacNO
-              ? 'Generated from the category code'
-              : 'Select a category to generate the asset number'
-          }
-          InputProps={{ readOnly: true }}
-          InputLabelProps={{ shrink: true }}
-        />
-      ) : (
-        <TextField
-          label="Asset Number"
-          sx={selectSx}
-          value={asset.FacNO || ''}
-          onChange={(e) => handleInputChange('FacNO', e.target.value)}
-          helperText="Auto-numbering is off. Enter a unique asset number."
-          InputLabelProps={{ shrink: true }}
-          required
-        />
-      )}
-
-      <Autocomplete
-        key="Asset Class"
-        sx={selectSx}
-        options={itemClassOptions}
-        value={asset.ItemClass || null}
-        onChange={(event, newValue) => handleInputChange('ItemClass', newValue || '')}
-        disabled={!asset.CATEGORY}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="Asset Class"
-            placeholder={asset.CATEGORY ? 'Asset Class' : 'Select a category first'}
-            helperText={
-              asset.CATEGORY && itemClassOptions.length === 0
-                ? 'No asset classes are set up for this category yet'
-                : ' '
-            }
-            sx={inputSx}
-            required
-          />
-        )}
-      />
 
       {/* ... Acquired Date, UOM, and Quantity ... */}
       <Box className="flex justify-start gap-2">
@@ -230,17 +140,28 @@ export default function CreateAssetCapitalization({
           required
         />
 
-        <NumericFormat
-          customInput={TextField}
-          label="Residual Value"
-          sx={{ width: '18rem' }}
-          margin="normal"
-          thousandSeparator=","
-          allowNegative={false}
-          decimalScale={2}
-          value={asset.Abre ?? ''}
-          onValueChange={handleNumberChange('Abre')}
-        />
+        <Box sx={{ width: '18rem' }}>
+          <NumericFormat
+            customInput={TextField}
+            label="Residual Value"
+            sx={{ width: '100%' }}
+            margin="normal"
+            thousandSeparator=","
+            allowNegative={false}
+            decimalScale={2}
+            value={asset.Abre ?? ''}
+            onValueChange={handleNumberChange('Abre')}
+            error={Boolean(residualError)}
+          />
+          {residualError && (
+            <span
+              role="alert"
+              style={{ display: 'block', color: '#d32f2f', fontSize: '0.75rem', marginTop: '-4px' }}
+            >
+              {residualError}
+            </span>
+          )}
+        </Box>
 
         <NumericFormat
           customInput={TextField}
@@ -289,6 +210,37 @@ export default function CreateAssetCapitalization({
           />
         )}
       />
+
+      <Box className="flex justify-start gap-2">
+        <TextField
+          label="Warranty Start date"
+          sx={{
+            width: '16rem',
+            color: 'gray',
+            '& .MuiInputBase-input': { color: 'gray' }
+          }}
+          type="date"
+          margin="normal"
+          value={asset.StartDate || ''}
+          onChange={(e) => handleInputChange('StartDate', e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+
+        <TextField
+          label="Warranty End date"
+          sx={{
+            width: '16rem',
+            color: 'gray',
+            '& .MuiInputBase-input': { color: 'gray' }
+          }}
+          type="date"
+          margin="normal"
+          value={asset.EndDate || ''}
+          onChange={(e) => handleInputChange('EndDate', e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Box>
+      
     </div>
   );
 }

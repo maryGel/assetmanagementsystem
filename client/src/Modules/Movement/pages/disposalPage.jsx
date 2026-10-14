@@ -11,7 +11,8 @@ import DisposalTabs from '../disposal/disposalTabs';
 import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
-import { CustomDialog } from '../../../Utils/customDialog'
+import { CustomDialog } from '../../../Utils/customDialog';
+import { getCurrentLevel } from '../../../Utils/approvalLevelUtils'
 
 // Custom Hooks
 import { useAD_h } from '../../../hooks/useAD_h';
@@ -220,6 +221,7 @@ const refreshData = useCallback(async () => {
   const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
   const isReadOnly = !canEditDocument;
   const nextLevel = getNextLevel(baseHeader);
+  const currentLevel = getCurrentLevel(baseHeader);
 
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
 
@@ -750,9 +752,9 @@ const refreshData = useCallback(async () => {
           <br/>
           <label className='text-base font-normal text-gray-500'>Status : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{docStatus(currentHeader?.xpost)}</label>
-          {nextLevel && currentHeader?.xpost === 2 && (
-            <label className='pl-3 text-sm text-orange-300'>
-              (Next approval level {nextLevel}/{totalLevels})
+          {nextLevel && (currentHeader?.xpost === 2 || currentHeader?.xpost === 3) && (
+            <label className='pl-3 text-sm text-blue-500'>
+              ( Level of approval:  {currentLevel}/{totalLevels} )
             </label>
           )}
           

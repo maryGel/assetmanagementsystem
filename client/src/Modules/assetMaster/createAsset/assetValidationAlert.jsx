@@ -22,7 +22,7 @@ const ValidationAlert = ({ errors, type = 'error' }) => {
         ) : (
           <>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Please fix the following errors:
+              Fill out the missing fields:
             </Typography>
             <ul style={{ margin: 0, paddingLeft: '20px' }}>
               {errors.map((error, index) => (

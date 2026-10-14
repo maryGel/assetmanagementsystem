@@ -71,6 +71,28 @@ const normalizeItemStatus = (status) => {
 };
 const getItemStatusLabel = (status) => (!status || status === 'OPEN' ? 'Open' : status);
 
+// An item whose jo_d row already has an AD_No can no longer have its status changed.
+const hasAdNo = (item) => String(item?.original?.AD_No ?? '').trim() !== '';
+
+// Deep links opened in a new tab.
+const getJOFormUrl = (joNo) => `/assetMovement/pages/JOFormPage?docId=${encodeURIComponent(joNo)}`;
+const getADFormUrl = (adNo) => `/assetMovement/pages/ADFormPage?docId=${encodeURIComponent(adNo)}`;
+const getAssetUrl = (facNo) => `/assetFolder/assetMasterDisplay?copyFrom=${encodeURIComponent(facNo)}`;
+
+const linkClass = 'font-medium text-blue-600 underline hover:text-blue-800';
+const NewTabLink = ({ href, children, className = linkClass, title }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className={className}
+    title={title}
+    onClick={(e) => e.stopPropagation()}
+  >
+    {children}
+  </a>
+);
+
 const buildItemsFromDetails = (details, expensesByFacNo = {}) => (details || []).map((detail) => ({
   // Keep the full jo_d row so a save can write back every column the
   // maintenance UI doesn't edit (brand, serialno, location, dates, xpost...).
@@ -139,6 +161,7 @@ export default function WorkOrderDialog({
   const isCreateMode = resolvedMode === 'create';
   const [isInitializing, setIsInitializing] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  // false when hidden, otherwise the success message string to display.
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [validationError, setValidationError] = useState(null);
@@ -148,9 +171,13 @@ export default function WorkOrderDialog({
   const [workOrderData, setWorkOrderData] = useState({ joNo: '', workNo: '', woDate: '', maintenanceStatus: 'Ongoing', items: [] });
 
   // Resizable column widths (px), in the same order as the header cells.
-  const WO_COLUMNS = ['Item Status', 'FAC No.', 'Item Name', 'Qty', 'UOM', 'Details of Work', 'Evaluation', 'Remarks on Eval.', 'Maintenance Remarks', 'Expenses', 'Actions', 'Reason for Disposal'];
-  const [colWidths, setColWidths] = useState([140, 190, 180, 70, 80, 260, 140, 180, 220, 130, 140, 200]);
-  const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
+  const WO_COLUMNS = ['Item Status', 'FAC No.', 'Item Name', 'Qty', 'UOM', 'Details of Work', 'Evaluation', 'Remarks on Eval.', 'Maintenance Remarks', 'Expenses', 'Actions', 'Reason for Disposal', 'Disposal No'];
+  const [colWidths, setColWidths] = useState([160, 190, 180, 70, 80, 260, 140, 180, 220, 130, 140, 200, 150]);
+  // "Disposal No" (last column) only appears when at least one item has an AD_No.
+  const showDisposalNo = workOrderData.items.some(hasAdNo);
+  const visibleColumns = showDisposalNo ? WO_COLUMNS : WO_COLUMNS.slice(0, -1);
+  const visibleWidths = showDisposalNo ? colWidths : colWidths.slice(0, -1);
+  const totalColWidth = visibleWidths.reduce((a, b) => a + b, 0);
 
   const startColResize = (e, colIndex) => {
     e.preventDefault();
@@ -175,6 +202,7 @@ export default function WorkOrderDialog({
   const [openExpenseDialog, setOpenExpenseDialog] = useState(false);
   const [expenseData, setExpenseData] = useState(emptyExpenseForm());
   const [editingExpenseIndex, setEditingExpenseIndex] = useState(null);
+  const [expenseErrors, setExpenseErrors] = useState({});
 
   const [openDisposalDialog, setOpenDisposalDialog] = useState(false);
   const [disposalReason, setDisposalReason] = useState('');
@@ -361,7 +389,7 @@ export default function WorkOrderDialog({
     setIsSaving(true);
     try {
       await persistWorkOrder(workOrderData.items, workOrderData.maintenanceStatus);
-      setSaveSuccess(true);
+      setSaveSuccess(isCreateMode ? 'Work order created successfully!' : 'Work order updated successfully!');
       setTimeout(() => {
         onClose();
         setSaveSuccess(false);
@@ -392,7 +420,7 @@ export default function WorkOrderDialog({
     setIsSaving(true);
     try {
       await persistWorkOrder(updatedItems, 'Completed');
-      setSaveSuccess(true);
+      setSaveSuccess(isCreateMode ? 'Work order created successfully!' : 'Work order updated successfully!');
       setTimeout(() => {
         onClose();
         setSaveSuccess(false);
@@ -410,6 +438,7 @@ export default function WorkOrderDialog({
     setSelectedItemForExpense(item);
     setSelectedItemIndex(index);
     setEditingExpenseIndex(null);
+    setExpenseErrors({});
     setExpenseData({ ...emptyExpenseForm(), expenseType: 'LABOR EXPENSE' });
     setOpenExpenseDialog(true);
   };
@@ -422,10 +451,23 @@ export default function WorkOrderDialog({
       qty: expense.qty || '', orNumber: expense.orNumber, workDone: expense.workDone,
     });
     setEditingExpenseIndex(expenseIndex);
+    setExpenseErrors({});
     setOpenExpenseDialog(true);
   };
 
+  // Expense Amount, Qty, O.R No. and Work Done/Remarks are mandatory.
+  const validateExpense = () => {
+    const errors = {};
+    if (!String(expenseData.expenseAmount ?? '').trim()) errors.expenseAmount = 'Expense Amount is required';
+    if (!String(expenseData.qty ?? '').trim()) errors.qty = 'Qty is required';
+    if (!String(expenseData.orNumber ?? '').trim()) errors.orNumber = 'O.R No. is required';
+    if (!String(expenseData.workDone ?? '').trim()) errors.workDone = 'Work Done/Remarks is required';
+    setExpenseErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSaveExpense = async () => {
+    if (!validateExpense()) return;
     try {
       setIsSaving(true);
       setSaveError(null);
@@ -467,7 +509,8 @@ export default function WorkOrderDialog({
         setExpenseData(emptyExpenseForm());
         setEditingExpenseIndex(null);
         setSelectedItemForExpense(null);
-        setSaveSuccess(true);
+        setExpenseErrors({});
+        setSaveSuccess(editingExpenseIndex !== null ? 'Expense has been updated' : 'Expense has been added');
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         setSaveError(result.error);
@@ -503,7 +546,7 @@ export default function WorkOrderDialog({
       const result = await deleteWorkOrderExpense(expenseToDelete.id);
       if (result.success) {
         removeLocally();
-        setSaveSuccess(true);
+        setSaveSuccess('Expense has been deleted');
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         setSaveError(result.error);
@@ -520,6 +563,11 @@ export default function WorkOrderDialog({
 
   const handleWoItemsChangePage = (_, newPage) => setWoItemsPage(newPage);
   const handleWoItemsChangeRowsPerPage = (event) => { setWoItemsRowsPerPage(parseInt(event.target.value, 10)); setWoItemsPage(0); };
+
+  // Expenses on the selected item can't be edited/deleted once the item is
+  // Completed or already has an AD_No.
+  const selectedItem = workOrderData.items[selectedItemIndex];
+  const isSelectedItemLocked = !!selectedItem && (selectedItem.status === 'Completed' || hasAdNo(selectedItem));
 
   const overallExpenses = useMemo(
     () => workOrderData.items.reduce(
@@ -543,17 +591,16 @@ export default function WorkOrderDialog({
             <div>
               <h2 className="text-lg font-semibold text-green-600">Work Order {workOrderData.workNo} </h2>
               <div className="mt-1 text-base text-gray-500">
-                <div><strong>Job Order :</strong> {workOrderData.joNo}</div>
+                <div>
+                  <strong>Job Order :</strong>{' '}
+                  {workOrderData.joNo ? <NewTabLink href={getJOFormUrl(workOrderData.joNo)} title="Open job order">{workOrderData.joNo}</NewTabLink> : null}
+                </div>
               </div>
             </div>
           </div>
         </DialogTitle>
         <DialogContent>
-          {saveSuccess && (
-            <Alert severity="success" className="mb-4">
-              {isCreateMode ? 'Work order created successfully!' : 'Work order updated successfully!'}
-            </Alert>
-          )}
+          {saveSuccess && <Alert severity="success" className="mb-4">{saveSuccess}</Alert>}
           {saveError && <Alert severity="error" className="mb-4">Error: {saveError}</Alert>}
           {validationError && <Alert severity="warning" className="mb-4" onClose={() => setValidationError(null)}>{validationError}</Alert>}
 
@@ -588,11 +635,11 @@ export default function WorkOrderDialog({
                 <div style={{ maxHeight: 420, overflow: 'auto' }}>
                 <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: totalColWidth, minWidth: totalColWidth }}>
                   <colgroup>
-                    {colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
+                    {visibleWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
                   </colgroup>
                   <TableHead>
                     <TableRow className="bg-gray-50">
-                      {WO_COLUMNS.map((label, i) => (
+                      {visibleColumns.map((label, i) => (
                         <TableCell
                           key={label}
                           align={i === 9 ? 'center' : (i === 10 || i === 11) ? 'right' : 'left'}
@@ -612,7 +659,7 @@ export default function WorkOrderDialog({
                   <TableBody>
                     {paginatedWOItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan="11" className="px-4 py-8 text-center text-gray-500">No items found</TableCell>
+                        <TableCell colSpan={visibleColumns.length} className="px-4 py-8 text-center text-gray-500">No items found</TableCell>
                       </TableRow>
                     ) : (
                       paginatedWOItems.map((item, index) => {
@@ -625,7 +672,13 @@ export default function WorkOrderDialog({
                             className={`cursor-pointer transition-colors ${selectedItemIndex === actualIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                           >
                             <TableCell>
-                              <FormControl size="small" disabled={isSaving || isOverallCompleted || !item.evaluation?.trim()} fullWidth onClick={(e) => e.stopPropagation()}>
+                              <FormControl
+                                size="small"
+                                disabled={isSaving || isOverallCompleted || !item.evaluation?.trim() || hasAdNo(item)}
+                                fullWidth
+                                onClick={(e) => e.stopPropagation()}
+                                title={hasAdNo(item) ? `Status is locked: already tied to AD No. ${item.original.AD_No}` : ''}
+                              >
                                 <Select value={item.status || 'OPEN'} onChange={(e) => handleItemStatusChange(actualIndex, e.target.value)} sx={{ minWidth: 120 }}>
                                   <MenuItem value="OPEN">Open</MenuItem>
                                   <MenuItem value="In Progress">In Progress</MenuItem>
@@ -634,10 +687,12 @@ export default function WorkOrderDialog({
                                 </Select>
                               </FormControl>
                             </TableCell>
-                            <TableCell className="font-medium text-blue-600">{item.FAC_NO}</TableCell>
+                            <TableCell>
+                              {item.FAC_NO ? <NewTabLink href={getAssetUrl(item.FAC_NO)} title="Open asset">{item.FAC_NO}</NewTabLink> : null}
+                            </TableCell>
                             <TableCell 
                               sx={{
-                                color: selectedItemIndex === actualIndex ? '#1d4ed8' : '', // blue-700 : orange-400
+                                color: selectedItemIndex === actualIndex ? '#dd2c00' : '', // blue-700 : orange-400
                                 fontWeight: selectedItemIndex === actualIndex ? 600 : 400,
                               }}
                             >{item.FAC_name}</TableCell>
@@ -677,23 +732,23 @@ export default function WorkOrderDialog({
                                   const updatedItems = workOrderData.items.map((itm, idx) => idx === actualIndex ? { ...itm, woRemarks: e.target.value } : itm);
                                   setWorkOrderData({ ...workOrderData, items: updatedItems });
                                 }}
-                                disabled={isSaving || isOverallCompleted || !item.evaluation?.trim()}
+                                disabled={isSaving || isOverallCompleted || !item.evaluation?.trim() || item.status === 'Completed' || hasAdNo(item)}
                                 placeholder="Type your remarks here"
                                 fullWidth
                                 variant="outlined"
                               />
                             </TableCell>
                             <TableCell align="center">
-                              <span className="text-sm font-medium text-blue-600">
+                              <span className="text-sm font-medium">
                                 ₱{item.expenses.reduce((total, expense) => total + safeParseNumber(expense.expenseAmount), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </TableCell>
                             <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                               <button
-                                disabled={isSaving || item.status === 'Completed'}
+                                disabled={isSaving || item.status === 'Completed' || hasAdNo(item)}
                                 onClick={() => handleAddExpense(item, actualIndex)}
                                 className={`flex items-center gap-2 p-2 bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors 
-                                  ${(isSaving || item.status === 'Completed') ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-blue-500 hover:text-white'}`}
+                                  ${(isSaving || item.status === 'Completed' || hasAdNo(item)) ? 'opacity-50 cursor-not-allowed bg-gray-200' : 'hover:bg-blue-500 hover:text-white'}`}
                               >
                                 <AddIcon fontSize="small" />Expense
                               </button>
@@ -701,6 +756,13 @@ export default function WorkOrderDialog({
                             <TableCell align="right">
                               {item.status === 'For Disposal' && <span className="text-sm text-red-600">{item.disposalReason || 'No reason provided'}</span>}
                             </TableCell>
+                            {showDisposalNo && (
+                              <TableCell>
+                                {hasAdNo(item) ? (
+                                  <NewTabLink href={getADFormUrl(item.original.AD_No)} title="Open disposal form">{item.original.AD_No}</NewTabLink>
+                                ) : null}
+                              </TableCell>
+                            )}
                           </TableRow>
                         );
                       })
@@ -709,7 +771,7 @@ export default function WorkOrderDialog({
                 </Table>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2 px-4 border-t border-gray-200">
-                  <span className="text-sm font-semibold text-gray-700">
+                  <span className="font-semibold text-gray-700">
                     Overall Expenses: <span className="text-blue-600">₱{formatWithCommas(overallExpenses)}</span>
                   </span>
                   <TablePagination
@@ -725,18 +787,21 @@ export default function WorkOrderDialog({
               </TableContainer>
 
               <div key={workOrderData.items[selectedItemIndex]?.FAC_NO ?? selectedItemIndex} className="p-4 mt-4 border-2 border-blue-300 rounded-lg bg-blue-50/30">
-                <h4 className="mb-2 text-lg font-semibold text-orange-700">
+                <h4 className="mb-2 text-lg font-semibold">
                   Work Details and Expenses
                 </h4>
                 <div className='flex items-center gap-3'>
                   <span className='text-sm'>Asset Name:</span>
-                  <span className='font-medium text-blue-700'>{workOrderData.items[selectedItemIndex]?.FAC_name}</span>
+                  <span className='font-medium text-red-600'>{workOrderData.items[selectedItemIndex]?.FAC_name}</span>
                 </div>
                 {workOrderData.items[selectedItemIndex] && (
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                       <div className="flex gap-3 text-sm text-gray-600">
-                        <span>Asset No: </span> {workOrderData.items[selectedItemIndex].FAC_NO}
+                        <span>Asset No: </span>
+                        <span>
+                          {workOrderData.items[selectedItemIndex].FAC_NO}
+                        </span>
                         <span className="ml-4">
                           <span className="font-medium">Status:</span>
                           <Chip 
@@ -770,10 +835,10 @@ export default function WorkOrderDialog({
                               <TableCell>{expense.orNumber}</TableCell>
                               <TableCell>{expense.workDone}</TableCell>
                               <TableCell align="right">
-                                <IconButton size="small" onClick={() => handleEditExpense(workOrderData.items[selectedItemIndex], idx)} color="primary" disabled={isSaving || isOverallCompleted}>
+                                <IconButton size="small" onClick={() => handleEditExpense(workOrderData.items[selectedItemIndex], idx)} color="primary" disabled={isSaving || isOverallCompleted || isSelectedItemLocked}>
                                   <EditIcon fontSize="small" />
                                 </IconButton>
-                                <IconButton size="small" onClick={() => handleDeleteExpense(selectedItemIndex, idx)} color="error" disabled={isSaving || isOverallCompleted}>
+                                <IconButton size="small" onClick={() => handleDeleteExpense(selectedItemIndex, idx)} color="error" disabled={isSaving || isOverallCompleted || isSelectedItemLocked}>
                                   <span className="text-sm">×</span>
                                 </IconButton>
                               </TableCell>
@@ -821,10 +886,12 @@ export default function WorkOrderDialog({
             </FormControl>
             <TextField
               label="Expense Amount" type="text" value={expenseData.expenseAmount || ''}
+              required error={!!expenseErrors.expenseAmount} helperText={expenseErrors.expenseAmount}
               onChange={(e) => {
                 const rawValue = e.target.value.replace(/,/g, '');
                 if (rawValue === '' || /^\d*\.?\d*$/.test(rawValue)) {
                   setExpenseData({ ...expenseData, expenseAmount: rawValue });
+                  setExpenseErrors((prev) => ({ ...prev, expenseAmount: undefined }));
                 }
               }}
               onBlur={() => {
@@ -846,17 +913,29 @@ export default function WorkOrderDialog({
               fullWidth variant="outlined" disabled={isSaving}
               InputProps={{ startAdornment: <span style={{ marginRight: '8px', color: '#666' }}>₱</span> }}
             />
-            <TextField label="Qty" type="number" value={expenseData.qty} onChange={(e) => setExpenseData({ ...expenseData, qty: e.target.value })} fullWidth variant="outlined" disabled={isSaving} />
-            <TextField label="O.R No." value={expenseData.orNumber} onChange={(e) => setExpenseData({ ...expenseData, orNumber: e.target.value })} fullWidth variant="outlined" disabled={isSaving} />
             <TextField
-              label="Work Done/Remarks" value={expenseData.workDone} onChange={(e) => setExpenseData({ ...expenseData, workDone: e.target.value })}
+              label="Qty" type="number" value={expenseData.qty}
+              required error={!!expenseErrors.qty} helperText={expenseErrors.qty}
+              onChange={(e) => { setExpenseData({ ...expenseData, qty: e.target.value }); setExpenseErrors((prev) => ({ ...prev, qty: undefined })); }}
+              fullWidth variant="outlined" disabled={isSaving}
+            />
+            <TextField
+              label="O.R No." value={expenseData.orNumber}
+              required error={!!expenseErrors.orNumber} helperText={expenseErrors.orNumber}
+              onChange={(e) => { setExpenseData({ ...expenseData, orNumber: e.target.value }); setExpenseErrors((prev) => ({ ...prev, orNumber: undefined })); }}
+              fullWidth variant="outlined" disabled={isSaving}
+            />
+            <TextField
+              label="Work Done/Remarks" value={expenseData.workDone}
+              required error={!!expenseErrors.workDone} helperText={expenseErrors.workDone}
+              onChange={(e) => { setExpenseData({ ...expenseData, workDone: e.target.value }); setExpenseErrors((prev) => ({ ...prev, workDone: undefined })); }}
               fullWidth variant="outlined" multiline rows={3} className="sm:col-span-2" disabled={isSaving}
             />
           </div>
           {saveError && <Alert severity="error" className="mt-3">{saveError}</Alert>}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setOpenExpenseDialog(false); setEditingExpenseIndex(null); setSelectedItemForExpense(null); setSaveError(null); }} color="secondary">Cancel</Button>
+          <Button onClick={() => { setOpenExpenseDialog(false); setEditingExpenseIndex(null); setSelectedItemForExpense(null); setSaveError(null); setExpenseErrors({}); }} color="secondary">Cancel</Button>
           <Button onClick={handleSaveExpense} variant="contained" color="primary" disabled={isSaving}>
             {isSaving ? <CircularProgress size={24} /> : (editingExpenseIndex !== null ? 'Update' : 'Add')}
           </Button>
