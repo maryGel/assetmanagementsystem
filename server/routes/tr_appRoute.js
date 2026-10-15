@@ -152,7 +152,8 @@ router.put('/approve/:TR_No', (req, res) => {
             JOIN tr_h h ON h.TR_No = d.TR_No
             SET i.Department = h.Department,
                 i.ItemLocation = h.Location,
-                i.Holder = h.Holder
+                i.Holder = h.Holder,
+                i.xxStats = ''   -- fully approved: clear 'With Pending Transfer'
             WHERE d.TR_No = ?
           `;
 
@@ -355,6 +356,20 @@ router.put('/reject/:TR_No', (req, res) => {
           });
         });
         
+        // 8b. Rejected: clear 'With Pending Transfer' on the assets of this TR
+        await new Promise((resolve, reject) => {
+          connection.query(
+            `UPDATE itemlist i
+             JOIN tr_d d ON d.FAC_NO = i.FacNO
+             SET i.xxStats = ''
+             WHERE d.TR_No = ?
+               AND TRIM(d.FAC_NO) <> ''
+               AND LOWER(TRIM(d.FAC_NO)) <> 'n'`,
+            [cleanDocNo],
+            (error, result) => (error ? reject(error) : resolve(result))
+          );
+        });
+
         // 9. Create rejection log with STAT = 'Disapproved'
         const insertLogSql = `
           INSERT INTO approval_logs 

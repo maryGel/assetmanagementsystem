@@ -342,6 +342,20 @@ router.put('/reject/:JO_No', (req, res) => {
           });
         });
         
+        // 8b. Rejected: clear 'With Pending Job Order' on the assets of this JO
+        await new Promise((resolve, reject) => {
+          connection.query(
+            `UPDATE itemlist i
+             JOIN jo_d d ON d.FAC_NO = i.FacNO
+             SET i.xxStats = ''
+             WHERE d.JO_No = ?
+               AND TRIM(d.FAC_NO) <> ''
+               AND LOWER(TRIM(d.FAC_NO)) <> 'n'`,
+            [cleanDocNo],
+            (error, result) => (error ? reject(error) : resolve(result))
+          );
+        });
+
         // 9. Create rejection log with STAT = 'Disapproved'
         const insertLogSql = `
           INSERT INTO approval_logs 

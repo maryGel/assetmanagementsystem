@@ -76,11 +76,7 @@ const money = new Intl.NumberFormat('en-US', {
 const PENDING_TRANSACTION_MSG = 'cannot add with pending transaction';
 const DUPLICATE_ASSET_MSG = 'Asset No. is already on another line';
 // Reads the status field regardless of casing (xStatus / xstatus / XSTATUS ...)
-const getXStatus = (asset) => {
-  if (!asset) return '';
-  const key = Object.keys(asset).find(k => k.toLowerCase() === 'xxstats');
-  return key ? String(asset[key] ?? '').trim().toUpperCase() : '';
-};
+const getXStatus = (asset) => String(asset?.xxStats ?? '').trim().toUpperCase();
 const isActiveAsset = (asset) => getXStatus(asset) === '';
 
 // Vertical scroll: show at most this many line items before the table scrolls

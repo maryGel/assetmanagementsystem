@@ -33,6 +33,10 @@ const syncPendingStatus = async (connection, oldList, newList) => {
   }
 };
 
+// A line is finished when its item Status or Main_Status is 'Completed' ('Done' is the old name)
+const isCompletedStatus = (value) =>
+  ['COMPLETED', 'DONE'].includes(String(value || '').trim().toUpperCase());
+
 // Get JO details
 router.get('/', (req, res) => {
   db.getConnection((err, connection) => {
@@ -264,13 +268,18 @@ router.put('/:joNo/maintenance', (req, res) => {
 
         // Asset status = "<eval_status> | <Main_Status>", using what is stored in jo_d
         const rows = await run(
-          'SELECT FAC_NO, eval_status, Main_Status FROM jo_d WHERE JO_No = ?',
+          'SELECT FAC_NO, eval_status, Status, Main_Status FROM jo_d WHERE JO_No = ?',
           [joNo]
         );
         for (const r of rows) {
           const facNo = (r.FAC_NO || '').trim();
           const evalStatus = (r.eval_status || '').trim();
           const mainStatus = (r.Main_Status || '').trim();
+          // Item Status or Main_Status is 'Completed': the asset is available again -> xxStats = ''
+          if (facNo && facNo.toLowerCase() !== 'n' && (isCompletedStatus(r.Status) || isCompletedStatus(mainStatus))) {
+            await run(`UPDATE itemlist SET xxStats = '' WHERE FacNO = ?`, [facNo]);
+            continue;
+          }
           if (!facNo || facNo.toLowerCase() === 'n') continue;
           if (!evalStatus || !mainStatus || mainStatus.toUpperCase() === 'OPEN') continue;
           await run('UPDATE itemlist SET xxStats = ? WHERE FacNO = ?', [`${evalStatus} | ${mainStatus}`, facNo]);
@@ -394,6 +403,18 @@ router.put('/:joNo', (req, res) => {
             const facNo = (detail.FAC_NO || '').trim();
             const evalStatus = (detail.eval_status || '').trim();
             const mainStatus = (detail.Main_Status || '').trim();
+
+            // Item Status or Main_Status is 'Completed': the asset is available again -> xxStats = ''
+            if (facNo && facNo.toLowerCase() !== 'n' && (isCompletedStatus(detail.Status) || isCompletedStatus(mainStatus))) {
+              await new Promise((resolve, reject) => {
+                connection.query(
+                  `UPDATE itemlist SET xxStats = '' WHERE FacNO = ?`,
+                  [facNo],
+                  (error, result) => (error ? reject(error) : resolve(result))
+                );
+              });
+              continue;
+            }
 
             if (!facNo || facNo.toLowerCase() === 'n') continue;
             if (!evalStatus || !mainStatus || mainStatus.toUpperCase() === 'OPEN') continue;

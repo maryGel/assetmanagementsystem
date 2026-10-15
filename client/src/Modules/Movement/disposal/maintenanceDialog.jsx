@@ -36,6 +36,8 @@ const wrapSx = { overflowWrap: 'anywhere' }; // long text wraps inside the (resi
 
 const FOR_DISPOSAL = 'for disposal';
 const norm = (v) => String(v ?? '').trim().toLowerCase();
+// A job order line already tied to a Disposal (jo_d.AD_No has a value) cannot be added again
+const hasAdNo = (d) => String(d?.AD_No ?? '').trim() !== '';
 
 /**
  * Dialog for pulling assets from Job Orders whose maintenance status is "For Disposal".
@@ -127,6 +129,7 @@ export default function MaintenanceDisposalDialog({ open, onClose, department, d
     return (joDetails || [])
       .filter((d) => headerByJO.has(d.JO_No))
       .filter((d) => norm(d.Main_Status) === FOR_DISPOSAL)
+      .filter((d) => !hasAdNo(d))
       .map((d) => {
         const h = headerByJO.get(d.JO_No);
         return { ...d, Sector_name: h.Sector_name, JO_Date: h.xDate };
@@ -173,7 +176,8 @@ export default function MaintenanceDisposalDialog({ open, onClose, department, d
   const selectedCount = Object.keys(selected).length;
 
   const handleAdd = () => {
-    onAdd(Object.values(selected));
+    // safety net: never hand back a line that is already on a Disposal
+    onAdd(Object.values(selected).filter((r) => !hasAdNo(r)));
     onClose();
   };
 
@@ -338,7 +342,7 @@ export default function MaintenanceDisposalDialog({ open, onClose, department, d
                 {rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={12} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                      No assets with “For Disposal” status found.
+                      No assets with “For Disposal” status available.
                     </TableCell>
                   </TableRow>
                 ) : pagedRows.map((r, i) => {

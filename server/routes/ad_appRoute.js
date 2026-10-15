@@ -120,10 +120,34 @@ router.put('/approve/:AD_No', (req, res) => {
         
         // 9. Update ad_d table only on final approval (when xpost becomes 1)
         let DetailsUpdateResult = null;
+        let ItemlistUpdateResult = null;
         if (isFinalApproval) {
           const updateDetailsSql = `UPDATE ad_d SET xpost = 1 WHERE AD_No = ?`;
           DetailsUpdateResult = await new Promise((resolve, reject) => {
             connection.query(updateDetailsSql, [cleanDocNo], (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            });
+          });
+
+          // Fully approved: the pending status is replaced by the final asset status.
+          //   Disposal_Type Dispose        -> 'Disposed'
+          //   Disposal_Type Sell / Selling -> 'Sold'
+          //   anything else                -> '' (cleared)
+          const updateItemlistSql = `
+            UPDATE itemlist i
+            JOIN ad_d d ON d.FAC_NO = i.FacNO
+            SET i.xxStats = CASE
+              WHEN LOWER(TRIM(d.Disposal_Type)) IN ('dispose', 'disposal', 'disposed') THEN 'Disposed'
+              WHEN LOWER(TRIM(d.Disposal_Type)) IN ('sell', 'selling', 'sold') THEN 'Sold'
+              ELSE ''
+            END
+            WHERE d.AD_No = ?
+              AND TRIM(d.FAC_NO) <> ''
+              AND LOWER(TRIM(d.FAC_NO)) <> 'n'
+          `;
+          ItemlistUpdateResult = await new Promise((resolve, reject) => {
+            connection.query(updateItemlistSql, [cleanDocNo], (error, result) => {
               if (error) reject(error);
               else resolve(result);
             });
@@ -177,6 +201,7 @@ router.put('/approve/:AD_No', (req, res) => {
             data: {
               doc_h_updated: updateResult.affectedRows,
               doc_d_updated: DetailsUpdateResult?.affectedRows || 0,
+              itemlist_updated: ItemlistUpdateResult?.affectedRows || 0,
               status: approvalStat,
               currentLevel: nextLevel,
               approvedLevels: approvedLevelsCount,
@@ -320,6 +345,35 @@ router.put('/reject/:AD_No', (req, res) => {
           });
         });
         
+        // 8b. Rejected: release the job order rows that were tied to this disposal
+        // (lines that came from Maintenance, withMain = 1), so they can be added again
+        await new Promise((resolve, reject) => {
+          connection.query(
+            `UPDATE jo_d j
+             JOIN ad_d d ON d.FAC_NO = j.FAC_NO AND j.AD_No = d.AD_No
+             SET j.AD_No = ''
+             WHERE d.AD_No = ?
+               AND d.withMain = 1`,
+            [cleanDocNo],
+            (error, result) => (error ? reject(error) : resolve(result))
+          );
+        });
+
+        // 8c. Rejected: lines from Maintenance (withMain = 1) go back to 'For Disposal';
+        // every other line (withMain = 0 or NULL) is cleared
+        await new Promise((resolve, reject) => {
+          connection.query(
+            `UPDATE itemlist i
+             JOIN ad_d d ON d.FAC_NO = i.FacNO
+             SET i.xxStats = CASE WHEN d.withMain = 1 THEN 'For Disposal' ELSE '' END
+             WHERE d.AD_No = ?
+               AND TRIM(d.FAC_NO) <> ''
+               AND LOWER(TRIM(d.FAC_NO)) <> 'n'`,
+            [cleanDocNo],
+            (error, result) => (error ? reject(error) : resolve(result))
+          );
+        });
+
         // 9. Create rejection log with STAT = 'Disapproved'
         const insertLogSql = `
           INSERT INTO approval_logs 
@@ -526,6 +580,56 @@ router.put('/post/:AD_No', (req, res) => {
           });
         });
 
+        // 4b. Tie the lines that came from Maintenance to their job order rows.
+        // A line "comes from Maintenance" when its asset has a jo_d row whose Main_Status is
+        // 'For Disposal' and that is not yet tied to a disposal.
+        const run = (sql, params) => new Promise((resolve, reject) => {
+          connection.query(sql, params, (error, result) => (error ? reject(error) : resolve(result)));
+        });
+
+        // The asset cannot be on two disposals: stop if its job order row already has another AD_No
+        const conflicts = await run(
+          `SELECT DISTINCT d.FAC_NO, j.AD_No
+           FROM ad_d d
+           JOIN jo_d j ON j.FAC_NO = d.FAC_NO
+           WHERE d.AD_No = ?
+             AND LOWER(TRIM(j.Main_Status)) = 'for disposal'
+             AND TRIM(IFNULL(j.AD_No, '')) <> ''
+             AND j.AD_No <> ?`,
+          [decodedADNo, decodedADNo]
+        );
+        if (conflicts.length > 0) {
+          throw new Error(`Asset ${conflicts[0].FAC_NO} is already on Disposal ${conflicts[0].AD_No}`);
+        }
+
+        // 2.3 start clean, then flag only the lines that match a job order row below
+        await run(`UPDATE ad_d SET withMain = 0 WHERE AD_No = ?`, [decodedADNo]);
+
+        // 2.2 jo_d.AD_No = this AD_No
+        const linkResult = await run(
+          `UPDATE jo_d j
+           JOIN ad_d d ON d.FAC_NO = j.FAC_NO
+           SET j.AD_No = d.AD_No
+           WHERE d.AD_No = ?
+             AND LOWER(TRIM(j.Main_Status)) = 'for disposal'
+             AND TRIM(IFNULL(j.AD_No, '')) = ''
+             AND TRIM(d.FAC_NO) <> ''
+             AND LOWER(TRIM(d.FAC_NO)) <> 'n'`,
+          [decodedADNo]
+        );
+
+        // 2.3 ad_d.withMain = 1 for the lines that are now tied to a job order row
+        const withMainResult = await run(
+          `UPDATE ad_d d
+           SET d.withMain = 1
+           WHERE d.AD_No = ?
+             AND EXISTS (
+               SELECT 1 FROM jo_d j
+               WHERE j.FAC_NO = d.FAC_NO AND j.AD_No = d.AD_No
+             )`,
+          [decodedADNo]
+        );
+
         // 5. Commit transaction
         connection.commit((commitErr) => {
           if (commitErr) {
@@ -549,6 +653,8 @@ router.put('/post/:AD_No', (req, res) => {
               old_xpost: currentDoc.xpost,
               new_xpost: 3,
               details_updated: detailsResult.affectedRows,
+              jo_rows_linked: linkResult.affectedRows,
+              lines_from_maintenance: withMainResult.affectedRows,
               status: 'Pending Approval'
             }
           });

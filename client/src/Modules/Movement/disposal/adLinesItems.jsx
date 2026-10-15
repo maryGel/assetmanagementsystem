@@ -108,12 +108,8 @@ const money = new Intl.NumberFormat('en-US', {
 // (anything else means it still has a pending transaction)
 const PENDING_TRANSACTION_MSG = 'cannot add with pending transaction';
 const DUPLICATE_ASSET_MSG = 'Asset No. is already on another line';
-// Reads the status field regardless of casing (xStatus / xstatus / XSTATUS ...)
-const getXStatus = (asset) => {
-  if (!asset) return '';
-  const key = Object.keys(asset).find(k => k.toLowerCase() === 'xxstats');
-  return key ? String(asset[key] ?? '').trim().toUpperCase() : '';
-};
+// Reads the itemlist.xxStats column (exact column name, empty = no pending transaction)
+const getXStatus = (asset) => String(asset?.xxStats ?? '').trim().toUpperCase();
 const isActiveAsset = (asset) => getXStatus(asset) === '';
 
 // Vertical scroll: show at most this many line items before the table scrolls
@@ -167,6 +163,7 @@ const ADLineItems = ({
   const {
     allAssets,
     fetchAssets,
+    fetchAssetByFacN0,
     isLoading
   } = useAssetMasterData();
   const [snackbar, setSnackbar] = useState({
@@ -527,18 +524,12 @@ const ADLineItems = ({
     try {
       const fresh = extractAssetRecord(await fetchAssetByFacN0(selectedAsset.FacNO));
       if (fresh && typeof fresh === 'object') fullRecord = fresh;
-      if (fresh && getXStatus(fresh)) latest = fresh;
+      // the server value wins whenever it includes xxStats (null / '' = active),
+      // so a status that was cleared since the list was loaded is not blocked by a stale cache
+      if (fresh && Object.prototype.hasOwnProperty.call(fresh, 'xxStats')) latest = fresh;
     } catch (err) {
       console.error('Could not verify asset status, using cached list value:', err);
     }
-
-        // DEBUG: shows exactly which record/status the check is looking at
-    console.log('[xStatus check]', {
-      FacNO: selectedAsset.FacNO,
-      cachedXStatus: getXStatus(selectedAsset),
-      latestXStatus: getXStatus(latest),
-      latestFields: Object.keys(latest),
-    });
 
     // never accept an asset that is not ACTIVE in itemlist
     if (!isActiveAsset(latest)) {
@@ -553,8 +544,7 @@ const ADLineItems = ({
     });
     setAssetInputs(prev => ({ ...prev, [rowId]: '' }));
 
-    console.log('Selected asset for row:', rowId, selectedAsset);
-
+      
     // Cached list row + the full record from the server (non-empty values win),
     // so fields missing from the dropdown list (balance_unit...) still fill in
     const src = {

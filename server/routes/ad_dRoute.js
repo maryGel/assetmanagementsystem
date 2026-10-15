@@ -35,6 +35,40 @@ import express from 'express';
     }
   };
 
+
+  // ---------- Maintenance link (jo_d.AD_No / ad_d.withMain) ----------
+  // A line "comes from Maintenance" when its asset has a jo_d row whose Main_Status is
+  // 'For Disposal'. Runs on every save of the lines, so it works for create and edit:
+  //  1. release job order rows that point to this AD but whose line was removed
+  //  2. withMain = 0 for every line of this AD
+  //  3. jo_d.AD_No = this AD_No for 'For Disposal' rows not yet tied to a disposal
+  //  4. withMain = 1 for the lines that are tied to a job order row
+  const linkMaintenanceLines = async (connection, adNo) => {
+    if (!adNo) return { linked: 0, withMain: 0 };
+    await runQuery(connection,
+      `UPDATE jo_d j SET j.AD_No = ''
+       WHERE j.AD_No = ?
+         AND NOT EXISTS (SELECT 1 FROM ad_d d WHERE d.AD_No = j.AD_No AND d.FAC_NO = j.FAC_NO)`,
+      [adNo]);
+    await runQuery(connection, `UPDATE ad_d SET withMain = 0 WHERE AD_No = ?`, [adNo]);
+    const linked = await runQuery(connection,
+      `UPDATE jo_d j
+       JOIN ad_d d ON d.FAC_NO = j.FAC_NO
+       SET j.AD_No = d.AD_No
+       WHERE d.AD_No = ?
+         AND LOWER(TRIM(j.Main_Status)) = 'for disposal'
+         AND TRIM(IFNULL(j.AD_No, '')) = ''
+         AND TRIM(d.FAC_NO) <> ''
+         AND LOWER(TRIM(d.FAC_NO)) <> 'n'`,
+      [adNo]);
+    const flagged = await runQuery(connection,
+      `UPDATE ad_d d SET d.withMain = 1
+       WHERE d.AD_No = ?
+         AND EXISTS (SELECT 1 FROM jo_d j WHERE j.FAC_NO = d.FAC_NO AND j.AD_No = d.AD_No)`,
+      [adNo]);
+    return { linked: linked.affectedRows, withMain: flagged.affectedRows };
+  };
+
   // ---------- Image upload (server/uploads/disposal-images) ----------
   const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'disposal-images');
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -266,12 +300,21 @@ import express from 'express';
             assetsFlagged = upd.affectedRows;
           }
 
+          // Tie lines that came from Maintenance to their job order rows (withMain = 1)
+          const adNos = [...new Set(items.map((i) => i.AD_No).filter(Boolean))];
+          let linesFromMaintenance = 0;
+          for (const adNo of adNos) {
+            const link = await linkMaintenanceLines(connection, adNo);
+            linesFromMaintenance += link.withMain;
+          }
+
           connection.release();
           res.status(201).json({
             message: 'AD details created successfully',
             count: results.length,
             ids: results.map(r => r.insertId),
-            assetsFlagged
+            assetsFlagged,
+            linesFromMaintenance
           });
         })
         .catch((error) => {
@@ -316,6 +359,7 @@ import express from 'express';
         if (!err && details.length === 0) {
           try {
             await syncPendingStatus(connection, existingRows.map((r) => r.FAC_NO), []);
+            await linkMaintenanceLines(connection, AD_No);
           } catch (statErr) {
             connection.release();
             console.error('Error updating itemlist xxStats:', statErr);
@@ -358,6 +402,7 @@ import express from 'express';
           if (!err) {
             try {
               await syncPendingStatus(connection, existingRows.map((r) => r.FAC_NO), details.map((d) => d.FAC_NO));
+              await linkMaintenanceLines(connection, AD_No);
             } catch (statErr) {
               connection.release();
               console.error('Error updating itemlist xxStats:', statErr);

@@ -118,8 +118,27 @@ router.put('/approve/:AAFNo', (req, res) => {
         
         // 8. Check if this is the final approval level (xPosted becomes 1)
         const isFinalApproval = approvedLevelsCount === totalLevels;
-        
-        
+
+        // Fully approved: clear 'With Pending for Lost Asset' on the assets of this AAF
+        // (asset number is stored in assetlostd.ItemNo)
+        let ItemlistUpdateResult = null;
+        if (isFinalApproval) {
+          const clearStatSql = `
+            UPDATE itemlist i
+            JOIN assetlostd d ON d.ItemNo = i.FacNO
+            SET i.xxStats = ''
+            WHERE d.AAFNo = ?
+              AND TRIM(d.ItemNo) <> ''
+              AND LOWER(TRIM(d.ItemNo)) <> 'n'
+          `;
+          ItemlistUpdateResult = await new Promise((resolve, reject) => {
+            connection.query(clearStatSql, [cleanDocNo], (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            });
+          });
+        }
+
         // 9. Create approval log with appropriate STAT value
         const insertLogSql = `
           INSERT INTO approval_logs 
@@ -166,6 +185,7 @@ router.put('/approve/:AAFNo', (req, res) => {
             message: message,
             data: {
               doc_h_updated: updateResult.affectedRows,
+              itemlist_updated: ItemlistUpdateResult?.affectedRows || 0,
               status: approvalStat,
               currentLevel: nextLevel,
               approvedLevels: approvedLevelsCount,
@@ -299,6 +319,21 @@ router.put('/reject/:AAFNo', (req, res) => {
           throw new Error('Lost Asset header not found');
         }
         
+        // 7b. Rejected: clear 'With Pending for Lost Asset' on the assets of this AAF
+        // (asset number is stored in assetlostd.ItemNo)
+        await new Promise((resolve, reject) => {
+          connection.query(
+            `UPDATE itemlist i
+             JOIN assetlostd d ON d.ItemNo = i.FacNO
+             SET i.xxStats = ''
+             WHERE d.AAFNo = ?
+               AND TRIM(d.ItemNo) <> ''
+               AND LOWER(TRIM(d.ItemNo)) <> 'n'`,
+            [cleanDocNo],
+            (error, result) => (error ? reject(error) : resolve(result))
+          );
+        });
+
         // 8. Create rejection log with STAT = 'Disapproved'
         const insertLogSql = `
           INSERT INTO approval_logs 
