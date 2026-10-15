@@ -8,7 +8,7 @@ import { useTR_d } from './useTR_d';
 import { api } from '../api/axios';
 
 const initialState = {
-  // Transfer Form View State
+  // Internal Transfer Form View State
   selectedTR: null,
   trDetails: [],
   trItemsLimit: 10,
@@ -321,7 +321,7 @@ function trReducer(state, action) {
         trDetails: action.payload?.newTRNo ? state.createTRDetails: null,
         snackbar: {
           open: true,
-          message: action.payload?.message || 'Transfer Form saved successfully!',
+          message: action.payload?.message || 'Internal Transfer Form saved successfully!',
           severity: 'success',
         },
       };
@@ -430,7 +430,7 @@ export const useTRData = (onSaveSuccess) => {
       console.error('TR_No is missing');
       dispatch({
         type: 'ERROR',
-        payload: 'Transfer Form number is required'
+        payload: 'Internal Transfer Form number is required'
       });
       return;
     }
@@ -527,7 +527,7 @@ export const useTRData = (onSaveSuccess) => {
         type: 'SAVE_SUCCESS',
         payload: {
           newTRNo: newTRNo,
-          message: `Transfer Form ${newTRNo} created successfully!`
+          message: `Internal Transfer Form ${newTRNo} created successfully!`
         }
       });
 
@@ -558,7 +558,7 @@ export const useTRData = (onSaveSuccess) => {
       console.error('TR_No is missing');
       dispatch({
         type: 'ERROR',
-        payload: 'Transfer Form number is required'
+        payload: 'Internal Transfer Form number is required'
       });
       return;
     }
@@ -605,7 +605,7 @@ export const useTRData = (onSaveSuccess) => {
         type: 'SAVE_SUCCESS',
         payload: {
           newTRNo: state.createTRHeader.TR_No,
-          message: `Transfer Form ${state.createTRHeader.TR_No} updated successfully!`
+          message: `Internal Transfer Form ${state.createTRHeader.TR_No} updated successfully!`
         }
       });
       

@@ -6,7 +6,7 @@ import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
 // label -> DB column on user0002inv
 const AUTO_NUMBER_FIELDS = [
   { label: 'Job Order', field: 'XJONum' },
-  { label: 'Transfer', field: 'XTRNum' },
+  { label: 'Internal Transfer', field: 'XTRNum' },
   { label: 'Asset Disposal', field: 'XADNum' },
   { label: 'Asset Accountability', field: 'XAANum' },
   { label: 'Lost Asset', field: 'XALNum' },

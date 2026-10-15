@@ -284,7 +284,7 @@ function MvTRForm({
     };
     
     const getAppLogByTRNo = (TR_No) => {
-        return approvalLogs?.filter(log => (log.TRNO === TR_No) && log.Module === 'Transfer') || [];
+        return approvalLogs?.filter(log => (log.TRNO === TR_No) && log.Module === 'Internal Transfer') || [];
     };
 
     // Sort the filteredTR array by date (latest first)
@@ -340,7 +340,7 @@ function MvTRForm({
           onConfirm={handleBulkAction}
           actionType={bulkActionType}
           itemCount={selectedTR.length}
-          itemName="Transfer"
+          itemName="Internal Transfer"
           loading={bulkLoading}
           remarks={bulkRemarks}
           onRemarksChange={setBulkRemarks}
@@ -358,7 +358,7 @@ function MvTRForm({
 
         {sortedFilteredTR.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No Transfer Forms found
+            No Internal Transfer Forms found
           </div>
         ) : (
             sortedFilteredTR?.map((header) => {
@@ -405,7 +405,7 @@ function MvTRForm({
                   <div className='flex flex-col px-2 text-sm tracking-wide text-slate-500'>
                     <span>{header.Department}</span>
                     <span> Holder: {header.Holder}</span>
-                    <span>For Transfer to: {header.Location}</span>
+                    <span>For Internal Transfer to: {header.Location}</span>
                     <div className='flex justify-start gap-2 mt-1 '>
                       <span>Remarks:</span>
                       <span className='text-black'>{header.Remarks}</span>
@@ -516,7 +516,7 @@ function MvTRForm({
                         <div className='sticky top-0 px-6 py-4 bg-white border-b rounded-t-2xl'>
                           <div className='flex items-center justify-between'>
                             <div>
-                              <h3 className='text-lg font-semibold text-gray-900'>Transfer Form Approval</h3>
+                              <h3 className='text-lg font-semibold text-gray-900'>Internal Transfer Form Approval</h3>
                               <p className='text-sm text-gray-500'>{header.TR_No}</p>
                               {nextLevel && (
                                 <p className='mt-1 text-xs text-blue-600'>
@@ -645,11 +645,11 @@ function MvTRForm({
                                 <div>{selectedDetails.Amount_aq}</div>
                               </div>
                               <div>
-                                <div className="text-sm text-gray-400">Transfer from:</div>
+                                <div className="text-sm text-gray-400">Internal Transfer from:</div>
                                 <div>{selectedDetails.Orig_Department}</div>
                               </div>
                               <div>
-                                <div className="text-sm text-gray-400">Transfer to:</div>
+                                <div className="text-sm text-gray-400">Internal Transfer to:</div>
                                 <div>{selectedDetails.New_Location}</div>
                               </div>
                               {selectedDetails.Brand &&

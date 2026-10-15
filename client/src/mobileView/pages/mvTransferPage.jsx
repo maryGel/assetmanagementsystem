@@ -258,7 +258,7 @@ function MvTransferPage({
                                 <button 
                                     className='w-5 transition-colors hover:text-blue-600'
                                     onClick={handleSearchClick}
-                                    title="Search Transfer"
+                                    title="Search Internal Transfer"
                                 >
                                     <SearchIcon/>
                                 </button>

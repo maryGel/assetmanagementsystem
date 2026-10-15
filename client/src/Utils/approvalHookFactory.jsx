@@ -17,7 +17,7 @@ export const useAllApprovalLevels = () => {
   // Create a map of document types to their getTotalLevels functions
   const approvalHooksMap = {
     'Job Order': jobOrderApproval,
-    'Transfer': trApproval,
+    'Internal Transfer': trApproval,
     'Disposal': disposalApproval,
     'Asset Accountability': assetAccApproval,
     'Lost Asset': assetLostApproval,

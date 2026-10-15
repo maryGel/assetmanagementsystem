@@ -458,11 +458,11 @@ export default function SearchTransactionTable({
 
   const handleSelectItem = (row) => {
     const transNo = row.DocNo;
-    const transInternal = 'Transfer Internal'
+    const transInternal = 'Internal Transfer'
     switch (row.DocType) {
       case 'Job Order':
         return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
-      case 'Transfer':
+      case 'Internal Transfer':
         return window.open(
           `/assetMovement/pages/TRFormType?docId=${transNo}&transferType=${encodeURIComponent(transInternal)}`,
           '_blank'

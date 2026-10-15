@@ -213,7 +213,7 @@ const refreshData = useCallback(async () => {
   const nextLevel = getNextLevel(baseHeader);
   const currentLevel = getCurrentLevel(baseHeader);
 
-  // Let a parent (e.g. the Transfer Type selector) know whether there are unsaved changes
+  // Let a parent (e.g. the Internal Transfer Type selector) know whether there are unsaved changes
   const { onDirtyChange } = useProps;
   const isDirty = !!(state.hasUnsavedChanges && (state.isCreating || state.isEditing));
   useEffect(() => {
@@ -247,7 +247,7 @@ const refreshData = useCallback(async () => {
 
   const handleSave = async () => {
     if (!state.createTRHeader?.TR_No) {
-      showToast('Transfer Form number is required');
+      showToast('Internal Transfer Form number is required');
       return;
     }
     if (!state.createTRHeader?.Department && !state.createTRHeader?.Department_Code) {
@@ -402,12 +402,12 @@ const refreshData = useCallback(async () => {
       
       if (bulkActionType === 'approve') {
         if (result.data?.isFinalApproval) {
-          showToast(`Transfer Form ${baseHeader.TR_No} is now fully approved!`, 'success');
+          showToast(`Internal Transfer Form ${baseHeader.TR_No} is now fully approved!`, 'success');
         } else {
           showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
         }
       } else {
-        showToast(`Transfer Form ${baseHeader.TR_No}is rejected`, 'error');
+        showToast(`Internal Transfer Form ${baseHeader.TR_No}is rejected`, 'error');
       }
       
     // Force refresh the data
@@ -491,7 +491,7 @@ const refreshData = useCallback(async () => {
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
           title="Confirm Save"
-          text="Are you sure you want to save this Transfer Form? Please review all information before saving."
+          text="Are you sure you want to save this Internal Transfer Form? Please review all information before saving."
           cancelText="Cancel"
           confirmText="Save"
           cancel={closeSaveDialog}
@@ -527,7 +527,7 @@ const refreshData = useCallback(async () => {
       <Dialog open={postDialogOpen} onClose={closePostDialog}>
         <CustomDialog
           title="Confirm Post"
-          text="Would you like to post this Transfer Form now? Once posted, it will be sent for approval."
+          text="Would you like to post this Internal Transfer Form now? Once posted, it will be sent for approval."
           cancelText="Cancel"
           confirmText="Post"
           cancel={closePostDialog}
@@ -549,8 +549,8 @@ const refreshData = useCallback(async () => {
                 </span>
               )}
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve this Transfer Form?` 
-                : `Are you sure you want to reject this Transfer Form? This action cannot be undone.`
+                ? `Are you sure you want to approve this Internal Transfer Form?` 
+                : `Are you sure you want to reject this Internal Transfer Form? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
@@ -681,7 +681,7 @@ const refreshData = useCallback(async () => {
       <div className='p-10 mx-10 bg-gray-100 rounded-lg shadow-lg lg:my-5'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
           <h1 className='text-sm font-bold text-gray-800'>
-            {state.isCreating ? 'Creating Transfer Form' : state.isEditing ? 'Editing Transfer Form' : 'Display Transfer Form'}
+            {state.isCreating ? 'Creating Internal Transfer Form' : state.isEditing ? 'Editing Internal Transfer Form' : 'Display Internal Transfer Form'}
           </h1>
           <div className='flex flex-wrap gap-2'>
             <span className='text-sm text-gray-500'>Last TR created :</span>
@@ -711,7 +711,7 @@ const refreshData = useCallback(async () => {
         </Box>
         
         <form className='mt-8'>
-          <label className='text-base font-normal text-gray-500'>Transfer Form No : </label>
+          <label className='text-base font-normal text-gray-500'>Internal Transfer Form No : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.TR_No || ''}</label> 
           <label className='pl-10 text-base font-normal text-gray-500'>Document Date : </label>
           <input 
@@ -787,7 +787,7 @@ const refreshData = useCallback(async () => {
 
             <div className='flex flex-wrap items-center justify-start w-full gap-4 mt-4 lg:gap-10'>
               <div className='flex items-center flex-1 min-w-[280px] gap-3'>
-                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Transfer to :</label>
+                <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Internal Transfer to :</label>
                 <Autocomplete 
                   disabled={isReadOnly}
                   className={`flex-1 min-w-[180px] max-w-sm`}

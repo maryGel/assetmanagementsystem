@@ -3,14 +3,14 @@ import { Select, MenuItem, Snackbar, Alert, Button } from '@mui/material'
 import TRFormPage from '../pages/transferFormPage'
 import { useSearchParams } from 'react-router-dom'
 
-const TRANSFER_TYPES = ['Transfer Internal', 'Stock Transfer In', 'Stock Transfer Out']
+const TRANSFER_TYPES = ['Internal Transfer', 'Inter-Branch In', 'Inter-Branch Out']
 
 export default function TRFormType(){
   const [searchParams] = useSearchParams()
   // Preselect from ?transferType=..., ignoring anything that isn't a known type
   const [transferType, setTransferType] = useState(() => {
   const fromUrl = searchParams.get('transferType')
-      return TRANSFER_TYPES.includes(fromUrl) ? fromUrl : 'Transfer Internal'
+      return TRANSFER_TYPES.includes(fromUrl) ? fromUrl : 'Internal Transfer'
     })
   const [pendingType, setPendingType] = useState(null)   // type the user wants to switch to
   const [hasUnsaved, setHasUnsaved] = useState(false)    // reported by TRFormPage
@@ -65,14 +65,14 @@ export default function TRFormType(){
             }
           }}
         >
-          <MenuItem value="Transfer Internal">Transfer Internal</MenuItem>
-          <MenuItem value="Stock Transfer In">Stock Transfer In</MenuItem>
-          <MenuItem value="Stock Transfer Out">Stock Transfer Out</MenuItem>
+          <MenuItem value="Internal Transfer">Internal Transfer</MenuItem>
+          <MenuItem value="Inter-Branch In">Inter-Branch In</MenuItem>
+          <MenuItem value="Inter-Branch Out">Inter-Branch Out</MenuItem>
         </Select>
       </div>
 
       {/* Form sits right under the type selector */}
-      {transferType === 'Transfer Internal' && (
+      {transferType === 'Internal Transfer' && (
         <TRFormPage key={formKey} onDirtyChange={handleDirtyChange} />
       )}
 

@@ -1,4 +1,4 @@
-import { assetMovList } from './asstMovList';
+import { assetMovList } from './asstMovList.jsx';
 import { NavLink } from 'react-router-dom';
 import { useMyAccess } from '../../../api/accessContext.jsx';
 // ^ adjust this relative path to wherever contexts/AccessContext.jsx

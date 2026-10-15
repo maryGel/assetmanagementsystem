@@ -382,7 +382,7 @@ const Icon = {
   Dollar: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/><path d="M12 7v10M9.5 9.5c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8-1.1 1.7-2.5 1.7-2.5.7-2.5 1.8S10.6 15 12 15s2.5-.8 2.5-1.9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
   Bars: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M5 19V10M12 19V5M19 19v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
   Wrench: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M14.7 6.3a4 4 0 00-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 005.4-5.4l-2.3 2.3-2-2 2.3-2.3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>,
-  Transfer: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M4 8h13l-3-3M20 16H7l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  InternalTransfer: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M4 8h13l-3-3M20 16H7l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   Users: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.6"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5M16 8a3 3 0 110 6M22 20c0-2.5-2-4.3-4.5-4.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   Trash: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   Alert: (c) => <svg viewBox="0 0 24 24" fill="none" className={c}><path d="M12 4l9 16H3L12 4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M12 10v4M12 17h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
@@ -403,7 +403,7 @@ function DashboardPage(useProps) {
   // Job Orders Data
   const { joHeaders, isLoading: joLoading, joRefresh } = useJO_h(useProps);
   const { joDetails, isLoading: joDetailsLoading, joDetailsRefresh } = useJO_d(useProps); // used below for Upcoming Maintenance
-  // Transfer Data
+  // Internal Transfer Data
   const { trHeaders, isLoading: trLoading, trHRefresh } = useTR_h(useProps);
   // Disposal Data
   const { adHeaders, isLoading: adLoading, adHRefresh } = useAD_h(useProps);
@@ -606,7 +606,7 @@ function DashboardPage(useProps) {
   const bookValueSample = [2.9, 2.85, 2.9, 2.95, 2.88, 2.8, 2.75, 2.7]; // SAMPLE DATA ($M)
   const depreciationSample = [0.5, 0.6, 0.65, 0.75, 0.8, 0.85, 0.9, 0.95]; // SAMPLE DATA ($M)
   const recentActivitySample = [ // SAMPLE DATA — wire to a real activity log endpoint
-    { time: '08:42', text: 'Asset transferred to Finance Department', icon: Icon.Transfer, color: 'text-purple-600' },
+    { time: '08:42', text: 'Asset transferred to Finance Department', icon: Icon.InternalTransfer, color: 'text-purple-600' },
     { time: '08:30', text: 'Work order created', icon: Icon.Wrench, color: 'text-blue-600' },
     { time: '08:15', text: 'Asset marked as lost', icon: Icon.Alert, color: 'text-red-600' },
     { time: '07:55', text: 'Maintenance completed', icon: Icon.Check, color: 'text-green-600' },
@@ -628,7 +628,7 @@ function DashboardPage(useProps) {
   //       'noopener,noreferrer'
   //     )
   //   },
-  //   { key: 'tr', label: 'Pending Transfers', count: trCount, icon: Icon.Transfer('w-4 h-4 text-purple-600'), iconBg: 'bg-purple-100', targetId: 3 },
+  //   { key: 'tr', label: 'Pending Transfers', count: trCount, icon: Icon.Internal Transfer('w-4 h-4 text-purple-600'), iconBg: 'bg-purple-100', targetId: 3 },
   //   { key: 'lost', label: 'Lost Assets', count: aLostCount, icon: Icon.Alert('w-4 h-4 text-red-600'), iconBg: 'bg-red-100', targetId: 6 },
   //   { key: 'disp', label: 'Assets for Disposal', count: adCount, icon: Icon.Trash('w-4 h-4 text-orange-600'), iconBg: 'bg-orange-100', targetId: 5 },
   // ].filter(a => a.count > 0);
@@ -729,7 +729,7 @@ function DashboardPage(useProps) {
           // iconBg="bg-purple-100"
           label="TRANSFERS"
           value={trCount}
-          onClick={() => openPendingTransactions('Transfer')}
+          onClick={() => openPendingTransactions('Internal Transfer')}
           disabled={!!activePage}
           loading={trLoading}
         />

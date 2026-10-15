@@ -98,7 +98,7 @@ export default function useColumnWidths() {
   
   const [columnWidths, setColumnWidths] = useState({
     id: 50,
-    Code: 200,
+    Code: 250,
     Name: 500,
   });  
 

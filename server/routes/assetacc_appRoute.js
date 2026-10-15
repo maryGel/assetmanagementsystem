@@ -389,7 +389,7 @@ router.put('/reject/:AAFNo', (req, res) => {
           
           res.json({
             success: true,
-            message: 'Transfer rejected successfully',
+            message: 'Internal Transfer rejected successfully',
             data: {
               doc_h_updated: updateResult.affectedRows,
               // doc_d_updated: DetailsUpdateResult?.affectedRows || 0,

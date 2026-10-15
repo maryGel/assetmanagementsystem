@@ -21,7 +21,7 @@ const addInFilter = (filters, params, column, value) => {
 const lineItemUnion = `(
   SELECT 'Job Order' AS DocType, jo.JO_No AS DocNo, jo.FAC_NO AS LinkFacNo FROM jo_d jo
   UNION ALL
-  SELECT 'Transfer', tr.TR_No, tr.FAC_NO FROM tr_d tr
+  SELECT 'Internal Transfer', tr.TR_No, tr.FAC_NO FROM tr_d tr
   UNION ALL
   SELECT 'Disposal', ad.AD_No, ad.FAC_NO FROM ad_d ad
   UNION ALL

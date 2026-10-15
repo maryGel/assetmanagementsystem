@@ -34,7 +34,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 // Hooks
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 // Custom Utils
-import { tableFieldFormat } from '../custom Utils/customLayout';
+import { tableFieldFormat } from '../customUtils/customLayout';
 import formatWithCommas from '../../../Utils/formatWithCommas';
 // import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';  
 

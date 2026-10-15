@@ -114,7 +114,7 @@ export const useTRApproval = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await axios.get(`/trApproval/total-levels?module=${encodeURIComponent('Transfer')}`, {
+      const response = await axios.get(`/trApproval/total-levels?module=${encodeURIComponent('Internal Transfer')}`, {
         signal: controller.signal,
         timeout: 10000,
         headers: {
@@ -156,8 +156,8 @@ export const useTRApproval = () => {
   };
 
   /**
- * Post a Transfer Form for approval (update xpost to 3 only)
- * @param {string} TR_No - Transfer Form number
+ * Post a Internal Transfer Form for approval (update xpost to 3 only)
+ * @param {string} TR_No - Internal Transfer Form number
  * @returns {Promise} Post result
  */
 const postTransfer = async (TR_No) => {
@@ -177,8 +177,8 @@ const postTransfer = async (TR_No) => {
     };
     
   } catch (err) {
-    console.error('Post Transfer Form error:', err);
-    const errorMessage = err.response?.data?.error || err.message || 'Failed to post Transfer Form for approval';
+    console.error('Post Internal Transfer Form error:', err);
+    const errorMessage = err.response?.data?.error || err.message || 'Failed to post Internal Transfer Form for approval';
     setError(errorMessage);
     setLoading(false);
     return { 
@@ -189,7 +189,7 @@ const postTransfer = async (TR_No) => {
 };
 
   /**
-   * Check if Transfer Form can be posted for approval
+   * Check if Internal Transfer Form can be posted for approval
    * @param {Object} docStatus - Document status object
    * @returns {Object} Post availability
    */

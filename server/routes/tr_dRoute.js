@@ -4,7 +4,7 @@ import express from 'express';
   const router = express.Router();
 
   // ---------- itemlist.xxStats sync for edited documents ----------
-  const PENDING_STATUS = 'With Pending Transfer';
+  const PENDING_STATUS = 'With Pending Internal Transfer';
 
   const runQuery = (connection, sql, params) => new Promise((resolve, reject) => {
     connection.query(sql, params, (error, result) => (error ? reject(error) : resolve(result)));
@@ -172,7 +172,7 @@ import express from 'express';
           if (facNos.length > 0) {
             const upd = await new Promise((resolve, reject) => {
               connection.query(
-                `UPDATE itemlist SET xxStats = 'With Pending Transfer' WHERE FacNO IN (?)`,
+                `UPDATE itemlist SET xxStats = 'With Pending Internal Transfer' WHERE FacNO IN (?)`,
                 [facNos],
                 (error, result) => (error ? reject(error) : resolve(result))
               );

@@ -25,7 +25,7 @@ export const assetMovList= [
     title: 'Transfer',
     link: '/assetMovement/pages/TRFormType',
     imgSrc: '/icons/menu_icons/transfer.png',
-    headerTitle: 'Asset Transfer',
+    headerTitle: 'Asset Internal Transfer',
   },
   {
     id: 5,

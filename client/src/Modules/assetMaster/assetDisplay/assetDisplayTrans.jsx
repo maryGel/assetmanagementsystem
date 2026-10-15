@@ -37,11 +37,11 @@ function getDocStatusLabel(status) {
 // the type label) instead of DocNo/DocType.
 function openDocumentPage(row) {
   const transNo = row.id;
-  const transInternal = 'Transfer Internal'
+  const transInternal = 'Internal Transfer'
   switch (row.docType) {
     case 'Job Order':
       return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
-    case 'Transfer':
+    case 'Internal Transfer':
       return window.open(
         `/assetMovement/pages/TRFormType?docId=${transNo}&transferType=${encodeURIComponent(transInternal)}`,
         '_blank'

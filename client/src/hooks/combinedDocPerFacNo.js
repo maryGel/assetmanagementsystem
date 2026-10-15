@@ -71,7 +71,7 @@ export const useCombinedDocPerFacNo = (facNo, useProps) => {
     }));
 
     const trTrans = matchedAssetRows(trDetails, getTrNo, trHeaderByNo).map((h) => ({
-      transNo: h.TR_No, type: 'Transfer', status: h.xpost,
+      transNo: h.TR_No, type: 'Internal Transfer', status: h.xpost,
       rejected: h.DISAPPROVED, date: h.xDate, Remarks: h.Remarks,
     }));
 

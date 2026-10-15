@@ -16,7 +16,7 @@ export const combinedDocHeaders = (useProps) => {
   // Job Orders Data
   const { joHeaders, isLoading: joLoading, error: joError, joRefresh } = useJO_h(useProps);
 
-  // Transfer Data
+  // Internal Transfer Data
   const { trHeaders, isLoading: trLoading, error: trError, trHRefresh } = useTR_h(useProps);
 
   // Disposal Data
@@ -45,7 +45,7 @@ export const combinedDocHeaders = (useProps) => {
     
     const trTrans = (trHeaders || []).map(tr => ({ 
       transNo: tr.TR_No, 
-      type: 'Transfer', 
+      type: 'Internal Transfer', 
       status: tr.xpost, 
       rejected: tr.DISAPPROVED, 
       date: tr.xDate, 

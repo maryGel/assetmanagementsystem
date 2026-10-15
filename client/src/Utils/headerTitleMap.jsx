@@ -16,7 +16,7 @@ export const headerTitleMap = {
   // Asset Movement Pages
   "/assetMovement/searchTransactions": "Search Transactions",
   "/assetMovement/pages/JOFormPage": "Job Order Page",
-  "/assetMovement/pages/TRFormType": "Transfer Form Page",
+  "/assetMovement/pages/TRFormType": "Internal Transfer Form Page",
   "/assetMovement/pages/ADFormPage": "Disposal Page",
   "/assetMovement/pages/AAFormPage": "Asset Accountability Page",
   "/assetMovement/pages/ALFormPage": "Lost Asset Page",

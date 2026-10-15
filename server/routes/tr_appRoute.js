@@ -9,7 +9,7 @@ import { getApprovalConfig, getCurrentApprovalStatus, getLatestApprovalLevel, ca
 const router = express.Router();
 
 /**
- * Approve a Transfer Request - Simplified for single-level approval
+ * Approve a Internal Transfer Request - Simplified for single-level approval
  */
 router.put('/approve/:TR_No', (req, res) => {
   const { TR_No } = req.params;
@@ -45,8 +45,8 @@ router.put('/approve/:TR_No', (req, res) => {
       }
 
       try {
-        // 1. Get approval configuration for Transfer module
-        const approvalConfig = await getApprovalConfig(connection, 'Transfer');
+        // 1. Get approval configuration for Internal Transfer module
+        const approvalConfig = await getApprovalConfig(connection, 'Internal Transfer');
         
         if (approvalConfig.length === 0) {
           throw new Error('No approval configuration found for this module');
@@ -63,7 +63,7 @@ router.put('/approve/:TR_No', (req, res) => {
         const currentDoc = await getCurrentApprovalStatus(connection, cleanDocNo, sql);
         
         // 3. Get the latest approved level from logs (only Approved or Confirmed)
-        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Transfer');
+        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Internal Transfer');
         
         // Determine the next level to approve
         const nextLevel = appLevel || (currentApprovedLevel + 1);
@@ -153,7 +153,7 @@ router.put('/approve/:TR_No', (req, res) => {
             SET i.Department = h.Department,
                 i.ItemLocation = h.Location,
                 i.Holder = h.Holder,
-                i.xxStats = ''   -- fully approved: clear 'With Pending Transfer'
+                i.xxStats = ''   -- fully approved: clear 'With Pending Internal Transfer'
             WHERE d.TR_No = ?
           `;
 
@@ -175,7 +175,7 @@ router.put('/approve/:TR_No', (req, res) => {
         const xUser = userInfo ? `${userInfo.user} - ${userInfo.lname}, ${userInfo.fname}` : String(approved);
         
         await new Promise((resolve, reject) => {
-          connection.query(insertLogSql, [cleanDocNo, 'Transfer', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
+          connection.query(insertLogSql, [cleanDocNo, 'Internal Transfer', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
             if (error) reject(error);
             else resolve();
           });
@@ -199,7 +199,7 @@ router.put('/approve/:TR_No', (req, res) => {
           // Prepare response message based on approval status
           let message = '';
           if (isFinalApproval) {
-            message = 'Transfer fully approved successfully';
+            message = 'Internal Transfer fully approved successfully';
           } else if (approvedLevelsCount === 1) {
             message = 'Level 1 approval confirmed';
           } else {
@@ -239,7 +239,7 @@ router.put('/approve/:TR_No', (req, res) => {
 });
 
 /**
- * Reject a Transfer
+ * Reject a Internal Transfer
  */
 
 router.put('/reject/:TR_No', (req, res) => {
@@ -274,8 +274,8 @@ router.put('/reject/:TR_No', (req, res) => {
       }
 
       try {
-        // 1. Get approval configuration for Transfer module
-        const approvalConfig = await getApprovalConfig(connection, 'Transfer');
+        // 1. Get approval configuration for Internal Transfer module
+        const approvalConfig = await getApprovalConfig(connection, 'Internal Transfer');
         
         if (approvalConfig.length === 0) {
           throw new Error('No approval configuration found for this module');
@@ -291,7 +291,7 @@ router.put('/reject/:TR_No', (req, res) => {
         const currentDoc = await getCurrentApprovalStatus(connection, cleanDocNo, sql);
         
         // 3. Get the latest approved level from logs (only Approved or Confirmed)
-        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Transfer');
+        const currentApprovedLevel = await getLatestApprovalLevel(connection, cleanDocNo, 'Internal Transfer');
         
         // Determine the level being rejected
         const nextLevel = appLevel || (currentApprovedLevel + 1);
@@ -356,7 +356,7 @@ router.put('/reject/:TR_No', (req, res) => {
           });
         });
         
-        // 8b. Rejected: clear 'With Pending Transfer' on the assets of this TR
+        // 8b. Rejected: clear 'With Pending Internal Transfer' on the assets of this TR
         await new Promise((resolve, reject) => {
           connection.query(
             `UPDATE itemlist i
@@ -380,7 +380,7 @@ router.put('/reject/:TR_No', (req, res) => {
         const xUser = userInfo ? `${userInfo.user} - ${userInfo.lname}, ${userInfo.fname}` : String(approved);
         
         await new Promise((resolve, reject) => {
-          connection.query(insertLogSql, [cleanDocNo, 'Transfer', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
+          connection.query(insertLogSql, [cleanDocNo, 'Internal Transfer', xUser, nextLevel, approvalStat, remarks || ''], (error) => {
             if (error) reject(error);
             else resolve();
           });
@@ -403,7 +403,7 @@ router.put('/reject/:TR_No', (req, res) => {
           
           res.json({
             success: true,
-            message: 'Transfer rejected successfully',
+            message: 'Internal Transfer rejected successfully',
             data: {
               doc_h_updated: updateResult.affectedRows,
               doc_d_updated: DetailsUpdateResult?.affectedRows || 0,
@@ -472,14 +472,14 @@ router.get('/total-levels', (req, res) => {
 
 
 /**
- * Post a Transfer Form for approval - updates xpost to 3 only
+ * Post a Internal Transfer Form for approval - updates xpost to 3 only
  * This is just to mark the TR as ready for approval, no approval action yet
  */
 
 router.put('/post/:TR_No', (req, res) => {
   const { TR_No } = req.params;
 
-  console.log('Post Transfer Form request:', { TR_No });
+  console.log('Post Internal Transfer Form request:', { TR_No });
 
   const decodedTRNo = decodeURIComponent(TR_No)
     .replace(/\u00A0/g, '')
@@ -522,20 +522,20 @@ router.put('/post/:TR_No', (req, res) => {
         });
 
         if (!currentDoc) {
-          throw new Error(`Transfer Form ${decodedTRNo} not found`);
+          throw new Error(`Internal Transfer Form ${decodedTRNo} not found`);
         }
 
         // 2. Validate if it can be posted
         if (currentDoc.xpost === 3) {
-          throw new Error('Transfer Form is already posted for approval');
+          throw new Error('Internal Transfer Form is already posted for approval');
         }
         
         if (currentDoc.xpost === 1) {
-          throw new Error('Transfer Form is already fully approved');
+          throw new Error('Internal Transfer Form is already fully approved');
         }
         
         if (currentDoc.disapproved === 1) {
-          throw new Error('Cannot post a disapproved Transfer Form');
+          throw new Error('Cannot post a disapproved Internal Transfer Form');
         }
 
         // 3. Update tr_h table - set xpost = 3
@@ -553,7 +553,7 @@ router.put('/post/:TR_No', (req, res) => {
         });
         
         if (updateResult.affectedRows === 0) {
-          throw new Error('Failed to update Transfer Form');
+          throw new Error('Failed to update Internal Transfer Form');
         }
 
         // 4. Update tr_d table - set xpost = 3 for all detail items
@@ -582,7 +582,7 @@ router.put('/post/:TR_No', (req, res) => {
           
           res.json({
             success: true,
-            message: `Transfer Form ${TR_No} has been posted for approval`,
+            message: `Internal Transfer Form ${TR_No} has been posted for approval`,
             data: {
               TR_No: decodedTRNo,
               old_xpost: currentDoc.xpost,
@@ -594,12 +594,12 @@ router.put('/post/:TR_No', (req, res) => {
         });
         
       } catch (error) {
-        console.error('Error in post Transfer Form process:', error);
+        console.error('Error in post Internal Transfer Form process:', error);
         connection.rollback(() => {
           connection.release();
           return res.status(500).json({
             success: false,
-            error: error.message || 'Failed to post Transfer Form for approval'
+            error: error.message || 'Failed to post Internal Transfer Form for approval'
           });
         });
       }

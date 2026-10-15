@@ -29,7 +29,7 @@ function MvDashBoard({useProps, firstName, selectedUser}){
     // Job Orders Data
     const {joHeaders, isLoading, error, joRefresh} = useJO_h(useProps);
     const {joDetails, joDetailsRefresh} = useJO_d(useProps);
-    // Transfer Data
+    // Internal Transfer Data
     const {trHeaders, trHRefresh} = useTR_h(useProps);
     const {trDetails, trDRefresh} = useTR_d(useProps);
     // Disposal Data

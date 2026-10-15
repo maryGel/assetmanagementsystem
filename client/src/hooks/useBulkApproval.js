@@ -19,7 +19,7 @@ export const useBulkApproval = ({
   const getApprovalFunction = useCallback((docType, actionType) => {
     const hookMap = {
       'Job Order': approvalHooks.jobOrder,
-      'Transfer': approvalHooks.transfer,
+      'Internal Transfer': approvalHooks.transfer,
       'Disposal': approvalHooks.disposal,
       'Asset Accountability': approvalHooks.assetAcc,
       'Lost Asset': approvalHooks.assetLost

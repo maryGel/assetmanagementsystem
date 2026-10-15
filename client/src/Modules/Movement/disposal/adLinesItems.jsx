@@ -39,7 +39,7 @@ import { api } from '../../../api/axios';
 // Hooks
 import { useAssetMasterData } from '../../../hooks/assetMasterHooks';
 // Custom Utils
-import { tableFieldFormat } from '../custom Utils/customLayout';
+import { tableFieldFormat } from '../customUtils/customLayout';
 
 
 // Component

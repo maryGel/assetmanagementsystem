@@ -133,7 +133,7 @@ export default function JOFormPage(useProps) {
     (log) =>
       log.TRNO === copyDocNo &&
       (log.Module === 'Job Order' ||
-        log.Module === 'Transfer' ||
+        log.Module === 'Internal Transfer' ||
         log.Module === 'Disposal' ||
         log.Module === 'Asset Accountability' ||
         log.Module === 'Lost Asset')

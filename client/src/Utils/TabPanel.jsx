@@ -10,12 +10,12 @@ import Box from '@mui/material/Box';
 
 // TabPanel component to render the content of each tab
 import AssetMasterTile from '../Modules/assetMaster/assetMaster/assetMasterTile'
-import AssetMovement from '../Modules/Movement/custom Utils/assetMoveTile';
+import AssetMovement from '../Modules/Movement/customUtils/assetMoveTile';
 import Depreciation from '../Modules/Depreciation/assetDepRun';
 import AssetReports from '../Modules/Reports/assetReport';
 import PhysicalCount from '../Modules/Physical/assetPhysicalCount';
 import DashboardPage from '../Modules/Dashboard/dashBoardPage';
-import SystemSetup from '../Modules/SystemSetup/custom Utils/systemSetupTile';
+import SystemSetup from '../Modules/SystemSetup/customUtils/systemSetupTile.jsx';
 
 import { useMyAccess } from '../api/accessContext.jsx';
 // ^ adjust if AccessContext.jsx doesn't end up at src/contexts/AccessContext.jsx

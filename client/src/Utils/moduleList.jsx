@@ -1,6 +1,6 @@
 export const transTypes = [
   'Job Order',
-  'Transfer',
+  'Internal Transfer',
   'Disposal',
   'Asset Accountability',
   'Lost Asset',

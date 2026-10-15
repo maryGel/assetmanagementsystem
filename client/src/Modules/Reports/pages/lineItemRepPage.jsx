@@ -13,7 +13,7 @@ import { useJO_h} from '../../../hooks/useJO_h';
 import { transTypes } from '../../../Utils/moduleList';
 
 // Each of these maps to its own line-item table/API on the backend
-// (Job Order -> jo_d, Transfer -> tr_d, Disposal -> ad_d,
+// (Job Order -> jo_d, Internal Transfer -> tr_d, Disposal -> ad_d,
 // Asset Accountability -> assetaccd, Lost Asset -> assetLostD).
 // Every one of those tables names its document-number column differently, so
 // the /lineItemReport endpoint is expected to normalize it to a single `DocNo`

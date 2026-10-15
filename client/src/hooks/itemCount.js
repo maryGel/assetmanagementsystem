@@ -9,7 +9,7 @@
 
 const SOURCES = [
   { docType: 'Job Order',            key: 'joDetails',        docFields: ['JO_No', 'JONo', 'DocNo'] },
-  { docType: 'Transfer',             key: 'trDetails',        docFields: ['TR_No', 'TRNo', 'TRNO', 'Transfer_No', 'DocNo'] },
+  { docType: 'Internal Transfer',             key: 'trDetails',        docFields: ['TR_No', 'TRNo', 'TRNO', 'Transfer_No', 'DocNo'] },
   { docType: 'Disposal',             key: 'adDetails',        docFields: ['AD_No', 'ADNo', 'Disposal_No', 'DocNo'] },
   { docType: 'Asset Accountability', key: 'assetAccDetails',  docFields: ['AAFNo', 'AANo', 'AccNo', 'DocNo'] },
   { docType: 'Lost Asset',           key: 'assetLostDetails', docFields: ['AAFNo', 'ALNo', 'LostNo', 'DocNo'] },
