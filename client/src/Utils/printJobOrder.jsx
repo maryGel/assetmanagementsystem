@@ -86,7 +86,6 @@ function buildItemsRows(items) {
           <td class="center">${escapeHtml(row.UOM)}</td>
           <td class="work-details">${escapeHtml(row.workDet)}</td>
           <td class="center">${formatDate(row.TargetDate)}</td>
-          <td class="center">${escapeHtml(row.Status || 'OPEN')}</td>
           <td>${escapeHtml(row.ItemLocation)}</td>
         </tr>`;
     })
@@ -184,7 +183,7 @@ export function generateJOPrintHTML({
 <meta charset="utf-8" />
 <title>Job Order ${escapeHtml(joNo)}</title>
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body {
     margin: 0;
     padding: 0;
@@ -326,6 +325,7 @@ export function generateJOPrintHTML({
   /* ---------- Items table ---------- */
   table.items-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 10.5px;
     margin-top: 6px;
@@ -340,14 +340,19 @@ export function generateJOPrintHTML({
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
+  table.items-table th {
+    overflow-wrap: anywhere;
+  }
   table.items-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
     border: 1px solid #dbe2ea;
     padding: 5px 6px;
     vertical-align: top;
   }
   table.items-table tr:nth-child(even) td { background: #f8fafc; }
   .num-cell { text-align: center; width: 24px; color: #777; }
-  .center { text-align: center; white-space: nowrap; }
+  .center { text-align: center; }
   .work-details { min-width: 140px; }
   .empty-row { text-align: center; color: #888; padding: 16px; font-style: italic; }
 
@@ -435,10 +440,10 @@ export function generateJOPrintHTML({
   .toolbar .btn-close { background: #666; color: #fff; }
 
   @media print {
-    body { background: #fff; }
+    html, body { background: #fff !important; height: auto; }
     .toolbar { display: none; }
-    .page { margin: 0; box-shadow: none; width: auto; min-height: auto; }
-    @page { size: A4; margin: 12mm; }
+    .page { margin: 0; padding: 0; box-shadow: none; width: 100%; max-width: 100%; min-height: auto; }
+    @page { size: A4; margin: 22mm 12mm 14mm 12mm; }
   }
 </style>
 </head>
@@ -505,7 +510,6 @@ export function generateJOPrintHTML({
             <th style="width:6%">UOM</th>
             <th style="width:24%">Work Details</th>
             <th style="width:10%">Target Date</th>
-            <th style="width:9%">Status</th>
             <th style="width:15%">Location</th>
           </tr>
         </thead>

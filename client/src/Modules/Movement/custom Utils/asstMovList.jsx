@@ -1,7 +1,7 @@
 export const assetMovList= [
   {
     id: 1,
-    title: 'Search Trans.',
+    title: 'Search Docs',
     link: '/assetMovement/searchTransactions',
     imgSrc: '/icons/menu_icons/searchdoc.png',
     headerTitle: 'Search Document',

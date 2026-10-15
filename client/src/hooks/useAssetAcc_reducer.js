@@ -167,6 +167,7 @@ function aaReducer(state, action) {
             serial: '',
             Supplier: '',
             unitcost: '',
+            location: ''
             },
         ],
         hasUnsavedChanges: false,
@@ -192,6 +193,7 @@ function aaReducer(state, action) {
         serial: '',
         Supplier: '',
         unitcost: '',
+        location: ''
       };
 
       return {
@@ -682,12 +684,13 @@ export const useAAData = (onSaveSuccess) => {
       ItemNo: '',
       ItemName: '',
       Qty: 1,
-      xDate: today,
+      DteAqui: today,
       xPosted: 0,
       Units: '',
       serial: '',
       Supplier: '',
       unitcost: '',
+      location: ''
     };
     
     // Use the same action type for both create and edit

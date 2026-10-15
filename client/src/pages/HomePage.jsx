@@ -1,4 +1,3 @@
-
 import MobileHomePage from '../mobileView/pages/mobileHomePage';
 
 //MUI
@@ -8,7 +7,7 @@ function HomePage({
   setHeaderTitle,
   isMobile
 }) {
-  
+
   const tabPaths = [
     { id: 0, link: '/Home'},
     { id: 1, link: '/Home/AssetMasterPage'},
@@ -19,21 +18,17 @@ function HomePage({
     { id: 6, link: '/Home/SystemSetup'},
   ];
 
+  if (isMobile) {
+    return <MobileHomePage />;
+  }
+
   return (
-    <>
-      {!isMobile && 
-        <div className='w-full px-2 md:flex md:flex-col md:px-4 lg:px-0'>
-          <FullWidthTabs 
-            setHeaderTitle={setHeaderTitle}
-            tabPaths={tabPaths}
-          />
-        </div> 
-      }           
-      <div>
-        <MobileHomePage
-        />
-      </div>    
-    </>
+    <div className='w-full px-2 md:flex md:flex-col md:px-4 lg:px-0'>
+      <FullWidthTabs
+        setHeaderTitle={setHeaderTitle}
+        tabPaths={tabPaths}
+      />
+    </div>
   );
 }
 

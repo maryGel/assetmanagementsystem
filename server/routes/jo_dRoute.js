@@ -3,6 +3,36 @@ import {db} from '../server.js';
 
 const router = express.Router();
 
+// ---------- itemlist.xxStats sync for edited documents ----------
+const PENDING_STATUS = 'With Pending Job Order';
+
+const runQuery = (connection, sql, params) => new Promise((resolve, reject) => {
+  connection.query(sql, params, (error, result) => (error ? reject(error) : resolve(result)));
+});
+
+// Unique asset numbers; blank and 'n' (no asset) are skipped
+const cleanFacNos = (list) => [...new Set(
+  list.map((f) => (f || '').trim()).filter((f) => f && f.toLowerCase() !== 'n')
+)];
+
+// Compare the asset numbers before and after an edit:
+//  - removed lines: clear xxStats (only if it still holds this document's pending status)
+//  - added lines:   set xxStats to the pending status
+// Lines that were already on the document are left untouched (so a status already
+// advanced by evaluation/maintenance is not overwritten).
+const syncPendingStatus = async (connection, oldList, newList) => {
+  const oldSet = cleanFacNos(oldList);
+  const newSet = cleanFacNos(newList);
+  const removed = oldSet.filter((f) => !newSet.includes(f));
+  const added = newSet.filter((f) => !oldSet.includes(f));
+  if (removed.length > 0) {
+    await runQuery(connection, `UPDATE itemlist SET xxStats = '' WHERE FacNO IN (?) AND xxStats = ?`, [removed, PENDING_STATUS]);
+  }
+  if (added.length > 0) {
+    await runQuery(connection, `UPDATE itemlist SET xxStats = ? WHERE FacNO IN (?)`, [PENDING_STATUS, added]);
+  }
+};
+
 // Get JO details
 router.get('/', (req, res) => {
   db.getConnection((err, connection) => {
@@ -136,7 +166,7 @@ router.post('/', (req, res) => {
         let assetsFlagged = 0;
         if (facNos.length > 0) {
           const upd = await run(
-            `UPDATE itemlist SET xxStats = 'With pending JO' WHERE FacNO IN (?)`,
+            `UPDATE itemlist SET xxStats = 'With Pending Job Order' WHERE FacNO IN (?)`,
             [facNos]
           );
           assetsFlagged = upd.affectedRows;
@@ -281,8 +311,25 @@ router.put('/:joNo', (req, res) => {
     
     // First, delete all existing details for this JO
     const deleteSql = 'DELETE FROM jo_d WHERE JO_No = ?';
+
+    // Remember which assets were on this JO before the lines are replaced
+    // (queued on the same connection, so it runs before the DELETE)
+    const oldFacNosPromise = runQuery(connection, 'SELECT FAC_NO FROM jo_d WHERE JO_No = ?', [joNo])
+      .then((rows) => rows.map((r) => r.FAC_NO));
+    oldFacNosPromise.catch(() => {}); // errors are handled where it is awaited
     
-    connection.query(deleteSql, [joNo], (err, deleteResult) => {
+    connection.query(deleteSql, [joNo], async (err, deleteResult) => {
+      // All lines removed: clear the pending status on the assets that were on this JO
+      if (!err && details.length === 0) {
+        try {
+          await syncPendingStatus(connection, await oldFacNosPromise, []);
+        } catch (statErr) {
+          connection.release();
+          console.error('Error updating itemlist xxStats:', statErr);
+          return res.status(500).json({ error: 'Details removed but asset status update failed', details: statErr.message });
+        }
+      }
+
       if (err) {
         connection.release();
         return res.status(500).json({ error: 'Error deleting old details', details: err.message });
@@ -328,6 +375,15 @@ router.put('/:joNo', (req, res) => {
           connection.release();
           console.error('Error inserting details:', err);
           return res.status(500).json({ error: 'Error inserting details', details: err.message });
+        }
+
+        // Added lines get 'With Pending Job Order'; removed lines are cleared
+        try {
+          await syncPendingStatus(connection, await oldFacNosPromise, details.map((d) => d.FAC_NO));
+        } catch (statErr) {
+          connection.release();
+          console.error('Error updating itemlist xxStats:', statErr);
+          return res.status(500).json({ error: 'Details saved but asset status update failed', details: statErr.message });
         }
 
         // Maintenance update: asset status = "<eval_status> | <Main_Status>".

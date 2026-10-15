@@ -4,6 +4,7 @@ import { NumericFormat } from 'react-number-format';
 import { TextField } from '@mui/material';
 import { fieldLabelClass,  staticTextClass, fieldClass, } from '../../../Utils/autocompleteStyles';
 import { max } from 'date-fns';
+import { getResidualValueError } from '../createAsset/assetMasterFields';
 
 const sectionCardClass = 'py-6 shadow-sm border bg-slate-50 border-slate-200 rounded-lg min-w-0';
 const sectionHeaderClass = 'block pl-5 mb-4 pb-2 border-b border-slate-100 text-blue-800 text-[clamp(0.85rem,0.7rem+0.6vw,1.125rem)] font-medium';
@@ -16,6 +17,9 @@ export default function AssetDisplayValue({ asset, isEditing, onFieldChange }) {
   
   // Book Value calculation
   const bookValue = unitCost - accumDep;
+
+  // Shown live, before the user clicks Next
+  const residualError = getResidualValueError(asset);
 
   return (
     <div className='w-full min-w-0 px-10'>
@@ -47,9 +51,10 @@ export default function AssetDisplayValue({ asset, isEditing, onFieldChange }) {
             thousandSeparator=","
             allowNegative={false}
           />
-          
+
           <span className={fieldLabelClass}>Residual Value: </span>
-          <NumericFormat
+          <div className='flexgap-2'>
+            <NumericFormat
             className={`${fieldClass(isEditing)} max-w-64`} 
             value={asset?.Abre ?? ''} 
             disabled={!isEditing}
@@ -57,8 +62,17 @@ export default function AssetDisplayValue({ asset, isEditing, onFieldChange }) {
             thousandSeparator=","
             allowNegative={false}
             decimalScale={2}
-
+            error={Boolean(residualError)}
           />
+          {residualError && (
+            <span
+              role="alert"
+              style={{ display: 'block', color: '#d32f2f', fontSize: '0.75rem', marginTop: '4px' }}
+            >
+              {residualError}
+            </span>
+          )}
+          </div>
           
           <span className={fieldLabelClass}>Monthly Depreciation:</span>
           <span className={staticTextClass}>{formatWithCommas(depreciatedCost)}</span>

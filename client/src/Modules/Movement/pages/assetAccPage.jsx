@@ -16,7 +16,6 @@ import { openAAPrintPreview } from '../../../Utils/printAssetAccountability'
 import { getCurrentLevel } from '../../../Utils/approvalLevelUtils'
 
 // Custom Hooks
-import { useAD_h } from '../../../hooks/useAD_h';
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
 import { useRefEmployees } from '../../../hooks/refEmployee'; 
 import { useRefLocation } from '../../../hooks/refLocation'; 
@@ -100,15 +99,10 @@ export default function AAFormPage(useProps) {
   // Reference data
   const { refDeptData } = useRefDepartment();
   const { refEmployees } = useRefEmployees();
-  const { refLocData } = useRefLocation();
-  const { refSections } = useSections();
+  
   const departments = refDeptData.map(item => item.Department);
   const employees = refEmployees.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
-  const locations = refLocData.map(item => item.LocationName);
-  const sections = refSections.map(item => item.xdesc);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const copyDocNo = searchParams.get('docId');
   const isCreatingRef = useRef(false);
@@ -222,6 +216,28 @@ const refreshData = useCallback(async () => {
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
 
   const handleHeaderChange = (field, value) => {
+      if (field === 'Department_Code' || field === 'Dep') {
+      const prev = currentHeader?.Dep || currentHeader?.Department || '';
+      const hasAssets = (currentAAItems || []).some(r => r.ItemNo);
+
+      if (prev && prev !== value && hasAssets) {
+        const ok = window.confirm(
+          'Changing the department will clear the selected assets. Continue?'
+          
+        );
+        if (ok) {
+          showToast('Department changed. All selected assets have been cleared.', 'info');
+        } else return;
+
+         
+        (currentAAItems || []).forEach(row => {
+          ['ItemNo','ItemName','Qty','Units','DteAqui','Supplier',
+          'serial','unitcost', 'location'].forEach(f =>
+            updateDetailRow(row.id, f, '')
+          );
+        });
+      }
+    }
     updateHeaderField(field, value);
   };
 
@@ -267,24 +283,24 @@ const handleEmployeeChange = (event, newValue) => {
 
   const handleSave = async () => {
     if (!state.createAAHeader?.AAFNo) {
-      alert('Asset Accountability number is required');
+      showToast('Asset Accountability number is required');
       return;
     }
     if (!state.createAAHeader?.Dep) {
-      alert('Please select department.');
+      showToast('Please select department.');
       return;
     }
     if (!state.createAAHeader?.EmpID) {
-      alert('Please enter employee.');
+      showToast('Please enter employee.');
       return;
     }
     if (!state.createAADetails || state.createAADetails.length === 0) {
-      alert('Please add at least one item');
+      showToast('Please add at least one item');
       return;
     }
     const invalidRows = state.createAADetails.filter(row => !row.ItemNo);
     if (invalidRows.length > 0) {
-      alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
+      showToast(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
       return;
     }
     openSaveDialog();

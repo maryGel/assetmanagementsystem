@@ -230,7 +230,7 @@ export function generateTRPrintHTML({
 <meta charset="utf-8" />
 <title>Transfer Form ${escapeHtml(trNo)}</title>
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body {
     margin: 0;
     padding: 0;
@@ -372,6 +372,7 @@ export function generateTRPrintHTML({
   /* ---------- Items table ---------- */
   table.items-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 10px;
     margin-top: 6px;
@@ -386,14 +387,19 @@ export function generateTRPrintHTML({
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
+  table.items-table th {
+    overflow-wrap: anywhere;
+  }
   table.items-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
     border: 1px solid #dbe2ea;
     padding: 5px 5px;
     vertical-align: top;
   }
   table.items-table tr:nth-child(even) td { background: #f8fafc; }
   .num-cell { text-align: center; width: 22px; color: #777; }
-  .center { text-align: center; white-space: nowrap; }
+  .center { text-align: center; }
   .amount-cell { text-align: right; white-space: nowrap; }
   .empty-row { text-align: center; color: #888; padding: 16px; font-style: italic; }
 
@@ -481,10 +487,10 @@ export function generateTRPrintHTML({
   .toolbar .btn-close { background: #666; color: #fff; }
 
   @media print {
-    body { background: #fff; }
+    html, body { background: #fff !important; height: auto; }
     .toolbar { display: none; }
-    .page { margin: 0; box-shadow: none; width: auto; min-height: auto; }
-    @page { size: A4; margin: 12mm; }
+    .page { margin: 0; padding: 0; box-shadow: none; width: 100%; max-width: 100%; min-height: auto; }
+    @page { size: A4; margin: 22mm 12mm 14mm 12mm; }
   }
 </style>
 </head>
@@ -532,7 +538,7 @@ export function generateTRPrintHTML({
         <tr>
           <td class="label">Custodian</td>
           <td class="value">${escapeHtml(custodian)}</td>
-          <td class="label">Location</td>
+          <td class="label">New Location</td>
           <td class="value">${escapeHtml(location)}</td>
         </tr>
         <tr>
@@ -551,16 +557,16 @@ export function generateTRPrintHTML({
         <thead>
           <tr>
             <th style="width:3%">#</th>
-            <th style="width:10%">Asset No.</th>
-            <th style="width:15%">Asset Name</th>
-            <th style="width:5%">Qty</th>
-            <th style="width:5%">UOM</th>
-            <th style="width:10%">Brand</th>
-            <th style="width:10%">Serial No.</th>
-            <th style="width:9%">Acquired Date</th>
-            <th style="width:9%">Acquired Cost</th>
-            <th style="width:12%">Holder</th>
-            <th style="width:12%">Location</th>
+            <th style="width:12%">Asset No.</th>
+            <th style="width:14%">Asset Name</th>
+            <th style="width:4%">Qty</th>
+            <th style="width:6%">UOM</th>
+            <th style="width:8%">Brand</th>
+            <th style="width:9%">Serial No.</th>
+            <th style="width:10%">Acquired Date</th>
+            <th style="width:11%">Acquired Cost</th>
+            <th style="width:11%">Previous Holder</th>
+            <th style="width:12%">Previous Location</th>
           </tr>
         </thead>
         <tbody>

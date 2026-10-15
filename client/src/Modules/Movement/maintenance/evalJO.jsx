@@ -128,25 +128,25 @@ function EvalJO({
             if (result.success) {
                 showToast(result.message || 'Evaluation submitted successfully!', 'success');
                 
-                // ✅ Clear selected items
+                // Clear selected items
                 setSelectedItems([]);
                 setIsModalOpen(false);
                 
-                // ✅ Refresh data to show updated status
+                // Refresh data to show updated status
                 if (onEvaluationComplete) {
                     setIsRefreshing(true);
                     await onEvaluationComplete();
                     setIsRefreshing(false);
                 }
                 
-                // ✅ Show warnings if any
+                // Show warnings if any
                 if (result.warnings && result.warnings.length > 0) {
                     setTimeout(() => {
                         showToast(`${result.warnings.length} item(s) had warnings`, 'warning');
                     }, 500);
                 }
 
-                // ✅ Check if all items are now evaluated
+                // Check if all items are now evaluated
                 const updatedItems = joDetails?.filter(detail => detail.JO_No === header.JO_No) || [];
                 const allEvaluated = updatedItems.every(item => isItemEvaluated(item));
                 
@@ -154,7 +154,7 @@ function EvalJO({
                     showToast('🎉 All items in this JO have been evaluated!', 'success');
                 } else {
                     const remaining = updatedItems.filter(item => !isItemEvaluated(item)).length;
-                    showToast(`✅ ${selectedItems.length} item(s) evaluated. ${remaining} item(s) remaining.`, 'success');
+                    showToast(`${selectedItems.length} item(s) evaluated. ${remaining} item(s) remaining.`, 'success');
                 }
 
             } else {
@@ -206,23 +206,28 @@ function EvalJO({
                 <div className="flex items-center justify-center w-full h-full p-8">
                     <div className="text-center">
                         <div className="w-8 h-8 mx-auto border-b-2 border-blue-600 rounded-full animate-spin"></div>
-                        <p className="mt-2 text-sm text-gray-500">Refreshing data...</p>
+                        <p className="mt-2 text-gray-500">Refreshing data...</p>
                     </div>
                 </div>
             ) : (
-                <div className={`items-start w-full text-sm mt-8 bg-white ${isClosingJO ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
+                <div className={`items-start p-5 border border-spacing-1 rounded-lg w-full mt-8 bg-white ${isClosingJO ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
                     <div className='flex justify-between px-5 py-2 font-sans tracking-wide'>
                         <span className='font-semibold'>{header.JO_No}</span>
                         <span><DateDisplay value={header.xDate} format="short" /></span>
                     </div>
                     
-                    <div className='flex flex-col gap-3 p-5 text-sm border-b text-slate-500'>
-                        <span>{header.Department_Code}</span>
-                        <span className='text-base text-black'>Remarks: {header.Remarks}</span>
-                        <div className='flex flex-col gap-1 mt-1'>
-                            <span>For inspection by: {header.Sector_name}</span>
-                            <span>Requestor: {header.requested_by}</span>
-                        </div>
+                    <div className='grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 p-5 border-b items-start'>
+                        <span className='text-gray-500'>Department:</span>
+                        <span className='tracking-wide'>{header.Department_Code || '-'}</span>
+
+                        <span className='text-gray-500'>To be inspected by:</span>
+                        <span className='tracking-wide'>{header.Sector_name || '-'}</span>
+
+                        <span className='text-gray-500'>Requestor:</span>
+                        <span className='tracking-wide'>{header.requested_by || '-'}</span>
+
+                        <span className='text-gray-500'>Remarks:</span>
+                        <span className='tracking-wide'>{header.Remarks || '-'}</span>
                     </div>
                  
                     <div className='px-3 py-1'>
@@ -238,12 +243,12 @@ function EvalJO({
                                             color="primary"
                                             disabled={isSubmitting || isRefreshing}
                                         />
-                                        <span className='text-sm text-slate-600'>
+                                        <span className='text-slate-600'>
                                             Select All ({unevaluatedItems.length} unevaluated)
                                         </span>
                                     </div>  
                                     <div 
-                                        className={`px-3 py-1 tracking-wide rounded-md shadow-md 
+                                        className={`px-3 py-1 m-5 tracking-wide rounded-md shadow-md 
                                             ${selectedItems.length > 0 && !isSubmitting && !isRefreshing
                                                 ? 'bg-green-600 text-white cursor-pointer hover:bg-green-700' 
                                                 : 'text-green-600 border border-green-600 cursor-not-allowed'
@@ -273,7 +278,7 @@ function EvalJO({
                             return (
                                 <div 
                                     key={`${item.JO_No}-${item.FAC_NO}-${item.workDet}`}
-                                    className={`flex flex-col mb-2 rounded-lg transition-colors duration-200
+                                    className={`flex flex-col mb-7 rounded-lg transition-colors duration-200
                                         ${evaluated 
                                             ? 'bg-gray-50 border border-gray-200' 
                                             : isItemSelected(item) 
@@ -282,7 +287,7 @@ function EvalJO({
                                         }`}
                                     onClick={() => !evaluated && !isRefreshing && handleItemSelect(item, index)}
                                 >
-                                    <div className='flex items-center gap-1 mt-1'>
+                                    <div className='flex items-center'>
                                         {/* Show checkbox only for unevaluated items */}
                                         {!evaluated && (
                                             <Checkbox

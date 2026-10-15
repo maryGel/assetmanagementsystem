@@ -198,7 +198,7 @@ export function generateADPrintHTML({
 <meta charset="utf-8" />
 <title>Disposal ${escapeHtml(adNo)}</title>
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body {
     margin: 0;
     padding: 0;
@@ -481,10 +481,10 @@ export function generateADPrintHTML({
   .toolbar .btn-close { background: #666; color: #fff; }
 
   @media print {
-    body { background: #fff; }
+    html, body { background: #fff !important; height: auto; }
     .toolbar { display: none; }
-    .page { margin: 0; box-shadow: none; width: auto; min-height: auto; }
-    @page { size: A4; margin: 12mm; }
+    .page { margin: 0; padding: 0; box-shadow: none; width: 100%; max-width: 100%; min-height: auto; }
+    @page { size: A4; margin: 22mm 12mm 14mm 12mm; }
   }
 </style>
 </head>

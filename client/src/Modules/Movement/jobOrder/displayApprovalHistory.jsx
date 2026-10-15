@@ -38,7 +38,7 @@ function DisplayApprovalHistory({
   return (
 
       <div className='w-full px-4 lg:px-10'>
-        <div className='w-full pt-5 pb-5 text-base shadow-sm shadow-slate-200'>
+        <div className='w-full pt-5 pb-5 text-base '>
           <TableContainer component={Paper} sx={{ width: '100%', overflowX: 'auto' }}>
             <Table sx={{ minWidth: 700, width: '100%' }} aria-label="simple table">
               <TableHead>

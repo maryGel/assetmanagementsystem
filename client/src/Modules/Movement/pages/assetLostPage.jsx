@@ -12,18 +12,15 @@ import { getAutocompleteSx } from '../../../Utils/autocompleteStyles';
 import { customTheme } from '../../../Utils/customTable';
 import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
 import { CustomDialog } from '../../../Utils/customDialog'
-import { openALPrintPreview } from '../../../Utils/printLostAssetForm';
+import { openALPrintPreview } from '../../../Utils/printLostAssetForm'
 import { getCurrentLevel } from '../../../Utils/approvalLevelUtils'
 
 // Custom Hooks
-import { useAD_h } from '../../../hooks/useAD_h';
 import { useRefDepartment } from '../../../hooks/refDepartment'; 
 import { useRefEmployees } from '../../../hooks/refEmployee'; 
-import { useRefLocation } from '../../../hooks/refLocation'; 
-import { useSections } from '../../../hooks/refSection';
 import { useALData } from '../../../hooks/useAssetLost_reducer';
 import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
-import { useAssetLostApproval  } from '../../../hooks/useAssetLostApproval';
+import { useAssetLostApproval } from '../../../hooks/useAssetLostApproval';
 import { useApprovalActions } from '../../../Utils/approvalActionHandler';
 import { useUsers } from '../../../hooks/useUsers';
 
@@ -100,15 +97,10 @@ export default function ALFormPage(useProps) {
   // Reference data
   const { refDeptData } = useRefDepartment();
   const { refEmployees } = useRefEmployees();
-  const { refLocData } = useRefLocation();
-  const { refSections } = useSections();
+  
   const departments = refDeptData.map(item => item.Department);
   const employees = refEmployees.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
-  const locations = refLocData.map(item => item.LocationName);
-  const sections = refSections.map(item => item.xdesc);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const copyDocNo = searchParams.get('docId');
   const isCreatingRef = useRef(false);
@@ -219,10 +211,31 @@ const refreshData = useCallback(async () => {
   const isReadOnly = !canEditDocument;
   const nextLevel = getNextLevel(baseHeader);
   const currentLevel = getCurrentLevel(baseHeader);
-
   const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
 
   const handleHeaderChange = (field, value) => {
+      if (field === 'Department_Code' || field === 'Dep') {
+      const prev = currentHeader?.Dep || currentHeader?.Department || '';
+      const hasAssets = (currentALItems || []).some(r => r.ItemNo);
+
+      if (prev && prev !== value && hasAssets) {
+        const ok = window.confirm(
+          'Changing the department will clear the selected assets. Continue?'
+          
+        );
+        if (ok) {
+          showToast('Department changed. All selected assets have been cleared.', 'info');
+        } else return;
+
+         
+        (currentALItems || []).forEach(row => {
+          ['ItemNo','ItemName','Qty','Units','DteAqui','Supplier',
+          'serial','unitcost', 'location'].forEach(f =>
+            updateDetailRow(row.id, f, '')
+          );
+        });
+      }
+    }
     updateHeaderField(field, value);
   };
 
@@ -268,41 +281,41 @@ const handleEmployeeChange = (event, newValue) => {
 
   const handleSave = async () => {
     if (!state.createALHeader?.AAFNo) {
-      alert('Lost Asset number is required');
+      showToast('Lost Asset Form number is required');
       return;
     }
     if (!state.createALHeader?.Dep) {
-      alert('Please select department.');
+      showToast('Please select department.');
       return;
     }
     if (!state.createALHeader?.EmpID) {
-      alert('Please enter employee.');
+      showToast('Please enter employee.');
       return;
     }
     if (!state.createALDetails || state.createALDetails.length === 0) {
-      alert('Please add at least one item');
+      showToast('Please add at least one item');
       return;
     }
     const invalidRows = state.createALDetails.filter(row => !row.ItemNo);
     if (invalidRows.length > 0) {
-      alert(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
+      showToast(`Please select assets for all rows (${invalidRows.length} row(s) missing asset)`);
       return;
     }
     openSaveDialog();
   };
 
-  const handleSuccessfulCreate = useCallback(async (newAANo) => {
+  const handleSuccessfulCreate = useCallback(async (newALNo) => {
     await refreshCompanyConfig();
-    setSearchParams({ docId: newAANo });
+    setSearchParams({ docId: newALNo });
     isCreatingRef.current = false;
   }, [setSearchParams, refreshCompanyConfig]);
 
   const handleConfirmSave = async () => {
-    const newAANo = state.createALHeader?.AAFNo;
+    const newALNo = state.createALHeader?.AAFNo;
     const wasCreating = state.isCreating;
     await confirmSave();
-    if (wasCreating && newAANo) {
-      handleSuccessfulCreate(newAANo);
+    if (wasCreating && newALNo) {
+      handleSuccessfulCreate(newALNo);
     }
   };
 
@@ -397,12 +410,12 @@ const handleEmployeeChange = (event, newValue) => {
       
       if (bulkActionType === 'approve') {
         if (result.data?.isFinalApproval) {
-          showToast(`Lost Asset ${baseHeader.AAFNo} is now fully approved!`, 'success');
+          showToast(`Lost Asset Form  ${baseHeader.AAFNo} is fully approved!`, 'success');
         } else {
           showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
         }
       } else {
-        showToast(`Lost Asset ${baseHeader.AAFNo} is rejected`, 'error');
+        showToast(`Lost Asset Form ${baseHeader.AAFNo} is rejected`, 'error');
       }
       
     // Force refresh the data
@@ -486,7 +499,7 @@ const handleEmployeeChange = (event, newValue) => {
       <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
         <CustomDialog
           title="Confirm Save"
-          text="Are you sure you want to save this Lost Asset? Please review all information before saving."
+          text="Are you sure you want to save this Lost Asset Form? Please review all information before saving."
           cancelText="Cancel"
           confirmText="Save"
           cancel={closeSaveDialog}
@@ -522,7 +535,7 @@ const handleEmployeeChange = (event, newValue) => {
       <Dialog open={postDialogOpen} onClose={closePostDialog}>
         <CustomDialog
           title="Confirm Post"
-          text="Would you like to post this Lost Asset now? Once posted, it will be sent for approval."
+          text="Would you like to post this Lost Asset Form now? Once posted, it will be sent for approval."
           cancelText="Cancel"
           confirmText="Post"
           cancel={closePostDialog}
@@ -544,8 +557,8 @@ const handleEmployeeChange = (event, newValue) => {
                 </span>
               )}
               {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve this Lost Asset?` 
-                : `Are you sure you want to reject this Lost Asset? This action cannot be undone.`
+                ? `Are you sure you want to approve this Lost Asset Form?` 
+                : `Are you sure you want to reject this Lost Asset Form? This action cannot be undone.`
               }
             </p>
             <div className="mb-4">
@@ -613,7 +626,7 @@ const handleEmployeeChange = (event, newValue) => {
       </Snackbar>
 
       {/* Buttons Section */}
-      <div className='flex justify-end gap-3 my-4 mx-14'>
+      <div className='flex flex-wrap justify-end gap-3 mx-16 mt-10'>
         {(state.isCreating || state.isEditing) && (
           <CustomBtn variant='saveBtn' iconType='save' onClick={handleSave}>
             {state.saving ? 'Saving...' : 'Save'}
@@ -673,14 +686,14 @@ const handleEmployeeChange = (event, newValue) => {
         )}
       </div>
           
-      <div className='p-3 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
+      <div className='p-10 bg-gray-100 rounded-lg shadow-lg lg:m-10'>
         <Box className='flex flex-wrap justify-between w-full h-full gap-1'>
           <h1 className='text-sm font-bold text-gray-800'>
-            {state.isCreating ? 'Creating Lost Asset' : state.isEditing ? 'Editing Lost Asset' : 'Display Lost Asset'}
+            {state.isCreating ? 'Creating Lost Asset Form' : state.isEditing ? 'Editing Lost Asset Form' : 'Display Lost Asset Form'}
           </h1>
-          <div className='flex gap-2'>
-            <span className='text-xs text-gray-500'>Last Lost Asset created :</span>
-            <span className='text-xs text-gray-500'>
+          <div className='flex flex-wrap gap-2'>
+            <span className='text-sm text-gray-500'>Last Lost Asset Form created :</span>
+            <span className='text-sm text-gray-500'>
               {assetLostHeaders && assetLostHeaders.length > 0 
                 ? [...assetLostHeaders].sort((a, b) => {
                     const numA = parseInt(String(a.AAFNo).split('-').pop() || 0);
@@ -689,8 +702,8 @@ const handleEmployeeChange = (event, newValue) => {
                   })[0]?.AAFNo 
                 : '---'}
             </span>
-            <span className='text-xs text-gray-500'>Document Date :</span>
-            <span className='text-xs text-gray-500'>
+            <span className='text-sm text-gray-500'>Document Date:</span>
+            <span className='text-sm text-gray-500'>
               {assetLostHeaders && assetLostHeaders.length > 0 
                 ? (() => {
                     const latest = [...assetLostHeaders].sort((a, b) => {
@@ -706,7 +719,7 @@ const handleEmployeeChange = (event, newValue) => {
         </Box>
         
         <form className='mt-8'>
-          <label className='text-base font-normal text-gray-500'>Lost Asset No : </label>
+          <label className='text-base font-normal text-gray-500'>Lost Asset Form No : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{currentHeader?.AAFNo || ''}</label> 
           <label className='pl-10 text-base font-normal text-gray-500'>Document Date : </label>
           <input 
@@ -723,7 +736,7 @@ const handleEmployeeChange = (event, newValue) => {
           <br/>
           <label className='text-base font-normal text-gray-500'>Status : </label>
           <label className='pl-3 text-base font-semibold text-gray-800'>{docStatus(currentHeader?.xPosted)}</label>
-             {nextLevel && (currentHeader?.xPosted === 2 || currentHeader?.xPosted === 3) && (
+              {nextLevel && (currentHeader?.xPosted === 2 || currentHeader?.xPosted === 3) && (
                 <label className='pl-3 text-sm text-blue-600'>
                   (Level of approval :  {currentLevel}/{totalLevels})
                 </label>
@@ -777,26 +790,6 @@ const handleEmployeeChange = (event, newValue) => {
                 )} 
               />
             </div>
-
-            <div className='flex flex-wrap items-start justify-start w-full gap-10 mt-4'>
-                <label className={`pt-2 text-base text-gray-500 w-28 font-normal`}>Remarks : </label>
-                <textarea
-                  id = "remarks"
-                  disabled={!state.isEditing && !state.isCreating}
-                  aria-label = "minimum height"
-                  minRows={2}
-                  value={currentHeader?.xREMARKS || ''}
-                  onChange={(e) => handleHeaderChange('xREMARKS', e.target.value)}
-                  className={`${!state.isEditing && !state.isCreating? 'text-gray-400' : 'text-black'} rounded-sm border-gray-300 `}
-                  style={{ 
-                    width: '50rem',
-                    resize: 'both',
-                    padding: '.5rem',
-                    border: '1px solid #ccc',
-                    marginTop: '.5rem'
-                  }}   
-                />
-              </div>
           </Box>
         </form>
       </div>    

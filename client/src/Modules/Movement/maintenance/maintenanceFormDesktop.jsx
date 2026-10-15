@@ -376,7 +376,19 @@ function MaintenanceFormDesktop({
                                 setSectorFilters(typeof value === 'string' ? value.split(',') : value);
                             }}
                             label="Maintenance"
-                            renderValue={(selected) => selected.length ? selected.join(', ') : 'All sectors'}
+                            renderValue={(selected) => {
+                                if (!selected || selected.length === 0) {
+                                    return 'All maintenance';
+                                }
+
+                                const limit = 1;
+                                const visibleItems = selected.slice(0, limit).join(', ');
+                                const remainingCount = selected.length - limit;
+
+                                return remainingCount > 0
+                                    ? `${visibleItems} (+${remainingCount} more)`
+                                    : visibleItems;
+                            }}
                         >
                             {sectorOptions.map(sector => (
                                 <MenuItem key={sector} value={sector}>
@@ -575,8 +587,8 @@ function MaintenanceFormDesktop({
                                       <TableCell className="px-4 py-3">
                                           <span className="px-2 py-1 text-xs font-medium rounded-full">{jo.workNo}</span>
                                       </TableCell>
-                                      <TableCell className="px-4 py-3">
-                                          <span className={`px-2 py-1 text-xs font-medium  ${jo.wo_date === '0000-00-00'? 'text-transparent' : 'text-blac'}`}>{`${jo?.wo_date}`}</span>
+                                      <TableCell className="px-4 py-3"> 
+                                          <span className={`px-2 py-1 text-xs font-medium  ${jo.wo_date === '0000-00-00' || jo.wo_date === null? 'text-transparent' : 'text-blac'}`}>{`${jo?.wo_date}`}</span>
                                       </TableCell>
                                       <TableCell className="">
                                           <Button

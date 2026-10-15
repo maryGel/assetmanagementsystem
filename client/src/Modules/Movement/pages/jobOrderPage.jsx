@@ -281,8 +281,6 @@ const refreshData = useCallback(async () => {
           showToast('Department changed. All selected assets have been cleared.', 'info');
         } else return;
 
-         
-
         (currentJOItems || []).forEach(row => {
           ['FAC_NO','FAC_name','qty','UOM','brand','serialno',
           'ItemLocation','StartDate','EndDate'].forEach(f =>

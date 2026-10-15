@@ -98,12 +98,6 @@ const SEARCH_FIELDS = ['FAC_NO', 'FAC_name', 'Description', 'workDet', 'serialno
 // Columns frozen on the left while scrolling sideways
 const FROZEN_COLS = ['no', 'action', 'FAC_name'];
 
-// Line fields that come from the selected asset. They are all cleared when the
-// line's From Department is changed or removed.
-// const ROW_ASSET_FIELDS = [
-//   'FAC_NO', 'FAC_name', 'qty', 'UOM', 'brand',
-//   'serialNo', 'serialno', 'Date_Aq', 'Amount_aq', 'Holder', 'location',
-// ];
 
 const money = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,

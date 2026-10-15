@@ -1,7 +1,36 @@
-  import express from 'express';
+import express from 'express';
   import {db} from '../server.js';
 
   const router = express.Router();
+
+  // ---------- itemlist.xxStats sync for edited documents ----------
+  const PENDING_STATUS = 'With Pending Transfer';
+
+  const runQuery = (connection, sql, params) => new Promise((resolve, reject) => {
+    connection.query(sql, params, (error, result) => (error ? reject(error) : resolve(result)));
+  });
+
+  // Unique asset numbers; blank and 'n' (no asset) are skipped
+  const cleanFacNos = (list) => [...new Set(
+    list.map((f) => (f || '').trim()).filter((f) => f && f.toLowerCase() !== 'n')
+  )];
+
+  // Compare the asset numbers before and after an edit:
+  //  - removed lines: clear xxStats (only if it still holds this document's pending status)
+  //  - added lines:   set xxStats to the pending status
+  // Lines that were already on the document are left untouched.
+  const syncPendingStatus = async (connection, oldList, newList) => {
+    const oldSet = cleanFacNos(oldList);
+    const newSet = cleanFacNos(newList);
+    const removed = oldSet.filter((f) => !newSet.includes(f));
+    const added = newSet.filter((f) => !oldSet.includes(f));
+    if (removed.length > 0) {
+      await runQuery(connection, `UPDATE itemlist SET xxStats = '' WHERE FacNO IN (?) AND xxStats = ?`, [removed, PENDING_STATUS]);
+    }
+    if (added.length > 0) {
+      await runQuery(connection, `UPDATE itemlist SET xxStats = ? WHERE FacNO IN (?)`, [PENDING_STATUS, added]);
+    }
+  };
 
   // Get all tr_d
   router.get('/', (req, res) => {
@@ -130,12 +159,33 @@
       
       // Execute all inserts
       Promise.all(promises)
-        .then((results) => {
+        .then(async (results) => {
+          // Flag each asset on this TR as having a pending transfer (per FacNO).
+          // Blank FAC_NO and 'n' (no asset) are skipped.
+          const facNos = [...new Set(
+            items
+              .map((i) => (i.FAC_NO || '').trim())
+              .filter((f) => f && f.toLowerCase() !== 'n')
+          )];
+
+          let assetsFlagged = 0;
+          if (facNos.length > 0) {
+            const upd = await new Promise((resolve, reject) => {
+              connection.query(
+                `UPDATE itemlist SET xxStats = 'With Pending Transfer' WHERE FacNO IN (?)`,
+                [facNos],
+                (error, result) => (error ? reject(error) : resolve(result))
+              );
+            });
+            assetsFlagged = upd.affectedRows;
+          }
+
           connection.release();
           res.status(201).json({
             message: 'TR details created successfully',
             count: results.length,
-            ids: results.map(r => r.insertId)
+            ids: results.map(r => r.insertId),
+            assetsFlagged
           });
         })
         .catch((error) => {
@@ -164,8 +214,25 @@
       
       // First, delete all existing details for this TR
       const deleteSql = 'DELETE FROM tr_d WHERE TR_No = ?';
+
+      // Remember which assets were on this TR before the lines are replaced
+      // (queued on the same connection, so it runs before the DELETE)
+      const oldFacNosPromise = runQuery(connection, 'SELECT FAC_NO FROM tr_d WHERE TR_No = ?', [TR_No])
+        .then((rows) => rows.map((r) => r.FAC_NO));
+      oldFacNosPromise.catch(() => {}); // errors are handled where it is awaited
       
-      connection.query(deleteSql, [TR_No], (err, deleteResult) => {
+      connection.query(deleteSql, [TR_No], async (err, deleteResult) => {
+        // All lines removed: clear the pending status on the assets that were on this TR
+        if (!err && details.length === 0) {
+          try {
+            await syncPendingStatus(connection, await oldFacNosPromise, []);
+          } catch (statErr) {
+            connection.release();
+            console.error('Error updating itemlist xxStats:', statErr);
+            return res.status(500).json({ error: 'Details removed but asset status update failed', details: statErr.message });
+          }
+        }
+
         if (err) {
           connection.release();
           return res.status(500).json({ error: 'Error deleting old details', details: err.message });
@@ -198,7 +265,18 @@
           detail.New_Location || '',
         ]);
         
-        connection.query(insertSql, [values], (err, insertResult) => {
+        connection.query(insertSql, [values], async (err, insertResult) => {
+          // Added lines get the pending status; removed lines are cleared
+          if (!err) {
+            try {
+              await syncPendingStatus(connection, await oldFacNosPromise, details.map((d) => d.FAC_NO));
+            } catch (statErr) {
+              connection.release();
+              console.error('Error updating itemlist xxStats:', statErr);
+              return res.status(500).json({ error: 'Details saved but asset status update failed', details: statErr.message });
+            }
+          }
+
           connection.release();
           
           if (err) {
@@ -235,4 +313,3 @@
   });
  
   export default router;
-

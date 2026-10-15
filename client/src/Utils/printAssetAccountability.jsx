@@ -211,7 +211,7 @@ export function generateAAPrintHTML({
 <meta charset="utf-8" />
 <title>Asset Accountability ${escapeHtml(aaNo)}</title>
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body {
     margin: 0;
     padding: 0;
@@ -344,6 +344,7 @@ export function generateAAPrintHTML({
   /* ---------- Items table ---------- */
   table.items-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 10.5px;
     margin-top: 6px;
@@ -358,14 +359,19 @@ export function generateAAPrintHTML({
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
+  table.items-table th {
+    overflow-wrap: anywhere;
+  }
   table.items-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
     border: 1px solid #dbe2ea;
     padding: 5px 6px;
     vertical-align: top;
   }
   table.items-table tr:nth-child(even) td { background: #f8fafc; }
   .num-cell { text-align: center; width: 24px; color: #777; }
-  .center { text-align: center; white-space: nowrap; }
+  .center { text-align: center; }
   .amount-cell { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .empty-row { text-align: center; color: #888; padding: 16px; font-style: italic; }
   .total-row td {
@@ -459,10 +465,10 @@ export function generateAAPrintHTML({
   .toolbar .btn-close { background: #666; color: #fff; }
 
   @media print {
-    body { background: #fff; }
+    html, body { background: #fff !important; height: auto; }
     .toolbar { display: none; }
-    .page { margin: 0; box-shadow: none; width: auto; min-height: auto; }
-    @page { size: A4; margin: 12mm; }
+    .page { margin: 0; padding: 0; box-shadow: none; width: 100%; max-width: 100%; min-height: auto; }
+    @page { size: A4; margin: 22mm 12mm 14mm 12mm; }
   }
 </style>
 </head>

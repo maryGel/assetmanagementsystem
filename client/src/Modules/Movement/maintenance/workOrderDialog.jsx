@@ -12,6 +12,7 @@ import { AutoResizeTextField } from '../../../Utils/textAreaResizable';
 import formatWithCommas from '../../../Utils/formatWithCommas';
 import { useJO_d } from '../../../hooks/useJO_d';
 import { useJO_woe } from '../../../hooks/useJO_woe';
+import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
 
 
 // Shared with anything that renders a JO/WO status pill (e.g. the Maintenance
@@ -119,6 +120,237 @@ const generateWorkOrderNumber = (joHeaders = []) => {
   return `DB-WO-${String(lastNumber + 1).padStart(7, '0')}`;
 };
 
+// JO header details shown under the JO No.: Department (Department_Code),
+// Maintenance (Sector_name) and Location. The jo header's location column name
+// isn't confirmed, so try the likely names and fall back to the distinct
+// per-item locations stored on the jo_d rows.
+const getJoLocation = (jo, details = []) => {
+  const fromHeader = String(jo?.Location ?? jo?.location ?? '').trim();
+  if (fromHeader) return fromHeader;
+  const fromItems = [...new Set((details || []).map((d) => String(d?.location ?? d?.Location ?? '').trim()).filter(Boolean))];
+  return fromItems.join(', ');
+};
+const getJoHeaderInfo = (jo, details = []) => ({
+  department: String(jo?.Department_Code ?? '').trim(),
+  location: getJoLocation(jo, details),
+  maintenance: String(jo?.Sector_name ?? '').trim(),
+});
+
+// ---------------------------------------------------------------------------
+// Work Order printout
+// Builds a standalone HTML document (header, every item with all of its
+// expenses, subtotals, grand total, signature lines) and prints it from a
+// hidden iframe, so the MUI dialog / page chrome never ends up on paper.
+// ---------------------------------------------------------------------------
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+// Keeps user-typed line breaks in multi-line fields (details, remarks).
+const escapeMultiline = (value) => escapeHtml(value).replace(/\r?\n/g, '<br/>');
+
+const formatPrintDate = (value) => {
+  if (!value) return '';
+  const text = String(value);
+  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : text;
+};
+
+const formatPeso = (value) => `₱${safeParseNumber(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// `companyConfig` is the row from useCompanyConfig (Company, address, CompTel).
+const buildWorkOrderPrintHtml = (workOrder, companyConfig) => {
+  const company = {
+    name: String(companyConfig?.Company ?? '').trim(),
+    address: String(companyConfig?.address ?? '').trim(),
+    phone: String(companyConfig?.CompTel ?? '').trim(),
+  };
+  const items = workOrder.items || [];
+  const itemTotal = (item) => (item.expenses || []).reduce((sum, exp) => sum + safeParseNumber(exp.expenseAmount), 0);
+  const grandTotal = items.reduce((sum, item) => sum + itemTotal(item), 0);
+  const overallLabel = getStatusLabel(workOrder.maintenanceStatus) === 'Not Started' ? '' : getStatusLabel(workOrder.maintenanceStatus);
+
+  const field = (label, value, full = false) => (value
+    ? `<div class="field${full ? ' full' : ''}"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeMultiline(value)}</span></div>`
+    : '');
+
+  const itemBlocks = items.map((item, index) => {
+    const expenses = item.expenses || [];
+    const adNo = String(item.original?.AD_No ?? '').trim();
+    const disposalReason = item.disposalReason ?? item.reasonForDisposal ?? '';
+
+    const expenseRows = expenses.map((exp) => `
+          <tr>
+            <td>${escapeHtml(formatPrintDate(exp.date))}</td>
+            <td>${escapeHtml(exp.expenseType)}</td>
+            <td class="num">${escapeHtml(formatPeso(exp.expenseAmount))}</td>
+            <td>${escapeHtml(exp.orNumber)}</td>
+            <td>${escapeMultiline(exp.workDone)}</td>
+          </tr>`).join('');
+
+    // No expenses -> no expense table at all.
+    const expenseTable = expenses.length === 0 ? '' : `
+        <table class="expenses">
+          <thead>
+            <tr>
+              <th style="width:11%">Date</th>
+              <th style="width:15%">Expense Type</th>
+              <th class="num" style="width:16%">Amount</th>
+              <th style="width:15%">O.R No.</th>
+              <th>Work Done / Remarks</th>
+            </tr>
+          </thead>
+          <tbody>${expenseRows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="num">Item Total</td>
+              <td class="num">${escapeHtml(formatPeso(itemTotal(item)))}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>`;
+
+    return `
+      <section class="item">
+        <div class="item-head">
+          <div class="item-title"><span class="item-no">${index + 1}.</span> ${escapeHtml(item.FAC_name)}</div>
+          <div class="item-status">${escapeHtml(getItemStatusLabel(item.status))}</div>
+        </div>
+        <div class="fields">
+          ${field('Asset No.', item.FAC_NO)}
+          ${field('Qty / UOM', [item.qty, item.uom].filter(Boolean).join(' '))}
+          ${field('Disposal No.', adNo)}
+          ${field('Details of Work', item.detailsOfWork, true)}
+          ${field('Maintenance Remarks', item.woRemarks, true)}
+          ${item.status === 'For Disposal' ? field('Reason for Disposal', disposalReason || 'No reason provided', true) : ''}
+        </div>${expenseTable}
+      </section>`;
+  }).join('');
+
+  // The summary gets a "Reason for Disposal" column only when at least one item is For Disposal.
+  const hasDisposalItems = items.some((item) => item.status === 'For Disposal');
+  const summaryRows = items.map((item, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(item.FAC_NO)}</td>
+        <td>${escapeHtml(item.FAC_name)}</td>
+        <td class="num">${(item.expenses || []).length}</td>
+        <td class="num">${escapeHtml(formatPeso(itemTotal(item)))}</td>
+        ${hasDisposalItems ? `<td>${item.status === 'For Disposal' ? escapeMultiline(item.disposalReason ?? item.reasonForDisposal ?? '') || 'No reason provided' : ''}</td>` : ''}
+      </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Work Order ${escapeHtml(workOrder.workNo)}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 0; }
+  .company { text-align: center; margin-bottom: 10px; line-height: 1.4; }
+  .company-name { font-size: 16px; font-weight: bold; letter-spacing: 0.5px; }
+  h1 { font-size: 20px; margin: 0 0 2px; letter-spacing: 1px; }
+  .header { border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .meta { display: grid; grid-template-columns: auto auto; column-gap: 24px; row-gap: 2px; text-align: left; }
+  .meta .label { color: #555; }
+  .meta .value { font-weight: bold; }
+  .item { border: 1px solid #999; margin-bottom: 16px; page-break-inside: avoid; break-inside: avoid; }
+  .item-head { display: flex; justify-content: space-between; background: #eee; padding: 5px 8px; border-bottom: 1px solid #999; }
+  .item-title { font-weight: bold; font-size: 12px; }
+  .item-status { font-weight: bold; text-transform: uppercase; font-size: 10px; }
+  /* One row per field: plain uppercase label on the left, bold value on the right. */
+  .fields { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; }
+  .field { display: grid; grid-template-columns: 150px 1fr; column-gap: 16px; align-items: baseline; }
+  .field .label { color: #111; font-size: 11px; font-weight: normal; text-transform: uppercase; }
+  .field .value { font-size: 12px;  white-space: normal; word-break: break-word; }
+  table { width: 100%; border-collapse: collapse; }
+  .expenses th, .expenses td { border-top: 1px solid #bbb; padding: 3px 6px; vertical-align: top; text-align: left; }
+  .expenses th { background: #f6f6f6; font-size: 10px; }
+  .expenses tfoot td { font-weight: bold; background: #f6f6f6; }
+  .num { text-align: right !important; white-space: nowrap; }
+  .empty { text-align: center !important; color: #777; font-style: italic; padding: 8px; }
+  .summary { margin-top: 14px; page-break-inside: avoid; break-inside: avoid; }
+  .summary h2 { font-size: 13px; margin: 0 0 4px; }
+  .summary th, .summary td { border: 1px solid #999; padding: 3px 6px; text-align: left; }
+  .summary th { background: #eee; }
+  .summary tfoot td { font-weight: bold; font-size: 12px; }
+  .signatures { display: flex; justify-content: space-between; gap: 24px; margin-top: 40px; page-break-inside: avoid; break-inside: avoid; }
+  .sig { flex: 1; text-align: center; }
+  .sig .line { border-top: 1px solid #111; margin-top: 34px; padding-top: 3px; font-size: 10px; }
+  .printed { margin-top: 14px; color: #777; font-size: 9px; text-align: right; }
+</style>
+</head>
+<body>
+  ${company.name || company.address || company.phone ? `
+  <div class="company">
+    ${company.name ? `<div class="company-name">${escapeHtml(company.name)}</div>` : ''}
+    ${company.address ? `<div>${escapeMultiline(company.address)}</div>` : ''}
+    ${company.phone ? `<div>Tel: ${escapeHtml(company.phone)}</div>` : ''}
+  </div>` : ''}
+  <div class="header">
+    <div class="meta">
+      <span>WORK ORDER</span>
+      <span><strong>${escapeHtml(workOrder.workNo)}</strong></span>
+      <span class="label">Date:</span><span class="value">${escapeHtml(formatPrintDate(workOrder.woDate))}</span>
+      <span class="label">Status:</span><span class="value">${escapeHtml(overallLabel)}</span>
+      <span class="label">Total Expenses:</span><span class="value">${escapeHtml(formatPeso(grandTotal))}</span>
+    </div>
+    <div class="meta">
+      <span class="label">Job Order No.:</span><span class="value">${escapeHtml(workOrder.joNo)}</span>
+      ${workOrder.department ? `<span class="label">Department:</span><span class="value">${escapeHtml(workOrder.department)}</span>` : ''}
+      ${workOrder.location ? `<span class="label">Location:</span><span class="value">${escapeHtml(workOrder.location)}</span>` : ''}
+      ${workOrder.maintenance ? `<span class="label">Maintenance:</span><span class="value">${escapeHtml(workOrder.maintenance)}</span>` : ''}
+    </div>
+  </div>
+
+  ${items.length === 0 ? '<p class="empty">No items on this work order.</p>' : itemBlocks}
+
+  ${items.length > 0 ? `
+  <section class="summary">
+    <h2>Expense Summary</h2>
+    <table>
+      <thead>
+        <tr><th style="width:5%">#</th><th style="width:16%">Asset No.</th><th>Item Name</th><th class="num" style="width:9%">Entries</th><th class="num" style="width:16%">Total</th>${hasDisposalItems ? '<th style="width:26%">Reason for Disposal</th>' : ''}</tr>
+      </thead>
+      <tbody>${summaryRows}</tbody>
+      <tfoot>
+        <tr><td colspan="4" class="num">Overall Expenses</td><td class="num">${escapeHtml(formatPeso(grandTotal))}</td>${hasDisposalItems ? '<td></td>' : ''}</tr>
+      </tfoot>
+    </table>
+  </section>` : ''}
+
+  <div class="signatures">
+    <div class="sig"><div class="line">Prepared by</div></div>
+    <div class="sig"><div class="line">Checked by</div></div>
+    <div class="sig"><div class="line">Approved by</div></div>
+  </div>
+  <div class="printed">Printed ${escapeHtml(new Date().toLocaleString())}</div>
+</body>
+</html>`;
+};
+
+// Prints an HTML string through a throwaway hidden iframe.
+const printHtmlDocument = (html) => {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  const cleanup = () => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) { cleanup(); return; }
+    win.onafterprint = cleanup;
+    win.focus();
+    win.print();
+    // Fallback in case afterprint never fires (some browsers).
+    setTimeout(cleanup, 60000);
+  };
+  iframe.srcdoc = html;
+  document.body.appendChild(iframe);
+};
+
 /**
  * Work Order dialog, reusable from anywhere: the Maintenance page (create/edit
  * flow) and, e.g., a "Work Order" link on the Line Item Report.
@@ -157,6 +389,7 @@ export default function WorkOrderDialog({
   const { getJODetailsByJO, updateMaintenanceDetails, joDetailsRefresh: joDetailsRefreshInternal } = useJO_d();
   const { fetchWorkOrderWithExpenses, createWorkOrderExpense, updateWorkOrderExpense, deleteWorkOrderExpense, generateExpenseId } = useJO_woe();
   const joDetailsRefresh = joDetailsRefreshProp || joDetailsRefreshInternal;
+  const { companyConfig } = useCompanyConfig();
 
   const isCreateMode = resolvedMode === 'create';
   const [isInitializing, setIsInitializing] = useState(false);
@@ -168,7 +401,7 @@ export default function WorkOrderDialog({
 
   const [selectedItemForExpense, setSelectedItemForExpense] = useState(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(0);
-  const [workOrderData, setWorkOrderData] = useState({ joNo: '', workNo: '', woDate: '', maintenanceStatus: 'Ongoing', items: [] });
+  const [workOrderData, setWorkOrderData] = useState({ joNo: '', workNo: '', woDate: '', maintenanceStatus: 'Ongoing', department: '', location: '', maintenance: '', items: [] });
 
   // Resizable column widths (px), in the same order as the header cells.
   const WO_COLUMNS = ['Item Status', 'FAC No.', 'Item Name', 'Qty', 'UOM', 'Details of Work', 'Evaluation', 'Remarks on Eval.', 'Maintenance Remarks', 'Expenses', 'Actions', 'Reason for Disposal', 'Disposal No'];
@@ -260,7 +493,8 @@ export default function WorkOrderDialog({
               joNo: jo.JO_No,
               workNo: jo.workNo,
               woDate: jo.wo_date,
-              maintenanceStatus: 'Ongoing',
+              maintenanceStatus: status,
+              ...getJoHeaderInfo(jo, details),
               items: buildItemsFromDetails(details, expensesByFacNo),
             });
           }
@@ -270,6 +504,7 @@ export default function WorkOrderDialog({
             workNo: generateWorkOrderNumber(joHeaders),
             woDate: new Date().toISOString().split('T')[0],
             maintenanceStatus: '',
+            ...getJoHeaderInfo(jo, details),
             items: buildItemsFromDetails(details),
           });
         }
@@ -559,7 +794,9 @@ export default function WorkOrderDialog({
     }
   };
 
-  const handlePrint = () => window.print();
+  // Prints the work order with every item and all of its expenses
+  // (not the on-screen dialog, which only shows one item's expenses at a time).
+  const handlePrint = () => printHtmlDocument(buildWorkOrderPrintHtml(workOrderData, companyConfig));
 
   const handleWoItemsChangePage = (_, newPage) => setWoItemsPage(newPage);
   const handleWoItemsChangeRowsPerPage = (event) => { setWoItemsRowsPerPage(parseInt(event.target.value, 10)); setWoItemsPage(0); };
@@ -595,6 +832,9 @@ export default function WorkOrderDialog({
                   <strong>Job Order :</strong>{' '}
                   {workOrderData.joNo ? <NewTabLink href={getJOFormUrl(workOrderData.joNo)} title="Open job order">{workOrderData.joNo}</NewTabLink> : null}
                 </div>
+                {workOrderData.department && <div><strong>Department :</strong> {workOrderData.department}</div>}
+                {workOrderData.location && <div><strong>Location :</strong> {workOrderData.location}</div>}
+                {workOrderData.maintenance && <div><strong>Maintenance :</strong> {workOrderData.maintenance}</div>}
               </div>
             </div>
           </div>
@@ -623,12 +863,6 @@ export default function WorkOrderDialog({
               {workOrderData.maintenanceStatus === 'Completed' && (
                 <Alert severity="info" className="mb-4">All items must be either "For Disposal" or "Completed" to keep this status.</Alert>
               )}
-
-              <div className="flex justify-end gap-2 mb-4">
-                <Button variant="contained" color="primary" onClick={handleUpdateWorkOrder} disabled={isSaving}>
-                  {isSaving ? <CircularProgress size={24} /> : (isCreateMode ? 'Create' : 'Update')}
-                </Button>
-              </div>
 
               <TableContainer component={Paper} className="mb-4">
                 {/* Scroll area: vertical + horizontal. Pagination stays outside so it doesn't scroll away. */}
@@ -747,7 +981,7 @@ export default function WorkOrderDialog({
                               <button
                                 disabled={isSaving || item.status === 'Completed' || hasAdNo(item)}
                                 onClick={() => handleAddExpense(item, actualIndex)}
-                                className={`flex items-center gap-2 p-2 bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors 
+                                className={`flex items-center gap-2 p-2 bg-blue-600 text-white text-sm font-medium rounded-md transition-colors 
                                   ${(isSaving || item.status === 'Completed' || hasAdNo(item)) ? 'opacity-50 cursor-not-allowed bg-gray-200' : 'hover:bg-blue-500 hover:text-white'}`}
                               >
                                 <AddIcon fontSize="small" />Expense
@@ -859,8 +1093,11 @@ export default function WorkOrderDialog({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handlePrint} startIcon={<PrintIcon />} color="primary">Print</Button>
+          <Button onClick={handlePrint} startIcon={<PrintIcon />} color="primary" disabled={isInitializing || workOrderData.items.length === 0}>Print</Button>
           <Button onClick={onClose} color="secondary">Cancel</Button>
+          <Button variant="contained" color="primary" onClick={handleUpdateWorkOrder} disabled={isSaving}>
+            {isSaving ? <CircularProgress size={24} /> : (isCreateMode ? 'Create' : 'Update')}
+          </Button>
         </DialogActions>
       </Dialog>
 
