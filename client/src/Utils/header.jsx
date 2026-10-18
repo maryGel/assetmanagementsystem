@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 // Custom Hooks
-import { headerTitleMap, getBackPath  } from './headerTitleMap';
+import { headerTitleMap } from './headerTitleMap';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useUsers } from '../hooks/useUsers';
 
 // MUI Icons
-import { Box, InputBase, Menu, MenuItem, CircularProgress, Backdrop, Button } from '@mui/material';
-import HomeIcon from '@mui/icons-material/Home';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import { Box, InputBase, Menu, MenuItem, CircularProgress, Backdrop } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import HistoryIcon from '@mui/icons-material/History';
 import NotificationsIcon from '@mui/icons-material/Notifications';
@@ -19,7 +17,6 @@ function Header({ username, headerTitle, setHeaderTitle }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
-  const isHomeTab = currentPath.includes('/Home');
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -49,8 +46,6 @@ function Header({ username, headerTitle, setHeaderTitle }) {
     setHeaderTitle(title);
   }, [title]);
 
-  const backPath = getBackPath(currentPath);
-
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   
   const handleMenuClose = () => setAnchorEl(null);
@@ -65,10 +60,6 @@ function Header({ username, headerTitle, setHeaderTitle }) {
     setTimeout(() => {
       navigate('/');
     }, 1000); // Show loading for 3 secondsge
-  }
-
-  const handleBackChange = () => {
-    navigate(backPath)
   }
 
   return (
@@ -96,17 +87,6 @@ function Header({ username, headerTitle, setHeaderTitle }) {
       </Backdrop>
 
       <header className="flex-wrap items-center p-2 pl-3 tracking-wider text-black bg-blue-100 md:pl-6 md:flex">
-        <button className="transition-transform duration-150 active:translate-y-0.5 hover:scale-x-95 mr-1">
-          {isHomeTab 
-            ? ( <Button onClick={() => { navigate('/Home')}} className='rounded-full'>
-                  <HomeIcon sx={{ fontSize: { xs: 26, md: 30 }, color: 'Black' }} />
-                </Button>) 
-            : ( <Button onClick= {handleBackChange}>
-                  <ChevronLeftIcon sx={{ fontSize: { xs: 26, md: 30 }, color: 'Black'  }} />
-                </Button>)
-          }
-        </button>
-
         <h1 className='truncate max-w-[40vw] md:max-w-none'>{headerTitle}</h1>
 
         <div className="flex ml-auto mr-2 space-x-2 md:mr-6 md:space-x-6 place-items-center">
