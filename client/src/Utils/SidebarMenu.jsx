@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -13,7 +13,7 @@ export const SIDEBAR_WIDTH_COLLAPSED = 64; // px, icon rail (w-16)
 
 // Fixed left sidebar. It stays put while the page on the right scrolls and
 // changes; the page itself is rendered by Layout's <Outlet />.
-export default function SidebarMenu({ collapsed, setCollapsed }) {
+function SidebarMenu({ collapsed, setCollapsed }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { hasCode, hasAccess, loading } = useMyAccess();
@@ -162,3 +162,7 @@ export default function SidebarMenu({ collapsed, setCollapsed }) {
     </aside>
   );
 }
+
+// memo: skip re-rendering when the parent re-renders (e.g. header title
+// changes) with the same props; URL changes still update it via useLocation.
+export default memo(SidebarMenu);
