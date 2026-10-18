@@ -5,16 +5,15 @@
    * - LAN-friendly
    **************************************************/
 
+  // Must be the first import: loads .env before any route reads process.env
+  import { config } from './config.js';
   import express from 'express';
   import mysql from 'mysql2';
   import bodyParser from 'body-parser';
   import cors from 'cors';
-  import dotenv from 'dotenv';
   import path from 'path';
   import { fileURLToPath } from 'url'
 
-  // Load environment variables
-  dotenv.config();
 
   // Route imports
     // Referential Routes
@@ -77,39 +76,19 @@
 
 
   // --- CORS CONFIGURATION ---
-  // Focused strictly on local development to avoid "split-brain" issues
-  const allowedOrigins = [ 
-    // 'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5174',
-  ];
+  // Local dev + LAN are allowed by default. Any other site (e.g. a deployed
+  // HTTPS frontend) must be listed in ALLOWED_ORIGINS in server/.env.
+  const devOriginPattern =
+    /^http:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$/;
 
 
   // Cors Hybrid safe
   const corsOptions = {
     origin: function (origin, callback) {
-      // Allow Postman / curl / server-to-server
+      // Same-origin requests, Postman / curl / server-to-server
       if (!origin) return callback(null, true)
 
-      // Allow localhost
-      if (
-        origin.startsWith('http://localhost:5174') ||
-        origin.startsWith('http://10.0.0.187') ||
-        origin.startsWith('http://127.0.0.1') ||
-        origin.startsWith('http://103.137.179.26:5174')
-      ) {
-        return callback(null, true)
-      }
-
-      // Allow LAN (192.168.x.x)
-      if (origin.startsWith('http://192.168.')) {
-        return callback(null, true)
-      }
-
-      // Allow future HTTPS domains
-      if (origin.startsWith('https://')) {
+      if (devOriginPattern.test(origin) || config.allowedOrigins.includes(origin)) {
         return callback(null, true)
       }
 
@@ -124,17 +103,14 @@
   app.use(cors(corsOptions))
 
   // --- MIDDLEWARE ---
-  app.use(express.json());
+  app.disable('x-powered-by');
+  app.use(express.json({ limit: '1mb' }));
   app.use(bodyParser.urlencoded({ extended: true }));
 
   // --- DATABASE CONFIGURATION ---
-  // Hardcoded to ensure Node always talks to the same DB as SQLyog
+  // Credentials come only from server/.env (see config.js / .env.example)
   const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'myuser101',
-    password: process.env.DB_PASSWORD || 'MmFjbV69',
-    database: process.env.DB_NAME || 'ams1',
-    port: 33060,
+    ...config.db,
     waitForConnections: true,
     connectionLimit: 25,
     queueLimit: 0,
@@ -148,11 +124,9 @@
   // Test database connection on startup
   db.getConnection((err, connection) => {
     if (err) {
-      console.error('❌ VM Database connection failed:', err.message);
-      console.log('🔧 Attempting to connect to:', dbConfig.host);
+      console.error('❌ Database connection failed:', err.message);
     } else {
-      console.log('✅ Successfully connected to VM Database at 127.0.0.1:33060');
-      console.log('📊 Database Name:', dbConfig.database);
+      console.log('✅ Connected to database');
       connection.release();
     }
   });
@@ -170,8 +144,11 @@
   // Health check endpoint
   app.get('/health', (req, res) => {
     db.query("SELECT 1 as test", (err) => {
-      if (err) return res.status(500).json({ status: 'error', error: err.message });
-      res.json({ status: 'ok', database: 'Connected to VM' });
+      if (err) {
+        console.error('Health check failed:', err.message);
+        return res.status(500).json({ status: 'error' });
+      }
+      res.json({ status: 'ok' });
     });
   });
 
@@ -239,7 +216,7 @@
   });
 
   // --- SERVER START ---
-  const PORT = process.env.PORT || 3000;
+  const PORT = config.port;
   
   app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));

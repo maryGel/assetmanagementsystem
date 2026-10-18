@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+import { JWT_SECRET } from '../config.js';
 
 export function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
@@ -20,7 +19,6 @@ export function requireAdmin(req, res, next) {
   if (req.user && (req.user.Admin === 1 || req.user.Admin === true)) {
     next();
   } else {
-    console.log("Access Denied. Current user object:", req.user);
     return res.status(403).json({ error: 'Forbidden' });
   }
 }

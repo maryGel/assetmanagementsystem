@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
+import { JWT_SECRET } from '../config.js';
 
 // ... Login ...
 router.post("/", (req, res) => {
