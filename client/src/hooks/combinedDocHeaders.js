@@ -1,5 +1,5 @@
 // hooks/useCombinedDocHeaders.js
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 
 import { useJO_h } from './useJO_h';
 import { useJO_d } from './useJO_d';
@@ -11,6 +11,17 @@ import { useAssetAccH } from './useAssetAccH';
 import { useAssetAccD } from './useAssetAccD';
 import { useAssetLostH } from './useAssetLostH';
 import { useAssetLostD } from './useAssetLostD';
+
+// The Job Order header's maintenance service has been saved under different
+// names (Sector_Name, Sector_name, Section...). Take the first one present.
+const JO_MAINT_FIELDS = ['Sector_Name', 'Sector_name', 'sector_name', 'Section', 'section', 'SecCode', 'Maintenance'];
+const getJoMaintenance = (jo) => {
+  for (const f of JO_MAINT_FIELDS) {
+    const v = jo?.[f];
+    if (v !== null && v !== undefined && String(v).trim() !== '') return v;
+  }
+  return '';
+};
 
 export const combinedDocHeaders = (useProps) => {
   // Job Orders Data
@@ -28,6 +39,17 @@ export const combinedDocHeaders = (useProps) => {
   // Asset Lost Data
   const { assetLostHeaders, isLoading: alostLoading, error: alostError, aLostHRefresh } = useAssetLostH(useProps);
 
+  // Dev hint: tells you the real column names if no maintenance field arrives
+  useEffect(() => {
+    if (Array.isArray(joHeaders) && joHeaders.length && !joHeaders.some((jo) => getJoMaintenance(jo) !== '')) {
+      console.warn(
+        '[combinedDocHeaders] Job Order headers have no maintenance/section field. ' +
+          'Add it to the Job Order SELECT in jo_hRoute. Fields received:',
+        Object.keys(joHeaders[0])
+      );
+    }
+  }, [joHeaders]);
+
   // Combine all documents
   const docHeaders = useMemo(() => {
     const joTrans = (joHeaders || []).map(jo => ({ 
@@ -39,7 +61,7 @@ export const combinedDocHeaders = (useProps) => {
       Remarks: jo.Remarks, 
       Departmnet: jo.Department_Code, 
       Location: jo.Department_Code, 
-      Maintenance: jo.Sector_Name, 
+      Maintenance: getJoMaintenance(jo), 
       appStat: jo.appStat 
     }));
     

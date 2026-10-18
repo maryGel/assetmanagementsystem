@@ -39,6 +39,7 @@ export default defineConfig({
       '/ad_dRoute': 'http://localhost:3000',
       '/assetacchRoute': 'http://localhost:3000',
       '/assetaccdRoute': 'http://localhost:3000',
+      '/returnitemRoute': 'http://localhost:3000',
       '/assetLostHRoute': 'http://localhost:3000',
       '/assetLostDRoute': 'http://localhost:3000',
       '/jo_woeRoute': 'http://localhost:3000',
@@ -53,8 +54,10 @@ export default defineConfig({
       '/refAssetGroup': 'http://localhost:3000',
       '/userPermissions': 'http://localhost:3000',
       '/assetReport': 'http://localhost:3000',
+      // Report
       '/lineItemReport': 'http://localhost:3000',
-      '/refSupplierRoute': 'http://localhost:3000'
+      '/refSupplierRoute': 'http://localhost:3000',
+      '/maintenanceReportRoute': 'http://localhost:3000',
     }
   },
   // Add base URL for Vercel

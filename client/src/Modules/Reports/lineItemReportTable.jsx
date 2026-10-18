@@ -71,25 +71,30 @@ const rowKey = (row) => `${row.DocNo ?? ''}-${row.DocType ?? ''}-${row.FacNO}`;
 
 
 const handleSelectItem = (row) => {
-  const transNo = encodeURIComponent(row.DocNo);
-  const transInternal = 'Internal Transfer'
-  switch (row.DocType) {   
-    case 'Job Order':
-      return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
-    case 'Internal Transfer':
-      return window.open(
-        `/assetMovement/pages/TRFormType?docId=${transNo}&transferType=${encodeURIComponent(transInternal)}`,
-        '_blank'
-      );
-    case 'Disposal':
-      return window.open(`/assetMovement/pages/ADFormPage?docId=${transNo}`, '_blank');
-    case 'Asset Accountability':
-      return window.open(`/assetMovement/pages/AAFormPage?docId=${transNo}`, '_blank');
-    case 'Lost Asset':
-      return window.open(`/assetMovement/pages/ALFormPage?docId=${transNo}`, '_blank');
-    default:
-      return;
-  }
+  const transNo = row.DocNo;
+    // Transfer Type
+    const transInternal = 'Internal Transfer'
+    
+    // Borrow/Issue
+    const assetAccountabilty = 'Asset Accountability';
+    switch (row.DocType) {
+      case 'Job Order':
+        return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
+      case 'Internal Transfer':
+        return window.open(
+          `/assetMovement/pages/TRFormType?docId=${transNo}&transferType=${encodeURIComponent(transInternal)}`,
+          '_blank'
+        );
+      case 'Disposal':
+        return window.open(`/assetMovement/pages/ADFormPage?docId=${transNo}`, '_blank');
+      case 'Asset Accountability':
+        return window.open(`/assetMovement/pages/AAFormType?docId=${transNo}&formType=${encodeURIComponent(assetAccountabilty)}`, 
+        '_blank');
+      case 'Lost Asset':
+        return window.open(`/assetMovement/pages/ALFormPage?docId=${transNo}`, '_blank');
+      default:
+        return;
+    }      
 };
 
 export default function LineItemReportTable({

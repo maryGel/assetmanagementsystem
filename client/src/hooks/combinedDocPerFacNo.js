@@ -27,7 +27,7 @@ import { useAssetLostD } from './useAssetLostD';
 //
 // To confirm: console.log(data[0]) right after each set...Details(data)
 // call in the five *_d.js hooks, or check the backend model for each table.
-const getFacNo = (row) => row?.FAC_NO ?? row?.FacNO ?? row?.facNo ?? row?.Fac_No ?? '';
+const getFacNo = (row) => row?.FAC_NO ?? row?.FacNO ?? row?.facNo ?? row?.Fac_No ?? row.ItemNo ?? '';
 const getJoNo = (row) => row?.JO_No ?? row?.joNo ?? row?.JoNo ?? '';
 const getTrNo = (row) => row?.TR_No ?? row?.trNo ?? row?.TrNo ?? '';
 const getAdNo = (row) => row?.AD_No ?? row?.adNo ?? row?.AdNo ?? '';

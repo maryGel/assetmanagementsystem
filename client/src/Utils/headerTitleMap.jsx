@@ -18,9 +18,9 @@ export const headerTitleMap = {
   "/assetMovement/pages/JOFormPage": "Job Order Page",
   "/assetMovement/pages/TRFormType": "Internal Transfer Form Page",
   "/assetMovement/pages/ADFormPage": "Disposal Page",
-  "/assetMovement/pages/AAFormPage": "Asset Accountability Page",
+  "/assetMovement/pages/AAFormType": "Borrow/Issue Page",
   "/assetMovement/pages/ALFormPage": "Lost Asset Page",
-  "/assetMovement/pages/maintenancePage": "JO Evaluation & Maintenance Page",
+  "/assetMovement/pages/maintenancePage": "Job Order Evaluation & Maintenance Page",
 
   // Asset Physical Count Pages
   "/assetPhysical/assetPrintQr": "Print QRcode",
@@ -53,7 +53,7 @@ export const getBackPath = (currentPath) => {
   if (currentPath.startsWith('/assetMovement/pages/JOFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/TRFormType')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/ADFormPage')) return '/Home/Movement';
-  if (currentPath.startsWith('/assetMovement/pages/AAFormPage')) return '/Home/Movement';
+  if (currentPath.startsWith('/assetMovement/pages/AAFormType')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/ALFormPage')) return '/Home/Movement';
   if (currentPath.startsWith('/assetMovement/pages/maintenancePage')) return '/Home/Movement';
 
@@ -69,6 +69,8 @@ export const getBackPath = (currentPath) => {
   // Reports Pages
   if (currentPath.startsWith('/assetReports/assetSummaryReport')) return '/Home/Reports';
   if (currentPath.startsWith('/assetReports/assetLineItemReport')) return '/Home/Reports';
+  if (currentPath.startsWith('/assetReports/maintenanceReport')) return '/Home/Reports';
+
 
   // System Setup Pages
   if (currentPath.startsWith('/systemSetup/user/userProfile')) return '/Home/SystemSetup';

@@ -15,6 +15,13 @@ export const assetReportList= [
   },
   {
     id: 3,
+    title: 'Maintenance',
+    link: '/assetReports/maintenanceReport',
+    imgSrc: '/icons/menu_icons/maintreport.png',
+    headerTitle: 'Maintenance Report',
+  },
+    {
+    id: 4,
     title: 'Dep Report',
     link: '/assetReports/depreciationRep',
     imgSrc: '/icons/menu_icons/depreport.png',

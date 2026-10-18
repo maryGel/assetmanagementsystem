@@ -85,9 +85,10 @@ const isSellType = (type) => type === 'Selling' || type === 'Sell';
 function buildItemCard(row, idx) {
   const disposalType = row.Disposal_Type || '—';
   const salvage = isSellType(disposalType) ? formatAmount(row.salvage_amount) : '—';
-  const imageHtml = row.imgItem
+  const hasImage = Boolean(row.imgItem);
+  const imageHtml = hasImage
     ? `<img class="item-img" src="${escapeHtml(row.imgItem)}" alt="${escapeHtml(row.imgTitle || row.FAC_name || 'Asset image')}" />`
-    : `<div class="no-image">No image</div>`;
+    : '';
 
   const line = (label, value) => `
         <tr>
@@ -95,19 +96,19 @@ function buildItemCard(row, idx) {
           <td class="val">${value}</td>
         </tr>`;
 
-  // 9 label/value rows on the left; the image spans all of them on the right.
-  // The first row carries the image cell (rowspan=9).
+  // When an image exists, reserve the third column for it. Without an image,
+  // omit that column and use a simple outer border around the item.
   return `
-    <table class="item-card">
+    <table class="item-card${hasImage ? '' : ' no-image-upload'}">
       <colgroup>
-        <col style="width:22%" />
-        <col style="width:34%" />
-        <col style="width:44%" />
+        <col style="width:${hasImage ? '22%' : '22%'}" />
+        <col style="width:${hasImage ? '34%' : '78%'}" />
+        ${hasImage ? '<col style="width:44%" />' : ''}
       </colgroup>
       <tr>
         <th class="lbl">#</th>
         <td class="val">${idx + 1}</td>
-        <td class="img-cell" rowspan="9">${imageHtml}</td>
+        ${hasImage ? `<td class="img-cell" rowspan="9">${imageHtml}</td>` : ''}
       </tr>
       ${line('Asset No.', escapeHtml(row.FAC_NO))}
       ${line('Asset Name', escapeHtml(row.FAC_name))}
@@ -119,11 +120,10 @@ function buildItemCard(row, idx) {
       ${line('Serial No.', escapeHtml(row.serialno))}
       <tr>
         <th class="lbl">Reason for Disposal</th>
-        <td class="val reason" colspan="2">${escapeHtml(row.workDet)}</td>
+        <td class="val reason"${hasImage ? ' colspan="2"' : ''}>${escapeHtml(row.workDet)}</td>
       </tr>
     </table>`;
 }
-
 function buildItemCards(items) {
   if (!items || items.length === 0) {
     return `<div class="empty-row">No line items on this Disposal.</div>`;
@@ -162,6 +162,7 @@ export function generateADPrintHTML({
   docStatus = defaultDocStatus,
   companyConfig = {},
   userName = '',
+  refSignatories = [],
   totalLevels = 3,
   // Prefix to prepend to companyConfig.ReportHeader (the logo path returned by
   // the server) if it's a relative path, e.g. your API's origin/base URL.
@@ -191,6 +192,20 @@ export function generateADPrintHTML({
 
   const itemCards = buildItemCards(currentADItems);
   const totalsBlock = buildTotalsBlock(currentADItems);
+
+  // Only print signatories configured for the Disposal module.
+  const disposalSignatories = (Array.isArray(refSignatories) ? refSignatories : [])
+    .filter((signatory) =>
+      String(signatory?.xModule || '').trim().toLowerCase() === 'disposal'
+    );
+
+  const signaturesHtml = disposalSignatories.map((signatory) => `
+    <div class="sig-block">
+      <div class="sig-line">${escapeHtml(signatory.xName || '')}</div>
+      ${signatory.xPosition ? `<div class="sig-position">${escapeHtml(signatory.xPosition)}</div>` : ''}
+      <div class="sig-role">${escapeHtml(signatory.xLabel || '')}</div>
+    </div>
+  `).join('');
 
   return `<!DOCTYPE html>
 <html>
@@ -360,6 +375,15 @@ export function generateADPrintHTML({
     page-break-inside: avoid;
     break-inside: avoid;
   }
+  /* Items without an uploaded image keep only the outer item border. */
+  table.item-card.no-image-upload {
+    border: 1px solid #cfd8e3;
+  }
+  table.item-card.no-image-upload th.lbl,
+  table.item-card.no-image-upload td.val {
+    border: 0;
+  }
+
   table.item-card th.lbl,
   table.totals-table th.lbl {
     color: #0B0C0F;
@@ -401,7 +425,7 @@ export function generateADPrintHTML({
     break-inside: avoid;
   }
   .no-image { color: #999; font-style: italic; font-size: 11px; }
-  .empty-row { text-align: center; color: #888; padding: 16px; font-style: italic; }
+  .empty-row { text-align: center; color: #888; padding: 10px; font-style: italic; }
 
   table.totals-table {
     width: 100%;
@@ -422,27 +446,37 @@ export function generateADPrintHTML({
   /* ---------- Signatures ---------- */
   .signatures {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     margin-top: 34px;
-    gap: 18px;
+    gap: 24px 18px;
   }
   .sig-block {
-    flex: 1;
+    flex: 1 1 20%;
+    min-width: 120px;
     text-align: center;
     font-size: 10.5px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .sig-line {
     border-top: 1px solid #333;
     margin-top: 40px;
     padding-top: 5px;
     font-weight: 600;
+    min-height: 18px;
+  }
+  .sig-position {
+    color: #555;
+    font-size: 9.5px;
+    margin-top: 2px;
   }
   .sig-role {
     color: #666;
     font-size: 9.5px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-top: 1px;
+    margin-top: 3px;
   }
 
   /* ---------- Footer ---------- */
@@ -544,24 +578,7 @@ export function generateADPrintHTML({
       ${itemCards}
       ${totalsBlock}
 
-      <div class="signatures">
-        <div class="sig-block">
-          <div class="sig-line">${escapeHtml(evaluatedBy)}</div>
-          <div class="sig-role">Evaluated By</div>
-        </div>
-        <div class="sig-block">
-          <div class="sig-line">&nbsp;</div>
-          <div class="sig-role">Verified By</div>
-        </div>
-        <div class="sig-block">
-          <div class="sig-line">&nbsp;</div>
-          <div class="sig-role">Approved By</div>
-        </div>
-        <div class="sig-block">
-          <div class="sig-line">&nbsp;</div>
-          <div class="sig-role">Noted By</div>
-        </div>
-      </div>
+      ${signaturesHtml ? `<div class="signatures">${signaturesHtml}</div>` : ''}
 
       <div class="print-footer">
         <span>Generated by the system on ${formatDate(new Date(), { withTime: true })}</span>

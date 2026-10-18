@@ -10,7 +10,12 @@ import ClearAllIcon from '@mui/icons-material/ClearAll';
 import CloseIcon from '@mui/icons-material/Close';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
-const btnStyles = "flex justify-center pt-1 pb-1 pl-2 pr-3 transition-transform duration-200 ease-in-out border rounded-full shadow-black border-spacing-1 active:scale-95"; 
+// Responsive: smaller text / padding / icon on tablets, larger on big monitors
+const btnStyles = "inline-flex items-center justify-center gap-1 whitespace-nowrap " +
+  "text-xs md:text-[0.8125rem] xl:text-sm " +
+  "py-1 pl-2 pr-2.5 md:py-1 md:pl-2.5 md:pr-3 xl:py-1.5 xl:pl-3 xl:pr-4 " +
+  "transition-transform duration-200 ease-in-out border rounded-full shadow-black border-spacing-1 active:scale-95";
+const iconSx = { fontSize: { xs: 16, md: 18, xl: 20 } };
 
 const variantStyles = {
   saveBtn : 'text-white bg-green-500 hover:bg-green-700',
@@ -68,7 +73,7 @@ export const CustomBtn = ({
           type= {type}
           title = {title}
         >
-          {Icon && <Icon/>}
+          {Icon && <Icon sx={iconSx} />}
           <span>{children}</span>
         </button>
       </>

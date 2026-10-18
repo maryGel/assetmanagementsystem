@@ -36,8 +36,8 @@ export const assetMovList= [
   },
   {
     id: 6,
-    title: 'Accountability',
-    link: '/assetMovement/pages/AAFormPage',
+    title: 'Borrow/Issue',
+    link: '/assetMovement/pages/AAFormType',
     imgSrc: '/icons/menu_icons/acquisition.png',
     headerTitle: 'Asset Acquisition',
   },

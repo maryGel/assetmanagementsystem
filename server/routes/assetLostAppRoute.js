@@ -119,20 +119,20 @@ router.put('/approve/:AAFNo', (req, res) => {
         // 8. Check if this is the final approval level (xPosted becomes 1)
         const isFinalApproval = approvedLevelsCount === totalLevels;
 
-        // Fully approved: clear 'With Pending for Lost Asset' on the assets of this AAF
+        // Fully approved: the assets of this AAF are now lost
         // (asset number is stored in assetlostd.ItemNo)
         let ItemlistUpdateResult = null;
         if (isFinalApproval) {
-          const clearStatSql = `
+          const setStatSql = `
             UPDATE itemlist i
             JOIN assetlostd d ON d.ItemNo = i.FacNO
-            SET i.xxStats = ''
+            SET i.xxStats = ?
             WHERE d.AAFNo = ?
               AND TRIM(d.ItemNo) <> ''
               AND LOWER(TRIM(d.ItemNo)) <> 'n'
           `;
           ItemlistUpdateResult = await new Promise((resolve, reject) => {
-            connection.query(clearStatSql, [cleanDocNo], (error, result) => {
+            connection.query(setStatSql, ['Lost Asset', cleanDocNo], (error, result) => {
               if (error) reject(error);
               else resolve(result);
             });
@@ -319,7 +319,7 @@ router.put('/reject/:AAFNo', (req, res) => {
           throw new Error('Lost Asset header not found');
         }
         
-        // 7b. Rejected: clear 'With Pending for Lost Asset' on the assets of this AAF
+        // 7b. Rejected: clear 'With Pending Lost Asset' on the assets of this AAF
         // (asset number is stored in assetlostd.ItemNo)
         await new Promise((resolve, reject) => {
           connection.query(

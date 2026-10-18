@@ -26,6 +26,7 @@ import { useDisposalApproval } from '../../../hooks/useADApproval';
 import { useApprovalActions } from '../../../Utils/approvalActionHandler';
 import { useUsers } from '../../../hooks/useUsers';
 import { openADPrintPreview } from '../../../Utils/printDisposalForm';
+import { useRefSignatories } from '../../../hooks/refSignatory';
 
 export default function ADFormPage(useProps) {
   const { selectedUser, setSelectedUser } = useUsers();
@@ -105,6 +106,7 @@ export default function ADFormPage(useProps) {
   const { refEmployees } = useRefEmployees();
   const { refLocData } = useRefLocation();
   const { refSections } = useSections();
+  const { refSignatories } = useRefSignatories(useProps);
   const departments = refDeptData.map(item => item.Department);
   const employees = refEmployees.map(item => item.Emp_No + ' - ' + item.Emp_FName + ' ' + item.Emp_LName);
   const locations = refLocData.map(item => item.LocationName);
@@ -115,6 +117,7 @@ export default function ADFormPage(useProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const copyDocNo = searchParams.get('docId');
   const isCreatingRef = useRef(false);
+  
 
   // Fetch total levels
   useEffect(() => {
@@ -506,6 +509,7 @@ const refreshData = useCallback(async () => {
       companyConfig,
       userName,
       totalLevels,
+      refSignatories,
     });
   };
 

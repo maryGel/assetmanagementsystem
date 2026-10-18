@@ -1,75 +1,8 @@
-import {useEffect, useState} from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper} from '@mui/material';
+// Kept for backward compatibility: anything that still imports
+// DisplayApprovalHistory gets the reusable ApprovalHistoryTable.
+// New code should import ApprovalHistoryTable from src/components directly.
+import ApprovalHistoryTable from '../../../components/ApprovalHistoryTable';
 
-// Hooks
-import { useApprovalLogs } from '../../../hooks/useApprovalLogs';
-
-// Utils
-import DateDisplay from '../../../Utils/formatDateForInput';
-
-
-function createData(id, docDate, postingDate, docNum, docType) {
-  return { id, docDate, postingDate, docNum, docType };
+export default function DisplayApprovalHistory({ docNo, modules }) {
+  return <ApprovalHistoryTable docNo={docNo} modules={modules} />;
 }
-
-function DisplayApprovalHistory({
-  useProps,
-}) {
-
-  const [searchParams] = useSearchParams();
-  const copyDocNo = searchParams.get('docId');
-      
-  const { approvalLogs } = useApprovalLogs(useProps);
-  const [viewApprovalLogs, setViewApprovalLogs] = useState([]);
-
-
-  useEffect(() => {
-    if (!approvalLogs) return;
-    const getApprovalLogs = approvalLogs.filter(log => log.TRNO === copyDocNo && (log.Module === 'Job Order' || log.Module === 'Internal Transfer' || log.Module === 'Disposal' || log.Module === 'Asset Accountability' || log.Module === 'Lost Asset'));
-    setViewApprovalLogs(getApprovalLogs)
-  }, [approvalLogs, copyDocNo]);
-  
-
- console.log(`copyDocNo: ${copyDocNo}`)
- console.log(`viewApprovals: ${viewApprovalLogs}`)
-
-
-  return (
-
-      <div className='w-full px-4 lg:px-10'>
-        <div className='w-full pt-5 pb-5 text-base '>
-          <TableContainer component={Paper} sx={{ width: '100%', overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 700, width: '100%' }} aria-label="simple table">
-              <TableHead>
-                <TableRow sx={{ color: 'text.primary' }}>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Level</TableCell>
-                  <TableCell>Approver</TableCell>
-                  <TableCell>Action</TableCell>
-                  <TableCell>Remarks</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                  {viewApprovalLogs.map((row, index) => (
-                    <TableRow
-                      key={index}
-                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                    >
-                      <TableCell><DateDisplay value={row.DT} format='short' /></TableCell>
-                      <TableCell>{row.APP_LEVEL}</TableCell>
-                      <TableCell>{row.X_USER?.split('-')[1]}</TableCell>
-                      <TableCell>{row.STAT}</TableCell>
-                      <TableCell>{row.REMARKS}</TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>   
-        </div>
-      </div>
-  )
-
-}
-
-export default DisplayApprovalHistory;

@@ -30,6 +30,8 @@ import AddIcon from '@mui/icons-material/Add';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import { visuallyHidden } from '@mui/utils';
+// Shared header style (same blue as the tab bars)
+import { HEADER_FG, headerCellSx } from '../../../components/tableHeaderStyle';
 // Custom Utils
 import DateDisplay from '../../../Utils/formatDateForInput';
 import { getNextLevel, getCurrentLevel, isPendingApproval } from '../../../Utils/approvalLevelUtils';
@@ -64,7 +66,7 @@ function getComparator(order, orderBy) {
 }
 
 const headCells = [
-  { id: 'DocNo', numeric: false, disablePadding: true, label: 'Document No' },
+  { id: 'DocNo', numeric: false, disablePadding: false, label: 'Document No' },
   { id: 'DocType', numeric: true, disablePadding: false, label: 'Document Type'},
   { id: 'Remarks', numeric: true, disablePadding: false, label: 'Remarks'},
   { id: 'Department', numeric: true, disablePadding: false, label: 'Department'},
@@ -79,7 +81,7 @@ const headCells = [
 const DEFAULT_COLUMN_WIDTHS = {
   DocNo: 150,
   DocType: 170,
-  Remarks: 500,
+  Remarks: 200,
   Department: 200,
   Location: 200,
   ItemCount: 110,
@@ -89,7 +91,19 @@ const DEFAULT_COLUMN_WIDTHS = {
 };
 const MIN_COLUMN_WIDTH = 70;
 const cellOverflowSx = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
-const CHECKBOX_COLUMN_WIDTH = 48;
+const CHECKBOX_COLUMN_WIDTH = 52;
+
+
+// Fixed-width checkbox column, identical in header and body and in both
+// normal and dense mode, so it never overlaps the Document No column.
+const checkboxCellSx = {
+  width: CHECKBOX_COLUMN_WIDTH,
+  minWidth: CHECKBOX_COLUMN_WIDTH,
+  maxWidth: CHECKBOX_COLUMN_WIDTH,
+  px: 0,
+  textAlign: 'center',
+  boxSizing: 'border-box',
+};
 
 // Number of items (distinct FAC_NO) in a document.
 // `itemCounts` comes from buildItemCounts(): { [DocType]: { [DocNo]: count } }
@@ -112,7 +126,7 @@ function getItemCount(row, itemCounts) {
 function EnhancedTableHead(props) {
   const {
     onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort,
-    columnWidths, onResizeStart,
+    columnWidths, onResizeStart, dense = false,
   } = props;
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
@@ -120,9 +134,10 @@ function EnhancedTableHead(props) {
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="checkbox" sx={{ width: CHECKBOX_COLUMN_WIDTH }}>
+        <TableCell padding="none" sx={{ ...checkboxCellSx, ...headerCellSx }}>
           {rowCount > 0 && (
             <Checkbox
+              size={dense ? 'small' : 'medium'}
               color="primary"
               indeterminate={numSelected > 0 && numSelected < rowCount}
               checked={rowCount > 0 && numSelected === rowCount}
@@ -140,11 +155,11 @@ function EnhancedTableHead(props) {
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
             sx={{
+              ...headerCellSx,
               fontWeight: 'bold',
               position: 'relative',
               width: columnWidths[headCell.id],
-              minWidth: columnWidths[headCell.id],
-              maxWidth: columnWidths[headCell.id],
+              minWidth: MIN_COLUMN_WIDTH,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -187,9 +202,9 @@ function EnhancedTableHead(props) {
                   height: '50%',
                   width: 2,
                   borderRadius: 1,
-                  backgroundColor: 'divider',
+                  backgroundColor: 'rgba(255,255,255,0.35)',
                 },
-                '&:hover::after': { backgroundColor: 'primary.main' },
+                '&:hover::after': { backgroundColor: HEADER_FG },
               }}
             />
           </TableCell>
@@ -208,6 +223,7 @@ EnhancedTableHead.propTypes = {
   rowCount: PropTypes.number.isRequired,
   columnWidths: PropTypes.object.isRequired,
   onResizeStart: PropTypes.func.isRequired,
+  dense: PropTypes.bool,
 };
 
 function EnhancedTableToolbar(props) {
@@ -218,7 +234,8 @@ function EnhancedTableToolbar(props) {
     onExportCsv,
     onBulkApprove,
     onBulkReject,
-    selectedDocuments = []
+    selectedDocuments = [],
+    title = 'Document List'
   } = props;
 
   // Check if selected documents can be approved/rejected
@@ -279,7 +296,7 @@ function EnhancedTableToolbar(props) {
           id="tableTitle"
           component="div"
         >
-          Document List
+          {title}
         </Typography>
       )}
       
@@ -365,12 +382,15 @@ export default function SearchTransactionTable({
   selectedDocuments = [],
   isRefreshing = false,
   dataVersion = 0,
-  itemCounts = {}
+  itemCounts = {},
+  onOpenDocument,          // optional: (row) => void. If given, replaces window.open
+  title = 'Document List', // optional toolbar title
+  emptyMessage = 'No documents found', // shown when there are no rows
 }) {
   // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('Date');  
-  const [dense, setDense] = useState(false);
+  const [dense, setDense] = useState(true); // dense by default
   const [docTypeLevels, setDocTypeLevels] = useState({});
   const [loadingLevels, setLoadingLevels] = useState(true);
   const { getTotalLevelsForDocTypes } = useAllApprovalLevels();
@@ -457,8 +477,15 @@ export default function SearchTransactionTable({
   };
 
   const handleSelectItem = (row) => {
+    // A page can handle the click itself (e.g. open a dialog). Returning
+    // false means "not handled", so the default new-tab behaviour runs.
+    if (onOpenDocument && onOpenDocument(row) !== false) return;
     const transNo = row.DocNo;
+    // Transfer Type
     const transInternal = 'Internal Transfer'
+    
+    // Borrow/Issue
+    const assetAccountabilty = 'Asset Accountability';
     switch (row.DocType) {
       case 'Job Order':
         return window.open(`/assetMovement/pages/JOFormPage?docId=${transNo}`, '_blank');
@@ -470,7 +497,8 @@ export default function SearchTransactionTable({
       case 'Disposal':
         return window.open(`/assetMovement/pages/ADFormPage?docId=${transNo}`, '_blank');
       case 'Asset Accountability':
-        return window.open(`/assetMovement/pages/AAFormPage?docId=${transNo}`, '_blank');
+        return window.open(`/assetMovement/pages/AAFormType?docId=${transNo}&formType=${encodeURIComponent(assetAccountabilty)}`, 
+        '_blank');
       case 'Lost Asset':
         return window.open(`/assetMovement/pages/ALFormPage?docId=${transNo}`, '_blank');
       default:
@@ -636,10 +664,13 @@ export default function SearchTransactionTable({
           onBulkApprove={onBulkApprove}
           onBulkReject={onBulkReject}
           selectedDocuments={selectedDocuments}
+          title={title}
         />
         <TableContainer sx={{ overflowX: 'auto' }}>
           <Table
-            sx={{ tableLayout: 'fixed', width: tableWidth, minWidth: tableWidth }}
+            // Fill the full width; scroll horizontally only when columns
+            // are wider than the screen (e.g. after resizing).
+            sx={{ tableLayout: 'fixed', width: '100%', minWidth: tableWidth }}
             aria-labelledby="tableTitle"
             size={dense ? 'small' : 'medium'}
           >
@@ -652,8 +683,16 @@ export default function SearchTransactionTable({
               rowCount={rows.length}
               columnWidths={columnWidths}
               onResizeStart={handleResizeStart}
+              dense={dense}
             />
             <TableBody>
+              {visibleRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={headCells.length + 1} sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}>
+                    {emptyMessage}
+                  </TableCell>
+                </TableRow>
+              )}
               {visibleRows.map((row) => {
                 const labelId = `enhanced-table-checkbox-${row.DocNo}`;
                 const isItemSelected = isSelected(row.DocNo);
@@ -676,11 +715,9 @@ export default function SearchTransactionTable({
                       },
                     }}
                   >
-                    <TableCell 
-                      padding="checkbox"
-                      sx={{ width: 25 }}
-                    >
+                    <TableCell padding="none" sx={checkboxCellSx}>
                       <Checkbox
+                        size={dense ? 'small' : 'medium'}
                         color="primary"
                         checked={isItemSelected}
                         onClick={(e) => {
@@ -693,12 +730,14 @@ export default function SearchTransactionTable({
                       component="th"
                       id={labelId}
                       scope="row"
-                      padding="none"
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        color: 'primary.main', 
-                        textDecoration: 'underline',                      
-                        '&:hover': { fontSize: '.9rem', color: '#43a047' }
+                      title={row.DocNo}
+                      sx={{
+                        ...cellOverflowSx,
+                        fontWeight: 'bold',
+                        color: 'primary.main',
+                        textDecoration: 'underline',
+                        // colour-only hover: changing font size made the row jump
+                        '&:hover': { color: '#43a047' }
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -839,5 +878,8 @@ SearchTransactionTable.propTypes = {
   selectedDocuments: PropTypes.array,
   isRefreshing: PropTypes.bool,
   dataVersion: PropTypes.number,
-  itemCounts: PropTypes.object
+  itemCounts: PropTypes.object,
+  onOpenDocument: PropTypes.func,
+  title: PropTypes.string,
+  emptyMessage: PropTypes.string
 };

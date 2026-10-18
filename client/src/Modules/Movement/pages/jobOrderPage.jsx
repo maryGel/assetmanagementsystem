@@ -1,1017 +1,495 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom'; 
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Snackbar, Alert, CircularProgress, Box } from '@mui/material';
+import ApartmentIcon from '@mui/icons-material/Apartment';
+import BuildIcon from '@mui/icons-material/Build';
+import FlagIcon from '@mui/icons-material/Flag';
+import TagIcon from '@mui/icons-material/Tag';
 
-// MUI Components
-import { Box, Autocomplete, TextField, ThemeProvider , Dialog, Snackbar, Alert, TextareaAutosize } from '@mui/material';
+// Reusable components
+import DocStatusDashboard from '../../../components/DocStatusDashboard';
+import FilterAutocomplete from '../../../components/FilterAutocomplete';
+import SearchTransactionTable from '../searchTrans/searchTransTable';
+import JobOrderDialog from '../jobOrder/JobOrderDialog';
 
+// Utils
+import { CustomBtn } from '../../../Utils/groupbtns';
+import BulkActionDialogDesktop from '../../../Utils/BulkActionDialogDesktop';
 
-// Components
-import JobOrderTabs from '../jobOrder/jobOrderTabs';
-
-// Custom Utils
-import { getAutocompleteSx,   
-  fieldClass,
-  staticFieldClass,
-  staticTextClass,
-  fieldLabelClass } from '../../../Utils/autocompleteStyles';  
-import { customTheme } from '../../../Utils/customTable';
-import { CustomBtn, getButtonConfig } from '../../../Utils/groupbtns';
-import { CustomDialog } from '../../../Utils/customDialog'
-import { getCurrentLevel } from '../../../Utils/approvalLevelUtils'
-
-
-
-// Custom Hooks
-import { useJO_h} from '../../../hooks/useJO_h';
-import { useRefDepartment } from '../../../hooks/refDepartment'; 
+// Hooks
+import { useCombinedDocHeaders } from '../../../hooks/combinedDocHeaders';
+import { useRefDepartment } from '../../../hooks/refDepartment';
 import { useSections } from '../../../hooks/refSection';
-import { useJOData } from '../../../hooks/useJO_reducer';
-import { useCompanyConfig } from '../../../hooks/useCompanyConfig';
+import { useBulkApproval } from '../../../hooks/useBulkApproval';
 import { useJobOrderApproval } from '../../../hooks/useJobOrderApproval';
-import { useApprovalActions } from '../../../Utils/approvalActionHandler';
 import { useUsers } from '../../../hooks/useUsers';
-import { useApprovalLogs } from '../../../hooks/useApprovalLogs';
+import { buildItemCounts } from '../../../hooks/itemCount';
+import { useJO_d } from '../../../hooks/useJO_d';
 
-// Print utility
-import { openJOPrintPreview } from '../../../Utils/printJobOrder';
+const DOC_TYPE = 'Job Order';
 
-export default function JOFormPage(useProps) {
+const STATUS_OPTIONS = [
+  { status: 0, label: 'Draft' },
+  { status: 3, label: 'For Approval' },
+  { status: 2, label: 'Partially Approved' },
+  { status: 1, label: 'Fully Approved' },
+  { status: 4, label: 'Rejected' },
+];
 
+const EMPTY_FILTERS = { department: [], maintenance: [], status: [], joNo: [] };
+
+// Field helpers (combined headers use slightly different field names)
+const norm = (v) => String(v ?? '').trim().toLowerCase();
+const getDept = (doc) => doc.Departmnet || doc.Department_Code || doc.Department || '';
+const getStatus = (doc) => Number(doc.status);
+
+// combinedDocHeaders puts the Job Order's maintenance service in "Maintenance"
+// (possibly as a section code). Do NOT fall back to "Location": for Job Orders
+// that holds the Department code, which made the filter compare the wrong thing.
+const MAINT_FIELDS = ['Maintenance', 'Section', 'section', 'SecCode', 'Sector_Name', 'Sector_name'];
+const getRawMaint = (doc) => {
+  for (const f of MAINT_FIELDS) {
+    const v = doc?.[f];
+    if (v !== null && v !== undefined && String(v).trim() !== '') return v;
+  }
+  return '';
+};
+
+export default function JobOrderPage(useProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ---------- Data ----------
+  const { docHeaders = [], isLoading, error, refetch } = useCombinedDocHeaders(useProps);
+  const { refDeptData = [] } = useRefDepartment(useProps);
+  const { refSections = [] } = useSections();
+  const { joDetails } = useJO_d();
   const { selectedUser, setSelectedUser } = useUsers();
-  // In JOFormPage.jsx - modify the userInfo
+
+  const jobOrders = useMemo(
+    () => (Array.isArray(docHeaders) ? docHeaders.filter((d) => d?.type === DOC_TYPE) : []),
+    [docHeaders]
+  );
+
+  // ---------- Maintenance lookup ----------
+  // Maps any value of a section row (code, id, description) to its xdesc,
+  // so a doc holding a section code still matches the description shown
+  // in the Maintenance filter.
+  const sectionLookup = useMemo(() => {
+    const map = new Map();
+    refSections.forEach((s) => {
+      if (!s?.xdesc) return;
+      Object.values(s).forEach((v) => {
+        if (v !== null && v !== undefined && typeof v !== 'object' && String(v).trim() !== '') {
+          if (!map.has(norm(v))) map.set(norm(v), s.xdesc);
+        }
+      });
+    });
+    // descriptions always win over codes/ids
+    refSections.forEach((s) => s?.xdesc && map.set(norm(s.xdesc), s.xdesc));
+    return map;
+  }, [refSections]);
+
+  const getMaint = useCallback(
+    (doc) => {
+      const raw = getRawMaint(doc);
+      if (raw === '') return '';
+      return sectionLookup.get(norm(raw)) || String(raw).trim();
+    },
+    [sectionLookup]
+  );
+
+  // Dev hint: if no Job Order carries a maintenance field at all, the
+  // backend query behind useCombinedDocHeaders is not selecting it.
+  useEffect(() => {
+    if (!jobOrders.length) return;
+    if (!jobOrders.some((d) => getRawMaint(d) !== '')) {
+      console.warn(
+        '[JobOrderPage] No maintenance/section field found on Job Order headers. ' +
+          'See the combinedDocHeaders warning for the raw Job Order columns. Fields received:',
+        Object.keys(jobOrders[0])
+      );
+    }
+  }, [jobOrders]);
+
+  const itemCounts = useMemo(
+    () =>
+      buildItemCounts({
+        joDetails,
+        trDetails: [],
+        adDetails: [],
+        assetAccDetails: [],
+        assetLostDetails: [],
+      }),
+    [joDetails]
+  );
+
+  // ---------- Filter options ----------
+  const departmentOptions = useMemo(() => refDeptData.map((d) => d.Department), [refDeptData]);
+  const maintenanceOptions = useMemo(
+    () => [...new Set(refSections.map((s) => s.xdesc).filter(Boolean))],
+    [refSections]
+  );
+  const joNoOptions = useMemo(
+    () =>
+      jobOrders
+        .map((d) => d.transNo)
+        .filter((n) => typeof n === 'string' && n)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' })),
+    [jobOrders]
+  );
+
+  // ---------- Filter state ----------
+  const [draft, setDraft] = useState(EMPTY_FILTERS);     // what the user is selecting
+  const [applied, setApplied] = useState(EMPTY_FILTERS); // what the table uses
+  const [activeCard, setActiveCard] = useState(null);    // dashboard selection
+  const [hasSearched, setHasSearched] = useState(false); // table stays empty until Go / dashboard
+
+  const setDraftField = (field) => (value) => setDraft((prev) => ({ ...prev, [field]: value }));
+
+  // ---------- Table state ----------
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selected, setSelected] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  // ---------- Dialog state ----------
+  const [dialog, setDialog] = useState({ open: false, docNo: null, create: false });
+
+  // ---------- Toast ----------
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'info' });
+  const showToast = useCallback((message, severity = 'info') => {
+    setToast({ open: true, message, severity });
+  }, []);
+
+  // ---------- User info (for approvals) ----------
   const userName = localStorage.getItem('username') || 'User';
   const rawUserId = localStorage.getItem('userId') || userName;
+  const cleanUserId = String(rawUserId).replace(/\s*-\s*$/, '').trim();
 
   useEffect(() => {
-    if (userName && userName !== 'User') {
-        console.log('Setting selected user:', userName);
-        setSelectedUser(userName);
-    }
+    if (userName && userName !== 'User') setSelectedUser(userName);
   }, [userName, setSelectedUser]);
 
-  // Clean the userId
-  const cleanUserId = String(rawUserId).replace(/\s*-\s*$/, '').trim();
-    const userInfo = {
-      // userId: cleanUserId,
+  const getUserInfo = useCallback(
+    () => ({
       user: cleanUserId,
       fname: selectedUser?.fname || '',
       lname: selectedUser?.lname || '',
-      multiApp: selectedUser?.multiApp || []
-    };
-
-  console.log('User Info:', userInfo);
-  
-  const {
-    state,
-    joHeaders, 
-    getJOData,
-    forceRefreshJO,
-
-    startCreate,
-    startEdit,
-    cancelEditCreate,
-
-    addDetailRow,
-    updateHeaderField,
-    updateDetailRow,  
-    removeDetailRow,
-
-    openSaveDialog,      
-    closeSaveDialog,     
-    openCancelDialog,    
-    closeCancelDialog,  
-    openDeleteDialog,
-    closeDeleteDialog,
-
-    confirmSave,         
-    confirmCancel, 
-    confirmDelete,
- 
-    hideSnackbar,     
-
-  } = useJOData();
-
-  const { 
-    postJobOrder, 
-    canPost, 
-    approveJobOrder,
-    rejectJobOrder,
-    canApprove,
-    getTotalLevels,
-    loading: approvalLoading 
-  } = useJobOrderApproval();
-
-  // Add state for post dialog
-  const [postDialogOpen, setPostDialogOpen] = useState(false);
-  const [rowToDelete, setRowToDelete] = useState(null)
-  const [totalLevels, setTotalLevels] = useState(3);
-  const [refreshKey, setRefreshKey] = useState(0); // Used to trigger refresh
-
-  // Add this with your other state declarations
-  const [localSnackbar, setLocalSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'info'
-  });
-
-  // reference data for dropdowns
-  // const {joHeaders} = useJO_h();
-  const { refDeptData } = useRefDepartment();
-  const { refSections } = useSections();
-  const departments = refDeptData.map(item => item.Department);
-  const sections = refSections.map(item => item.xdesc);
-
-  // get JO data if copyDocNo exists in URL
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const copyDocNo = searchParams.get('docId');
-  const isCreatingRef = useRef(false);
-
-  // Approval logs for this JO (used to populate the printable JO's approval/signature section)
-  const { approvalLogs } = useApprovalLogs(useProps);
-  const joApprovalLogs = (approvalLogs || []).filter(
-    (log) =>
-      log.TRNO === copyDocNo &&
-      (log.Module === 'Job Order' ||
-        log.Module === 'Internal Transfer' ||
-        log.Module === 'Disposal' ||
-        log.Module === 'Asset Accountability' ||
-        log.Module === 'Lost Asset')
+      multiApp: selectedUser?.multiApp || [],
+    }),
+    [selectedUser, cleanUserId]
   );
 
-    // Fetch total levels
+  // ---------- Deep links: ?docId=JO-0001 opens the dialog, ?status=3 filters ----------
   useEffect(() => {
-    let isMounted = true;
-    const fetchTotalLevels = async () => {
-      try {
-        const result = await getTotalLevels();
-        if (isMounted && result?.success) {
-          setTotalLevels(result.totalLevels);
-        }
-      } catch (err) {
-        console.error('Error fetching total levels:', err);
-        if (isMounted) setTotalLevels(3);
-      }
-    };
-    fetchTotalLevels();
-    return () => { isMounted = false; };
-  }, [getTotalLevels]);
+    const docId = searchParams.get('docId');
+    if (docId) setDialog({ open: true, docNo: docId, create: false });
 
-  const showToast = useCallback((message, severity = 'info') => {
-    setLocalSnackbar({ open: true, message, severity });
-  }, []);
-
-  const loadTRData = useCallback(async () => {
-    if (!copyDocNo || isCreatingRef.current) return;
-    await getJOData(copyDocNo);
-  }, [copyDocNo, getJOData]);
-
-  useEffect(() => {
-    loadTRData();
-  }, [copyDocNo, loadTRData]);
-
-const refreshData = useCallback(async () => {
-  if (!copyDocNo) return;
-   
-  // Reload the data
-  await forceRefreshJO(copyDocNo);
-  // Increment refresh trigger to force re-renders of child components if needed
-  setRefreshTrigger(prev => prev + 1);
-}, [copyDocNo, getJOData, forceRefreshJO]);
-
-  // Get approval level for the document
-  const getApprovalLevel = useCallback((header, forApproval = true) => {
-    if (!header) return 1;
-    
-    if (header.xpost === 3) {
-      return 1; // First approval
-    } else if (header.xpost === 2 && header.appStat) {
-      // Parse appStat safely - handle both string and number
-      let approvedLevels = [];
-      const appStatStr = String(header.appStat);
-      if (appStatStr.includes(',')) {
-        approvedLevels = appStatStr.split(',').map(l => parseInt(l.trim()));
-      } else {
-        approvedLevels = [parseInt(appStatStr)];
-      }
-      const nextLevel = approvedLevels.length + 1;
-      return forApproval ? nextLevel : nextLevel;
+    const statusParam = searchParams.get('status');
+    if (statusParam !== null && STATUS_OPTIONS.some((o) => o.status === Number(statusParam))) {
+      const s = Number(statusParam);
+      setActiveCard(s);
+      setDraft((prev) => ({ ...prev, status: STATUS_OPTIONS.filter((o) => o.status === s) }));
+      setApplied((prev) => ({ ...prev, status: STATUS_OPTIONS.filter((o) => o.status === s) }));
+      setHasSearched(true);
     }
-    return 1;
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---------- Filtering ----------
+  const filteredDocs = useMemo(() => {
+    if (!hasSearched) return [];
+    const statusCodes = applied.status.map((o) => o.status);
+    const maintSet = new Set(applied.maintenance.map(norm));
+    const deptSet = new Set(applied.department.map(norm));
+    return jobOrders.filter((doc) => {
+      if (applied.joNo.length && !applied.joNo.includes(doc.transNo)) return false;
+      if (deptSet.size && !deptSet.has(norm(getDept(doc)))) return false;
+      if (maintSet.size && !maintSet.has(norm(getMaint(doc)))) return false;
+      if (statusCodes.length && !statusCodes.includes(getStatus(doc))) return false;
+      return true;
+    });
+  }, [jobOrders, applied, hasSearched, getMaint]);
 
-  // ===== APPROVAL ACTIONS HOOK - Define AFTER refreshData =====
+  // Back to page 1 whenever the result set changes shape
+  useEffect(() => {
+    setPage(0);
+  }, [applied]);
+
+  const tableData = useMemo(
+    () =>
+      filteredDocs.map((doc) => ({
+        DocNo: doc.transNo,
+        DocType: doc.type,
+        Date: doc.date,
+        Status: doc.status,
+        Remarks: doc.Remarks,
+        Department: getDept(doc),
+        Location: doc.Location || '',
+        Maintenance: getMaint(doc), // own column, enabled with showMaintenance
+        Rejected: doc.DISAPPROVED,
+        appStat: doc.appStat || '',
+      })),
+    [filteredDocs, getMaint]
+  );
+
+  const selectedDocuments = useMemo(
+    () =>
+      filteredDocs
+        .filter((doc) => selected.includes(doc.transNo))
+        .map((doc) => ({
+          DocNo: doc.transNo,
+          DocType: doc.type,
+          Status: doc.status,
+          appStat: doc.appStat || '',
+          Remarks: doc.Remarks,
+          Department: getDept(doc),
+          Location: doc.Location || '',
+          Rejected: doc.DISAPPROVED,
+          ...doc,
+          Maintenance: getMaint(doc),
+        })),
+    [filteredDocs, selected, getMaint]
+  );
+
+  // ---------- Actions ----------
+  const handleGo = () => {
+    setSelected([]);
+    setApplied(draft);
+    setHasSearched(true);
+    // keep the dashboard highlight in sync with a single selected status
+    const codes = draft.status.map((o) => o.status);
+    setActiveCard(codes.length === 1 ? codes[0] : null);
+  };
+
+  const handleClear = () => {
+    setDraft(EMPTY_FILTERS);
+    setApplied(EMPTY_FILTERS);
+    setActiveCard(null);
+    setHasSearched(false);
+    setSelected([]);
+    showToast('Filters cleared', 'info');
+  };
+
+  const refreshData = useCallback(
+    async ({ silent = false } = {}) => {
+      setIsRefreshing(true);
+      try {
+        if (refetch) await refetch();
+        setDataVersion((v) => v + 1);
+        setSelected([]);
+        if (!silent) showToast('Data refreshed successfully', 'success');
+      } catch (err) {
+        showToast('Failed to refresh data: ' + err.message, 'error');
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [refetch, showToast]
+  );
+
+  // Dashboard click: filter the table by that status immediately.
+  // Clicking the active card again (status === null) un-selects it and
+  // empties the table, the same as before any search.
+  const handleCardSelect = (status) => {
+    setActiveCard(status);
+    setSelected([]);
+    if (status === null) {
+      setDraft((prev) => ({ ...prev, status: [] }));
+      setApplied((prev) => ({ ...prev, status: [] }));
+      setHasSearched(false);
+      return;
+    }
+    const statusFilter = STATUS_OPTIONS.filter((o) => o.status === status);
+    setDraft((prev) => ({ ...prev, status: statusFilter }));
+    setApplied((prev) => ({ ...prev, status: statusFilter }));
+    setHasSearched(true);
+  };
+
+  const openCreate = () => setDialog({ open: true, docNo: null, create: true });
+  const openDocument = (row) => setDialog({ open: true, docNo: row.DocNo, create: false });
+
+  const closeDialog = () => {
+    setDialog({ open: false, docNo: null, create: false });
+    if (searchParams.get('docId')) {
+      searchParams.delete('docId');
+      setSearchParams(searchParams, { replace: true });
+    }
+    refreshData({ silent: true });
+  };
+
+  // ---------- Bulk approval (Job Order only) ----------
+  const jobOrderHook = useJobOrderApproval();
   const {
-    processingItem,
-    remarks,
     bulkDialogOpen,
     bulkActionType,
+    bulkItemNames,
     bulkRemarks,
     bulkLoading,
-    handleIndividualAction,
-    processBulkAction,
+    bulkError,
     openBulkDialog,
+    executeBulkAction,
     closeBulkDialog,
-    updateRemarks,
-    clearRemarks,
-    setBulkRemarks
-  } = useApprovalActions({
-    onApprove: approveJobOrder,
-    onReject: rejectJobOrder,
-    onRefresh: refreshData,
+    setBulkRemarks,
+  } = useBulkApproval({
+    approvalHooks: {
+      jobOrder: {
+        approveDocument: jobOrderHook.approveJobOrder,
+        rejectDocument: jobOrderHook.rejectJobOrder,
+      },
+    },
+    onRefresh: () => refreshData({ silent: true }),
     showToast,
-    getUserInfo: () => userInfo
+    getUserInfo,
   });
 
-    // Get next level for display
-  const getNextLevel = useCallback((header) => {
-    if (!header || !header.xpost) return null;
-    if (header.xpost === 3) return 1;
-    if (header.xpost === 2 && header.appStat) {
-      const appStatStr = String(header.appStat);
-      const approvedLevels = appStatStr.includes(',') 
-        ? appStatStr.split(',').length 
-        : 1;
-      return approvedLevels + 1;
-    }
-    return null;
-  }, []);
+  const handleBulkApprove = useCallback(() => {
+    if (!selectedDocuments.length) return showToast('Please select documents to approve', 'warning');
+    openBulkDialog('approve', selectedDocuments);
+  }, [openBulkDialog, selectedDocuments, showToast]);
 
-  // Status mapping function
-  const docStatus = (status) => {
-    switch (status) {
-      case 0: return 'Draft';
-      case 1: return 'Fully Approved';
-      case 2: return 'Partially Approved';
-      case 3: return 'For Approval';
-      case 4: return 'Rejected';
-      default: return 'Draft';
-    }
-  }
+  const handleBulkReject = useCallback(() => {
+    if (!selectedDocuments.length) return showToast('Please select documents to reject', 'warning');
+    openBulkDialog('reject', selectedDocuments);
+  }, [openBulkDialog, selectedDocuments, showToast]);
 
-  const baseHeader = state.selectedJO;
-  const currentHeader = state.isCreating || state.isEditing
-          ? state.createJOHeader
-          : state.selectedJO;
-
-  const currentJOItems = state.isCreating || state.isEditing
-          ? state.createJODetails
-          : state.joDetails;
-
-  const canEditDocument = state.isCreating || (state.isEditing && baseHeader?.xpost === 0);
-  const isReadOnly = !canEditDocument;
-  const nextLevel = getNextLevel(baseHeader);
-  const currentLevel = getCurrentLevel(baseHeader);
-
-  // Generate Auto JO number based on the company config (db table: user0002inv)
-  const { companyConfig, refreshCompanyConfig } = useCompanyConfig(useProps);
-  
-  const handleHeaderChange = (field, value) => {
-    if (field === 'Department_Code') {
-      const prev = currentHeader?.Department_Code || currentHeader?.Department || '';
-      const hasAssets = (currentJOItems || []).some(r => r.FAC_NO);
-
-      if (prev && prev !== value && hasAssets) {
-        const ok = window.confirm(
-          'Changing the department will clear the selected assets. Continue?'
-          
-        );
-        if (ok) {
-          showToast('Department changed. All selected assets have been cleared.', 'info');
-        } else return;
-
-        (currentJOItems || []).forEach(row => {
-          ['FAC_NO','FAC_name','qty','UOM','brand','serialno',
-          'ItemLocation','StartDate','EndDate'].forEach(f =>
-            updateDetailRow(row.id, f, '')
-          );
-        });
-      }
-    }
-    updateHeaderField(field, value);
-  };
-
-  const handleCreate = () => {
-    isCreatingRef.current = true;
-    const config = Array.isArray(companyConfig) ? companyConfig[0] : companyConfig;
-    console.log('Correct config:', config);
-    startCreate(config, userName);
-    
-  };
-  
-  const handleEdit = () => {
-    if (!copyDocNo) return;
-    startEdit(copyDocNo);
-  };
-
-  const handleCancel = () => {
-    // Check if there are unsaved changes
-    if (state.hasUnsavedChanges) {
-      openCancelDialog(); // Open confirmation dialog
-    } else {
-      cancelEditCreate(); // Cancel directly
-    }
-  };
-  
-  const handleSave = async () => {
-    // Validate header fields
-    if (!state.createJOHeader?.JO_No) {
-      showToast('Job Order number is required');
-      return;
-    }
-    
-    if (!state.createJOHeader?.Department && !state.createJOHeader?.Department_Code) {
-      showToast('Please select a department');
-      return;
-    }
-    
-    if (!state.createJOHeader?.Sector_name) {
-      showToast('Please select a maintenance service');
-      return;
-    }
-
-    if (!state.createJOHeader?.Remarks) {  
-      showToast('Remarks field is required');
-      return;
-    }
-    
-    // Validate details
-    if (!state.createJODetails?.find(item => item.FAC_NO )) {
-      showToast('Please select an asset number');
-      return;
-    }
-
-    if (!state.createJODetails || state.createJODetails.length === 0) {
-      showToast('Please add at least one item');
-      return;
-    }
-
-    if (!state.createJODetails?.find(item => item.workDet )) {
-      showToast('Please provide work details for all items');
-      return;
-    }
-    
-    if (!state.createJODetails?.find(item => item.TargetDate )) {
-      showToast('Please provide Target Date for all items');
-      return;
-    }
-    
-
-
-  const rows = state.createJODetails || [];
-  if (rows.length === 0) {
-    showToast('Please add at least one item');
-    return;
-  }
-
-  // Validate every row, collecting what is missing on each
-  const problems = [];
-  rows.forEach((row, idx) => {
-    const missing = [];
-    if (!row.FAC_NO) missing.push('asset');
-    if (!row.qty || Number(row.qty) <= 0) missing.push('quantity');
-    if (!String(row.workDet || '').trim()) missing.push('work details');
-    if (!String(row.TargetDate || '').trim()) missing.push('target date');
-    
-    if (missing.length) problems.push(`Row ${idx + 1}: ${missing.join(', ')}`);
-  });
-
-  if (problems.length > 0) {
-    const shown = problems.slice(0, 3).join(' | ');
-    const more = problems.length > 3 ? ` (+${problems.length - 3} more rows)` : '';
-    showToast(`Please complete: ${shown}${more}`, 'warning');
-    return;
-  }
-    
-    // If validation passes, open save confirmation dialog
-    openSaveDialog();
-  };
-
-  // function to handle successful creation
-  const handleSuccessfulCreate = useCallback(async (newJONo) => {
-    console.log('Successfully created JO:', newJONo);
-
-    await refreshCompanyConfig();
-    
-    setSearchParams({ docId: newJONo });
-    isCreatingRef.current = false; // Reset the creating flag
-  }, [setSearchParams, refreshCompanyConfig]);
-
-
-  const handleConfirmSave = async () => {
-    // Capture the JO number before saving
-    const newJONo = state.createJOHeader?.JO_No;
-    const wasCreating = state.isCreating;
-    
-    // Call the original confirmSave (which calls createJO)
-    const saved = await confirmSave();
-    
-    // If this was a creation and we have a JO number, update the URL
-    if (wasCreating && saved && newJONo) {
-      handleSuccessfulCreate(newJONo);
-    }
-  };
-
-  const handleSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    hideSnackbar();
-  };
-
-  // Open post confirmation dialog
-  const openPostDialog = () => {
-    setPostDialogOpen(true);
-  };
-
-  // Close post confirmation dialog
-  const closePostDialog = () => {
-    setPostDialogOpen(false);
-  };
-
-  // Handle the actual post action
-  const handleConfirmPost = async () => {
-    closePostDialog();
-    
-    if (!copyDocNo && !baseHeader?.JO_No) {
-      showToast('No document to post', 'error');
-      return;
-    }
-
-    const docNo = copyDocNo || baseHeader?.JO_No;
-    const postCheck = canPost({ xpost: baseHeader?.xpost, disapproved: baseHeader?.disapproved });
-    
-    if (!postCheck.canPost) {
-      showToast(postCheck.reason, 'error');
-      return;
-    }
-
-    const result = await postJobOrder(docNo);
-      
-    if (result.success) {
-      showToast(result.message, 'success');
-      
-      // Wait a moment for the database to update
-      setTimeout(async () => {
-        // Force refresh the data
-        await refreshData();
-        
-        // Also refresh the JO headers list if needed
-        if (window.refreshJOData) {
-          await window.refreshJOData();
-        }
-      }, 500);
-      
-    } else {
-      showToast('Failed to post: ' + result.error, 'error');
-    }
-  };
-
-  // Handle approval with dialog
-  const handleApproveClick = () => {
-    if (!copyDocNo && !baseHeader?.JO_No) {
-      showToast('No document to approve', 'error');
-      return;
-    }
-
-    const docNo = copyDocNo || baseHeader?.JO_No;
-    const approvalCheck = canApprove({ 
-      xpost: baseHeader?.xpost, 
-      disapproved: baseHeader?.disapproved 
-    });
-    
-    if (!approvalCheck.canApprove) {
-      showToast(approvalCheck.reason, 'error');
-      return;
-    }
-
-    // Open bulk dialog for single approval
-    openBulkDialog('approve');
-    // Store the current item ID for the bulk action
-    window.currentApprovalItem = docNo;
-  };
-
-  // Handle rejection with dialog
-  const handleRejectClick = () => {
-    if (!copyDocNo && !baseHeader?.JO_No) {
-      showToast('No document to reject', 'error');
-      return;
-    }
-
-    const docNo = copyDocNo || baseHeader?.JO_No;
-    
-    // Open bulk dialog for single rejection
-    openBulkDialog('reject');
-    // Store the current item ID for the bulk action
-    window.currentApprovalItem = docNo;
-  };
-
-  // Handle single item action - FIXED to pass the correct level
-  const handleSingleItemAction = async () => {
-    if (!window.currentApprovalItem) return;
-    
-    const currentHeader = baseHeader;
-    const currentLevel = getApprovalLevel(currentHeader, bulkActionType === 'approve');
-    
-    const result = await handleIndividualAction(
-      window.currentApprovalItem,
-      bulkActionType,
-      bulkRemarks,
-      currentHeader,
-      userInfo,
-      currentLevel // Pass the level explicitly
-    );
-    
-    if (result?.success) {
-      closeBulkDialog();
-      setBulkRemarks('');
-      window.currentApprovalItem = null;
-      
-      if (bulkActionType === 'approve') {
-        if (result.data?.isFinalApproval) {
-          showToast(`Job Order Form ${baseHeader.JO_No} is fully approved!`, 'success');
-        } else {
-          showToast(`Level ${currentLevel} approved successfully. ${currentLevel} of ${totalLevels} levels completed.`, 'success');
-        }
-      } else {
-        showToast(`Job Order ${baseHeader.JO_No} is rejected`, 'error');
-      }
-      
-    // Force refresh the data
-    await refreshData();
-    
-    // Also refresh the parent component's data if needed
-    setTimeout(async () => {
-      await refreshData(); // Double refresh to ensure data is updated
-    }, 500);
-
-    } else if (result?.error) {
-      showToast(`Action failed: ${result.error}`, 'error');
-    }
-  };
-
-  const handleDeleteClick = (rowId) => {
-    if (currentJOItems.length === 1) {
-      // Show snackbar or alert that at least one row is required
-      showToast('At least one row is required', 'warning');
-      return;
-    }
-    setRowToDelete(rowId);
-    openDeleteDialog();
-  };
-
-  const handleConfirmDelete = () => {
-    if (rowToDelete) {
-      confirmDelete(rowToDelete);
-      setRowToDelete(null);
-    }
-  };
-
-  const handleCancelDelete = () => {
-    setRowToDelete(null);
-    closeDeleteDialog();
-  };
-
-  // Add local snackbar close handler
-  const handleLocalSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setLocalSnackbar(prev => ({ ...prev, open: false }));
-  };
-
-  const buttonConfig = getButtonConfig(state, baseHeader, canApprove);
-
-  // Open a professional, printable version of this Job Order in a new tab
-  const handlePreviewPrint = () => {
-    openJOPrintPreview({
-      currentHeader,
-      currentJOItems,
-      docStatus,
-      companyConfig,
-      userName,
-      totalLevels,
-      approvalLogs: joApprovalLogs,
-    });
-  };
-
-  // warn users if they try to leave with unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (state.hasUnsavedChanges && (state.isCreating || state.isEditing)) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return e.returnValue;
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [state.hasUnsavedChanges, state.isCreating, state.isEditing]);
-
-  console.log('Current status:', baseHeader?.xpost);
-  console.log('Button config:', buttonConfig);
-    
+  // ---------- Render ----------
   return (
-    <div className='w-full min-w-0 p-3 mx-auto '>
-      {/* Save Confirmation Dialog */}
-      <Dialog open={state.saveDialogOpen} onClose={closeSaveDialog}>
-        <CustomDialog
-          title="Confirm Save"
-          text="Are you sure you want to save this Job Order? Please review all information before saving."
-          cancelText="Cancel"
-          confirmText="Save"
-          cancel={closeSaveDialog}
-          confirm={handleConfirmSave}
-        />
-      </Dialog>
-
-      {/* Delete JO line items Confirmation Dialog */}
-      <Dialog open={state.deleteDialogOpen} onClose={closeDeleteDialog}>
-        <CustomDialog
-          title="Confirm Delete"
-          text="Are you sure you want to delete this item? This action cannot be undone."
-          cancelText="Cancel"
-          confirmText="Delete"
-          cancel={closeDeleteDialog}
-          confirm={handleConfirmDelete}
-        />
-      </Dialog>
-
-      <Dialog open={state.cancelDialogOpen} onClose={closeCancelDialog}>
-        <CustomDialog
-          title="Confirm Cancel"
-          text="Are you sure you want to cancel? All unsaved changes will be lost."
-          cancelText="Keep Editing"
-          confirmText="Discard Changes"
-          cancel={closeCancelDialog}
-          confirm={confirmCancel}
-        />
-      </Dialog>
-
-      {/* Post Confirmation Dialog */}
-      <Dialog open={postDialogOpen} onClose={closePostDialog}>
-        <CustomDialog
-          title="Confirm Post"
-          text="Would you like to post this Job Order now? Once posted, it will be sent for approval."
-          cancelText="Cancel"
-          confirmText="Post"
-          cancel={closePostDialog}
-          confirm={handleConfirmPost}
-        />
-      </Dialog>
-
-      {/* Bulk Action Dialog (used for both single and bulk approval/rejection) */}
-      {bulkDialogOpen && (
-        <Dialog open={bulkDialogOpen} onClose={closeBulkDialog} maxWidth="sm" fullWidth>
-          <Box sx={{ p: 3 }}>
-            <h2 className="mb-4 text-xl font-bold">
-              {bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
-            </h2>
-            <p className="mb-4 text-gray-600">
-              {nextLevel && (
-                <span className='block mt-1 text-xs text-blue-600'>
-                  Level {nextLevel} of {totalLevels} Approval
-                </span>
-              )}
-              {bulkActionType === 'approve' 
-                ? `Are you sure you want to approve this Job Order: ${baseHeader?.JO_No} ?` 
-                : `Are you sure you want to reject this Job Order: ${baseHeader?.JO_No} ? This action cannot be undone.`
-              }
-            </p>
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium text-gray-700">
-                Remarks <span className="text-red-500">*</span>
-              </label>
-              <TextareaAutosize
-                minRows={3}
-                placeholder={bulkActionType === 'reject' ? "Please provide a reason for rejection..." : "Please enter approval remarks..."}
-                value={bulkRemarks}
-                onChange={(e) => setBulkRemarks(e.target.value)}
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  fontSize: '14px',
-                  borderRadius: '4px',
-                  border: '1px solid #ccc',
-                  resize: 'vertical',
-                  fontFamily: 'inherit'
-                }}
-              />
-            </div>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-              <CustomBtn
-                variant="cancelBtn"
-                onClick={closeBulkDialog}
-                disabled={bulkLoading}
-              >
-                Cancel
-              </CustomBtn>
-              <CustomBtn
-                variant={bulkActionType === 'approve' ? 'saveBtn' : 'rejectBtn'}
-                onClick={handleSingleItemAction}
-                disabled={bulkLoading || (!bulkRemarks.trim())}
-              >
-                {bulkLoading ? 'Processing...' : (bulkActionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection')}
-              </CustomBtn>
-            </Box>
-          </Box>
-        </Dialog>
-      )}
-
+    <div className="flex flex-col w-full gap-4 ">
       <Snackbar
-        open={state.snackbar.open}
+        open={toast.open}
         autoHideDuration={4000}
-        onClose={handleSnackbarClose}
+        onClose={(e, reason) => reason !== 'clickaway' && setToast((t) => ({ ...t, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={state.snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {state.snackbar.message}
+        <Alert severity={toast.severity} variant="filled" sx={{ width: '100%' }}
+          onClose={() => setToast((t) => ({ ...t, open: false }))}>
+          {toast.message}
         </Alert>
       </Snackbar>
 
-      {/* Local Snackbar for post/approval/rejection operations */}
-      <Snackbar
-        open={localSnackbar.open}
-        autoHideDuration={4000}
-        onClose={handleLocalSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleLocalSnackbarClose}
-          severity={localSnackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {localSnackbar.message}
-        </Alert>
-      </Snackbar>
-
-      {/* Buttons Section */}
-      <div className='flex flex-wrap justify-end gap-3 mx-16 mt-10'>
-        
-        {/* Save Button */}
-        {(state.isCreating || state.isEditing) && (
-          <CustomBtn
-            variant='saveBtn'
-            iconType='save'
-            onClick={handleSave}
-            title='Save changes made in this Job Order'
-          >
-            {state.saving ? 'Saving...' : 'Save'}
-          </CustomBtn>
-        )}
-        
-        {/* Edit Button */}
-        {!state.isEditing && !state.isCreating && currentHeader?.xpost === 0 && (
-          <CustomBtn
-            variant='editBtn'
-            iconType='edit'
-            onClick={handleEdit}
-            title='Edit this Job Order'
-          >
-            Edit
-          </CustomBtn>       
-        )}
-        
-        {/* Create Button */}
-        {!state.isEditing && !state.isCreating && (
-          <CustomBtn
-            variant='createBtn'
-            iconType='add'
-            onClick={handleCreate}
-            title='Create new Job Order'
-          >
-            Create
-          </CustomBtn>
-        )}
-        
-        {/* Cancel Button */}
-        {(state.isEditing || state.isCreating) && (
-          <CustomBtn
-            variant='cancelBtn'
-            iconType='cancel'
-            onClick={handleCancel}
-            title='Cancel & Discard Changes'
-          >
-            Cancel
-          </CustomBtn>
-        )}
-
-        {/* Post Button - for draft documents */}
-        {buttonConfig.showPost && (
-          <CustomBtn
-            variant='postBtn'
-            iconType='post'
-            title='Post this document for approval'
-            onClick={openPostDialog}
-            disabled={approvalLoading}
-          >
-            {buttonConfig.postText || 'Post'}
-          </CustomBtn>
-        )}
-
-        {/* Approve Button - for documents pending approval */}
-        {buttonConfig.showApprove && (
-          <CustomBtn
-            variant='saveBtn'
-            iconType='save'
-            title='Approve this document'
-            onClick={handleApproveClick}
-            disabled={state.isEditing ||approvalLoading || processingItem === copyDocNo}
-          >
-            {processingItem === copyDocNo ? 'Approving...' : (buttonConfig.approveText || 'Approve')}
-          </CustomBtn>
-        )}
-
-        {/* Reject Button - for documents pending approval */}
-        {buttonConfig.showReject && (
-          <CustomBtn
-            variant='rejectBtn'
-            iconType='reject'
-            title='Reject this document'
-            onClick={handleRejectClick}
-            disabled={approvalLoading || processingItem === copyDocNo}
-          >
-            {processingItem === copyDocNo ? 'Rejecting...' : (buttonConfig.rejectText || 'Reject')}
-          </CustomBtn>
-        )}
-
-        {/* Print Button - always show for existing documents */}
-        {copyDocNo && (
-          <CustomBtn
-            variant='printBtn'
-            iconType='print'
-            title='Preview and Print'
-            onClick={handlePreviewPrint}
-          >
-            Preview
-          </CustomBtn>
-        )}
+      {/* 1. Dashboard */}
+      <div className='px-9'>
+        <DocStatusDashboard
+          docs={jobOrders}
+          getStatus={getStatus}
+          activeStatus={activeCard}
+          onSelect={handleCardSelect}
+          loading={isLoading}
+        />
       </div>
-          
-      <div className='p-10 my-5 bg-gray-100 rounded-lg shadow-lg lg:mx-10'>
-        <Box className='flex flex-wrap justify-between w-full h-full gap-2'>
-          <h1 className='text-sm font-bold text-gray-800 '>{
-            state.isCreating ? 'Creating Job Order' : state.isEditing ? 'Editing Job Order' : 'Display Job Order'
-          }
-          </h1>
-          <div className='flex flex-wrap gap-2'>
-            <text className='text-sm text-gray-500'>Last JO created :</text>
-            <text className='text-sm text-gray-500'>
-                  {/* Get the latest JO from joHeaders */}
-                  {joHeaders && joHeaders.length > 0 
-                    ? [...joHeaders].sort((a, b) => {
-                        const numA = parseInt(String(a.JO_No).split('-').pop() || 0);
-                        const numB = parseInt(String(b.JO_No).split('-').pop() || 0);
-                        return numB - numA;
-                      })[0]?.JO_No 
-                    : '---'}
 
-            </text>
-            <text className='text-sm text-gray-500'>Document Date:</text>
-            <text className='text-sm text-gray-500'>
-                    {joHeaders && joHeaders.length > 0 
-                    ? (() => {
-                        const latest = [...joHeaders].sort((a, b) => {
-                          const numA = parseInt(String(a.JO_No).split('-').pop() || 0);
-                          const numB = parseInt(String(b.JO_No).split('-').pop() || 0);
-                          return numB - numA;
-                        })[0];
-                        return latest?.xDate ? new Date(latest.xDate).toLocaleDateString() : '---';
-                      })()
-                    : '---'}
-
-            </text>
-          </div>
-        </Box>
-        <form className='mt-8'>
-            <label className='text-base font-normal text-gray-500 '>Job Order No : </label>
-            <label className='pl-3 text-base font-semibold text-gray-800 '>{currentHeader?.JO_No || ''}</label> 
-            <label className='pl-10 text-base font-normal text-gray-500'>Document Date : </label>
-            <input 
-              className={`ml-5 p-2 text-base rounded-lg ${!state.isEditing && !state.isCreating ? '' : ' bg-white'} border border-gray-300`}
-              type='date' 
-              value={currentHeader?.xDate ? currentHeader.xDate.slice(0,10): ""} 
-              disabled={isReadOnly}
-              onChange={(e) => {  
-                if (!isReadOnly) {
-                  updateHeaderField('xDate', e.target.value);
-                }
-              }}
-            /> 
-            <br/>
-            <label className='text-base font-normal text-gray-500 '>Status : </label>
-            <label className='pl-3 text-base font-semibold text-gray-800 '>{docStatus(currentHeader?.xpost)}</label>
-              {nextLevel && (currentHeader?.xpost === 2 || currentHeader?.xpost === 3) && (
-                <label className='pl-3 text-sm text-blue-600'>
-                  (Level of approval :  {currentLevel}/{totalLevels})
-                </label>
-              )}
-            <div className='flex items-center pt-3 min-w-[240px] gap-3'>
-              <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Requested by : </label>
-              <input
-                type="text"
-                disabled
-                className="flex-1 min-w-[120px] text-base "
-                value={currentHeader?.requested_by || userName}
-                // onChange={(e) => handleHeaderChange('requested_by', e.target.value)}
-              />
-            </div>
-            <Box className='mt-2 '>
-              <div className='flex flex-wrap items-center justify-start w-full gap-6 mt-4 lg:gap-10'>
-                <div className='flex items-center min-w-[400px] gap-3'>
-                  <label className='flex-shrink-0 text-base font-normal text-gray-500 w-28'>Department :</label>
-                  <Autocomplete
-                    variant='body2'
-                    disabled={isReadOnly}
-                    className={`flex-1 min-w-[180px] max-w-sm`}
-                    size = 'small'
-                    options= {departments} 
-                    value={currentHeader?.Department_Code || currentHeader?.Department  || '' }
-                    onChange={(e, newValue) => handleHeaderChange('Department_Code', newValue)}
-                    renderInput={(params) => (
-                      <TextField {...params} 
-                        sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                      />              
-                    )} 
-                  />
-                </div>
-                <div className='flex items-center flex-1 min-w-[300px] gap-3'>
-                  <label className='flex-shrink-0 w-40 text-base font-normal text-gray-500'>Maintenance Service :</label>
-                  <Autocomplete 
-                    disabled={isReadOnly}
-                    className={`flex-1 min-w-[180px] max-w-sm`}              
-                    size = 'small'
-                    options= {sections} 
-                    value={currentHeader?.Sector_name || ''}
-                    onChange={(e, newValue) => handleHeaderChange('Sector_name', newValue)}
-                    renderInput={(params) => (
-                      <TextField {...params} 
-                        sx={getAutocompleteSx(state.isEditing || state.isCreating)}
-                      />              
-                    )} 
-                  />
-                </div>
-              </div>
-
-              <div className='flex max-w-[1000px] justify-start w-full gap-10 mt-4'>
-                <label className={`pt-2 text-base text-gray-500 w-24 font-normal`}>Remarks : </label>
-                <textarea
-                  id = "remarks"
-                  disabled={isReadOnly}
-                  aria-label = "minimum height"
-                  minRows={2}
-                  value={currentHeader?.Remarks || ''}
-                  onChange={(e) => handleHeaderChange('Remarks', e.target.value)}
-                  className={`${!state.isEditing && !state.isCreating 
-                    ? 'border-slate-200  text-slate-500 '
-                    : 'border-slate-200 bg-white text-slate-600 cursor-default ' }
-                  border rounded-md w-full  font-normal text-gray-800
-                  `}
-                  style={{ 
-                    resize: 'both',
-                    padding: '.5rem',
-                    marginTop: '.5rem'
-                  }}   
-                />
-              </div>
-              
-            </Box>
-        </form>
-      </div>    
-      <ThemeProvider theme={customTheme}>
-        <div className='w-full m-auto rounded-lg lg:px-10'>
-          <JobOrderTabs
-            state={state}
-            isCreating={state.isCreating}
-            isEditing={state.isEditing}
-            setIsEditing={state.setIsEditing}
-            docStatus={docStatus}
-            isReadOnly={isReadOnly}
-            copyDocNo={copyDocNo}
-            currentHeader={currentHeader}
-            currentJOItems={currentJOItems}
-            updateDetailRow={updateDetailRow}
-            addDetailRow={addDetailRow}
-            removeDetailRow={removeDetailRow}
-            handleDeleteClick={handleDeleteClick}
-            handleConfirmDelete={handleConfirmDelete}
-            handleCancelDelete={handleCancelDelete}
+      {/* 2. Filters + 3. Buttons */}
+      <div className="flex flex-col gap-3 p-5 m-3 border border-gray-200 shadow-sm bg-neutral-100 rounded-xl">
+        <div className="flex flex-wrap gap-3">
+          <FilterAutocomplete
+            label="Job Order No."
+            icon={TagIcon}
+            options={joNoOptions}
+            value={draft.joNo}
+            onChange={setDraftField('joNo')}
+          />
+          <FilterAutocomplete
+            label="Department"
+            icon={ApartmentIcon}
+            options={departmentOptions}
+            value={draft.department}
+            onChange={setDraftField('department')}
+          />
+          <FilterAutocomplete
+            label="Maintenance"
+            icon={BuildIcon}
+            options={maintenanceOptions}
+            value={draft.maintenance}
+            onChange={setDraftField('maintenance')}
+          />
+          <FilterAutocomplete
+            label="Document Status"
+            icon={FlagIcon}
+            options={STATUS_OPTIONS}
+            value={draft.status}
+            onChange={setDraftField('status')}
+            getOptionLabel={(o) => o.label}
+            isOptionEqualToValue={(o, v) => o.status === v.status}
           />
         </div>
-      </ThemeProvider>
 
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-gray-100">
+          <CustomBtn variant="goBtn" iconType="go" onClick={handleGo}>
+            Go
+          </CustomBtn>
+          <CustomBtn variant="clearBtn" iconType="clear" onClick={handleClear}>
+            Clear
+          </CustomBtn>
+          {isRefreshing ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2 }}>
+              <CircularProgress size={20} />
+              <span className="text-sm text-gray-600">Refreshing...</span>
+            </Box>
+          ) : (
+            <CustomBtn variant="refreshBtn" iconType="refresh" onClick={() => refreshData()}>
+              Refresh
+            </CustomBtn>
+          )}
+          <CustomBtn variant="createBtn" iconType="add" onClick={openCreate}>
+            Create New Job Order
+          </CustomBtn>
+        </div>
+      </div>
+
+      {/* 4. Table (reused) */}
+      <SearchTransactionTable
+        key={`jo-table-${dataVersion}`}
+        title="Job Orders"
+        showMaintenance
+        emptyMessage={
+          hasSearched
+            ? 'No Job Orders match the selected filters.'
+            : 'Select filters and click Go, or click a dashboard card to load Job Orders.'
+        }
+        loading={isLoading && !jobOrders.length}
+        error={error}
+        displayedDocs={tableData}
+        page={page}
+        total={filteredDocs.length}
+        setPage={setPage}
+        rowsPerPage={rowsPerPage}
+        setRowsPerPage={setRowsPerPage}
+        isTableActive
+        selected={selected}
+        setSelected={setSelected}
+        onBulkApprove={handleBulkApprove}
+        onBulkReject={handleBulkReject}
+        selectedDocuments={selectedDocuments}
+        isRefreshing={isRefreshing}
+        dataVersion={dataVersion}
+        itemCounts={itemCounts}
+        onOpenDocument={openDocument}
+      />
+
+      <BulkActionDialogDesktop
+        isOpen={bulkDialogOpen}
+        onClose={closeBulkDialog}
+        onConfirm={executeBulkAction}
+        actionType={bulkActionType}
+        itemCount={bulkItemNames.length}
+        itemNames={bulkItemNames}
+        loading={bulkLoading}
+        remarks={bulkRemarks}
+        onRemarksChange={setBulkRemarks}
+        error={bulkError}
+      />
+
+      <JobOrderDialog
+        open={dialog.open}
+        initialDocNo={dialog.docNo}
+        startInCreate={dialog.create}
+        joNumbers={joNoOptions}
+        onClose={closeDialog}
+        onDataChanged={() => refreshData({ silent: true })}
+      />
     </div>
-  )
+  );
 }

@@ -107,9 +107,7 @@ export const useAssetAccApproval = () => {
   };
   
   const getTotalLevels = useCallback(async () => {
-    try {
-      console.log('🔄 Fetching total levels from API...');
-      
+    try {      
       const response = await axios.get(`/approval/total-levels?module=${encodeURIComponent('Asset Accountability')}`, {
         timeout: 10000,
         headers: {
@@ -123,7 +121,6 @@ export const useAssetAccApproval = () => {
       // The backend returns: { success: true, totalLevels: number, module: string }
       if (response.data && response.data.success === true) {
         const totalLevels = response.data.totalLevels || 3;
-        console.log('✅ Successfully fetched total levels:', totalLevels);
         return { success: true, totalLevels: totalLevels };
       } else {
         console.warn('⚠️ API returned unexpected structure:', response.data);

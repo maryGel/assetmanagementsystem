@@ -23,14 +23,14 @@ const DATE_RANGE_STORAGE_KEY = 'evalDateRange';
 // Tighter padding/chip sizing so the multi-select filters stay compact.
 const compactAutocompleteSx = {
   '& .MuiOutlinedInput-root': {
-    padding: '3px 8px !important',
-    fontSize: '0.85rem',
+    padding: '5px !important',
+    fontSize: '.95rem',
   },
   '& .MuiOutlinedInput-root .MuiAutocomplete-input': {
     padding: '6px 6px !important',
     fontSize: '0.75rem',
   },
-  '& .MuiInputLabel-root': { fontSize: '0.75rem' },
+  '& .MuiInputLabel-root': { fontSize: '1rem' },
   '& .MuiChip-root': {
     height: 20,
     fontSize: '0.7rem',
@@ -532,9 +532,9 @@ function EvalJOFormDesktop({
     </div>
 
   {/* Right side: Search + Actions */}
-    <div className="flex flex-wrap items-center w-full gap-2 lg:w-auto lg:flex-nowrap">
+    <div className="flex flex-wrap items-center w-full lg:gap-4 lg:w-auto lg:flex-nowrap">
       {/* Search Field */}
-      <div className="relative flex items-center flex-1 min-w-[9rem] lg:flex-none lg:w-56">
+      <div className="relative flex items-center flex-1 min-w-[10rem] lg:flex-none lg:w-80">
         <div className="absolute text-gray-400 left-2.5 md:left-3">
           <SearchIcon fontSize="small" />
         </div>
@@ -544,7 +544,7 @@ function EvalJOFormDesktop({
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search here"
-          className="w-full min-w-0 py-1.5 pl-8 pr-8 text-xs transition-colors border border-gray-300 rounded-md outline-none md:pl-9 md:text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="w-full min-w-0 py-2 transition-colors border border-gray-300 rounded-md outline-none md:pl-9 md:text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           autoComplete="off"
         />
         {searchQuery && (
@@ -564,7 +564,7 @@ function EvalJOFormDesktop({
         disableCloseOnSelect
         size="small"
         sx={{
-          flex: { xs: '1 1 100%', sm: '1 1 150px', lg: '0 0 200px' },
+          flex: { xs: '1 1 100%', sm: '1 1 250px', lg: '0 0 250px' },
           minWidth: 0,
           ...compactAutocompleteSx,
         }}
@@ -739,7 +739,7 @@ function EvalJOFormDesktop({
                               </span>
                               <span className="text-[11px] md:text-xs text-gray-500">
                                 {isFullyEvaluated ? (
-                                  <span className="text-green-600">✓ Fully Evaluated ({items.length}) item/s</span>
+                                  <span className="text-green-600">✓ Fully Evaluated ({items.length})</span>
                                 ) : (
                                   <span className="text-amber-600">{evaluatedCount}/{items.length} evaluated</span>
                                 )}

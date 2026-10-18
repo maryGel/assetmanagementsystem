@@ -404,7 +404,7 @@ export default function WorkOrderDialog({
   const [workOrderData, setWorkOrderData] = useState({ joNo: '', workNo: '', woDate: '', maintenanceStatus: 'Ongoing', department: '', location: '', maintenance: '', items: [] });
 
   // Resizable column widths (px), in the same order as the header cells.
-  const WO_COLUMNS = ['Item Status', 'FAC No.', 'Item Name', 'Qty', 'UOM', 'Details of Work', 'Evaluation', 'Remarks on Eval.', 'Maintenance Remarks', 'Expenses', 'Actions', 'Reason for Disposal', 'Disposal No'];
+  const WO_COLUMNS = ['Item Status', 'Asset No.', 'Asset Name', 'Qty', 'UOM', 'Details of Work', 'Evaluation', 'Remarks on Eval.', 'Maintenance Remarks', 'Expenses', 'Actions', 'Reason for Disposal', 'Disposal No'];
   const [colWidths, setColWidths] = useState([160, 190, 180, 70, 80, 260, 140, 180, 220, 130, 140, 200, 150]);
   // "Disposal No" (last column) only appears when at least one item has an AD_No.
   const showDisposalNo = workOrderData.items.some(hasAdNo);
@@ -982,7 +982,7 @@ export default function WorkOrderDialog({
                                 disabled={isSaving || item.status === 'Completed' || hasAdNo(item)}
                                 onClick={() => handleAddExpense(item, actualIndex)}
                                 className={`flex items-center gap-2 p-2 bg-blue-600 text-white text-sm font-medium rounded-md transition-colors 
-                                  ${(isSaving || item.status === 'Completed' || hasAdNo(item)) ? 'opacity-50 cursor-not-allowed bg-gray-200' : 'hover:bg-blue-500 hover:text-white'}`}
+                                  ${(isSaving || item.status === 'Completed' || item.status === 'For Disposal'|| hasAdNo(item)) ? 'opacity-50 cursor-not-allowed bg-gray-200' : 'hover:bg-blue-500 hover:text-white'}`}
                               >
                                 <AddIcon fontSize="small" />Expense
                               </button>

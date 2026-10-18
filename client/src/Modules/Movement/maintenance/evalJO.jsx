@@ -244,7 +244,7 @@ function EvalJO({
                                             disabled={isSubmitting || isRefreshing}
                                         />
                                         <span className='text-slate-600'>
-                                            Select All ({unevaluatedItems.length} unevaluated)
+                                            Select All 
                                         </span>
                                     </div>  
                                     <div 
@@ -278,7 +278,7 @@ function EvalJO({
                             return (
                                 <div 
                                     key={`${item.JO_No}-${item.FAC_NO}-${item.workDet}`}
-                                    className={`flex flex-col mb-7 rounded-lg transition-colors duration-200
+                                    className={`flex flex-col mb-3 rounded-lg transition-colors duration-200
                                         ${evaluated 
                                             ? 'bg-gray-50 border border-gray-200' 
                                             : isItemSelected(item) 
@@ -305,7 +305,7 @@ function EvalJO({
                                                 <span className="text-xl text-green-600">✓</span>
                                             </div>
                                         )}
-                                        <div className='flex flex-col gap-1 pl-2'>
+                                        <div className='flex flex-col gap-1 p-1'>
                                             <div>
                                                 <span className={`font-semibold ${evaluated ? 'text-gray-600' : 'text-blue-800'}`}>
                                                     {item.FAC_name}

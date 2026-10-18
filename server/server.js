@@ -48,6 +48,7 @@
   import tr_dRoute from './routes/tr_dRoute.js';
   import assetacchRoute from './routes/assetacchRoute.js';
   import assetaccdRoute from './routes/assetaccdRoute.js';
+  import returnitemroute from './routes/returnitemRoute.js'
   import assetLostHRoute from './routes/assetLostHRoute.js';
   import assetLostDRoute from './routes/assetLostDRoute.js';
   import jo_appRoute from './routes/jo_appRoute.js';
@@ -59,8 +60,10 @@
   import user0002invRoute from './routes/user0002invRoute.js';
   import physicalCountRoutes from './routes/physicalCountRoutes.js';
   import userPermissionsRoute from './routes/userPermissionsRoute.js';
+  // Report
   import assetReportRoute from './routes/assetReportRoute.js';
   import lineItemReport from './routes/lineitemReportRoute.js';
+  import maintenanceReportRoute from './routes/maintenanceReportRoute.js'
 
 
 
@@ -204,6 +207,7 @@
   app.use('/tr_dRoute', tr_dRoute);
   app.use('/assetacchRoute', assetacchRoute);
   app.use('/assetaccdRoute', assetaccdRoute);
+  app.use('/returnitemRoute', returnitemroute)
   app.use('/assetLostHRoute', assetLostHRoute);
   app.use('/assetLostDRoute', assetLostDRoute);
   app.use('/approval', jo_appRoute);
@@ -215,8 +219,10 @@
   app.use('/companyConfig', user0002invRoute);
   app.use('/physicalCount', physicalCountRoutes);
   app.use('/userPermissions', userPermissionsRoute);
+  //Report
   app.use('/assetReport', assetReportRoute);
   app.use('/lineItemReport', lineItemReport);
+  app.use('/maintenanceReportRoute', maintenanceReportRoute)
 
   // React (Vite Dist)
   app.use(express.static(path.join(__dirname, '../client/dist')))

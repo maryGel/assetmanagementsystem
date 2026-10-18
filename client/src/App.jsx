@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { CircularProgress } from "@mui/material";
 import ProtectedRoute from "./api/ProtectedRoute.jsx";
@@ -30,9 +30,6 @@ const ReferentialPage = lazy(() =>
 const JOFormPage = lazy(() =>
   import("./Modules/Movement/pages/jobOrderPage.jsx")
 );
-// const TRFormPage = lazy(() =>
-//   import("./Modules/Movement/pages/transferFormPage.jsx")
-// );
 
 const TRFormType = lazy(() =>
   import("./Modules/Movement/transfer/transferTypePage.jsx")
@@ -41,8 +38,8 @@ const TRFormType = lazy(() =>
 const ADFormPage = lazy(() =>
   import("./Modules/Movement/pages/disposalPage.jsx")
 );
-const AAFormPage = lazy(() =>
-  import("./Modules/Movement/pages/assetAccPage.jsx")
+const AAFormType = lazy(() =>
+  import("./Modules/Movement/aaccountability/aaFormType.jsx")
 );
 const ALFormPage = lazy(() =>
   import("./Modules/Movement/pages/assetLostPage.jsx")
@@ -89,6 +86,10 @@ const LineItemReportPage = lazy(() =>
   import("./Modules/Reports/pages/lineItemRepPage.jsx")
 );
 
+const MaintenanceReportPage = lazy(() =>
+  import("./Modules/Reports/pages/maintenanceReportPage.jsx")
+);
+
 
 
 
@@ -118,10 +119,12 @@ function App() {
   );
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const saveTitleUpdate = (newTitle) => {
+  // Stable identity: pages receive this as a prop (and some use it in
+  // effects), so a new function on every App render made them re-run.
+  const saveTitleUpdate = useCallback((newTitle) => {
     localStorage.setItem("currentHeaderTitle", newTitle);
     setHeaderTitle(newTitle);
-  };
+  }, []);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -136,6 +139,10 @@ function App() {
 
   return (
     <div className="App">
+      {/* This boundary now only catches the login page and the first load of
+          the app shell. Pages inside <Layout> are caught by the Suspense
+          inside Layout, so the sidebar/header stay on screen while a page
+          loads instead of being covered by this full-screen loader. */}
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route
@@ -220,14 +227,6 @@ function App() {
                 </PermissionRoute>
               }
             />
-            {/* <Route
-              path="/assetMovement/pages/TRFormPage"
-              element={
-                <PermissionRoute path="/assetMovement/pages/TRFormPage">
-                  <TRFormPage setHeaderTitle={saveTitleUpdate} />
-                </PermissionRoute>
-              }
-            /> */}
             <Route
               path="/assetMovement/pages/TRFormType"
               element={
@@ -245,10 +244,10 @@ function App() {
               }
             />
             <Route
-              path="/assetMovement/pages/AAFormPage"
+              path="/assetMovement/pages/AAFormType"
               element={
-                <PermissionRoute path="/assetMovement/pages/AAFormPage">
-                  <AAFormPage setHeaderTitle={saveTitleUpdate} />
+                <PermissionRoute path="/assetMovement/pages/AAFormType">
+                  <AAFormType setHeaderTitle={saveTitleUpdate} />
                 </PermissionRoute>
               }
             />
@@ -288,9 +287,14 @@ function App() {
               element={<AssetReportPage setHeaderTitle={saveTitleUpdate} />}
             />
 
-             <Route
+            <Route
               path="/assetReports/assetLineItemReport"
               element={<LineItemReportPage setHeaderTitle={saveTitleUpdate} />}
+            />
+
+            <Route
+              path="/assetReports/maintenanceReport"
+              element={<MaintenanceReportPage setHeaderTitle={saveTitleUpdate} />}
             />
 
             {/* System Setup */}

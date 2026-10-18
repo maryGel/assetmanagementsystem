@@ -119,20 +119,20 @@ router.put('/approve/:AAFNo', (req, res) => {
         // 8. Check if this is the final approval level (xPosted becomes 1)
         const isFinalApproval = approvedLevelsCount === totalLevels;
         
-        // Fully approved: clear 'With Pending Asset Accountability' on the assets of this AAF
+        // Fully approved (xPosted = 1): the assets of this AAF are now borrowed/issued
         // (asset number is stored in assestaccd.ItemNo)
         let ItemlistUpdateResult = null;
         if (isFinalApproval) {
-          const clearStatSql = `
+          const setStatSql = `
             UPDATE itemlist i
             JOIN assestaccd d ON d.ItemNo = i.FacNO
-            SET i.xxStats = ''
+            SET i.xxStats = ?
             WHERE d.AAFNo = ?
               AND TRIM(d.ItemNo) <> ''
               AND LOWER(TRIM(d.ItemNo)) <> 'n'
           `;
           ItemlistUpdateResult = await new Promise((resolve, reject) => {
-            connection.query(clearStatSql, [cleanDocNo], (error, result) => {
+            connection.query(setStatSql, ['Borrowed/Issued', cleanDocNo], (error, result) => {
               if (error) reject(error);
               else resolve(result);
             });
