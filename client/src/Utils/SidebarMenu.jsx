@@ -84,7 +84,12 @@ export default function SidebarMenu({ collapsed, setCollapsed }) {
         </div>
       )}
 
-      <nav className="flex-1 px-2 pb-4 overflow-y-auto">
+      {/* scrollbarGutter reserves the scrollbar's space so the menu doesn't
+          shift sideways when a long list makes the scrollbar appear. */}
+      <nav
+        className="flex-1 px-2 pb-4 overflow-y-auto"
+        style={{ scrollbarGutter: 'stable' }}
+      >
         {loading && !collapsed && (
           <p className="px-3 py-2 text-xs text-slate-400">Loading menu…</p>
         )}
@@ -117,26 +122,38 @@ export default function SidebarMenu({ collapsed, setCollapsed }) {
                 )}
               </button>
 
-              {open && m.items.length > 0 && (
-                <ul className="py-1 mt-1 ml-5 border-l border-white/10">
-                  {m.items.map((item) => (
-                    <li key={item.id}>
-                      <NavLink
-                        to={item.link}
-                        className={({ isActive }) =>
-                          `flex items-center gap-2 pl-4 pr-3 py-2 text-[13px] rounded-lg transition-colors ${
-                            isActive
-                              ? 'text-indigo-200 font-semibold bg-white/10'
-                              : 'text-slate-300 hover:text-white hover:bg-white/5'
-                          }`
-                        }
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                        {item.title}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
+              {/* Always rendered and animated open/closed (grid-rows 0fr -> 1fr)
+                  instead of being mounted/unmounted, so the list slides
+                  rather than popping in and out. `invisible` when closed
+                  keeps the hidden links out of the tab order. */}
+              {m.items.length > 0 && (
+                <div
+                  className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+                    open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] invisible'
+                  }`}
+                  aria-hidden={!open}
+                >
+                  <ul className="min-h-0 overflow-hidden ml-5 border-l border-white/10">
+                    {m.items.map((item, idx) => (
+                      <li key={item.id} className={idx === 0 ? 'pt-1' : ''}>
+                        <NavLink
+                          to={item.link}
+                          tabIndex={open ? 0 : -1}
+                          className={({ isActive }) =>
+                            `flex items-center gap-2 pl-4 pr-3 py-2 text-[13px] rounded-lg transition-colors ${
+                              isActive
+                                ? 'text-indigo-200 font-semibold bg-white/10'
+                                : 'text-slate-300 hover:text-white hover:bg-white/5'
+                            }`
+                          }
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+                          {item.title}
+                        </NavLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           );

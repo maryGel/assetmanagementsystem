@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useAccess } from '../hooks/useAccess';
 import { PATH_TO_UCODE } from './permissionContext';
 
@@ -42,23 +42,30 @@ export function AccessProvider({ children }) {
   // Admins bypass the granted-permissions check entirely - matches the
   // backend's requireAdmin pattern (usersRoute.js), where Admin already
   // has unrestricted access to admin-only endpoints.
-  const hasAccess = (path) => {
+  // The functions and the context value are memoized so their identity only
+  // changes when the permissions actually change. Otherwise every re-render
+  // above this provider handed consumers (like the sidebar) brand-new
+  // functions, re-running their permission filtering for no reason.
+  const hasAccess = useCallback((path) => {
     if (isAdmin) return true;
     const requiredCode = PATH_TO_UCODE[path];
     if (!requiredCode) return true; // unrestricted path
     return grantedCodes.has(requiredCode);
-  };
+  }, [isAdmin, grantedCodes]);
 
   // Same as hasAccess, but for callers that already have a U_CODE in
   // hand (e.g. the top-level menu tabs, each mapped 1:1 to its own
   // U_CODE) rather than a path that needs looking up in PATH_TO_UCODE.
-  const hasCode = (code) => {
+  const hasCode = useCallback((code) => {
     if (isAdmin) return true;
     if (!code) return true;
     return grantedCodes.has(code);
-  };
+  }, [isAdmin, grantedCodes]);
 
-  const value = { hasAccess, hasCode, loading, error, isAdmin, grantedCodes };
+  const value = useMemo(
+    () => ({ hasAccess, hasCode, loading, error, isAdmin, grantedCodes }),
+    [hasAccess, hasCode, loading, error, isAdmin, grantedCodes]
+  );
 
   return (
     <AccessContext.Provider value={value}>
