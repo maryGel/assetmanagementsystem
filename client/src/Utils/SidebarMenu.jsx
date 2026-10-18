@@ -26,19 +26,27 @@ export default function SidebarMenu({ collapsed, setCollapsed }) {
     if (loading) return [];
     return menuConfig
       .filter((m) => hasCode(m.code))
-      .map((m) => ({ ...m, items: m.items.filter((i) => hasAccess(i.link)) }));
+      .map((m) => ({
+        ...m,
+        // a "leaf" menu (Dashboard) is a page itself; the others are groups
+        leaf: m.items.length === 0,
+        items: m.items.filter((i) => hasAccess(i.link)),
+      }));
   }, [loading, hasCode, hasAccess]);
 
   const isActiveMenu = (m) =>
-    pathname === m.link || m.items.some((i) => i.link === pathname);
+    m.leaf ? pathname.startsWith('/Home') : m.items.some((i) => i.link === pathname);
 
   const isOpen = (m) =>
     openGroups[m.label] !== undefined ? openGroups[m.label] : isActiveMenu(m);
 
   const handleMenuClick = (m) => {
-    // Show the module's tile screen on the right, like the old tab did.
-    navigate(m.link);
-    if (m.items.length === 0) return;
+    // Dashboard opens its page; every other menu only expands/collapses,
+    // so the right side never changes until a sub-link is clicked.
+    if (m.leaf) {
+      navigate(m.link);
+      return;
+    }
     if (collapsed) {
       setCollapsed(false);
       setOpenGroups((p) => ({ ...p, [m.label]: true }));
